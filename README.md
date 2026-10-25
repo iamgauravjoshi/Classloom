@@ -17,7 +17,7 @@ Multi-school management SaaS for Indian schools: one portal for admissions, stud
 ```bash
 pnpm install
 cp .env.example .env
-pnpm infra:up      # postgres, redis, minio, mailpit, gotenberg
+pnpm infra:up      # postgres, redis, s3 (RustFS), mailpit, gotenberg
 pnpm dev           # web on :3000, api on :4000
 ```
 
@@ -36,16 +36,16 @@ pnpm dev           # web on :3000, api on :4000
 
 ## Ports
 
-| Service              | Port        |
-| -------------------- | ----------- |
-| Web (Next.js)        | 3000        |
-| API (NestJS)         | 4000        |
-| PostgreSQL           | 5432        |
-| Redis                | 6379        |
-| MinIO (S3) / console | 9000 / 9001 |
-| Mailpit SMTP / UI    | 1025 / 8025 |
-| Gotenberg (PDF)      | 3001        |
-| Storybook            | 6006        |
+| Service                          | Port        |
+| -------------------------------- | ----------- |
+| Web (Next.js)                    | 3000        |
+| API (NestJS)                     | 4000        |
+| PostgreSQL                       | 5432        |
+| Redis                            | 6379        |
+| RustFS (S3-compatible) / console | 9000 / 9001 |
+| Mailpit SMTP / UI                | 1025 / 8025 |
+| Gotenberg (PDF)                  | 3001        |
+| Storybook                        | 6006        |
 
 ## Pinned major versions
 
