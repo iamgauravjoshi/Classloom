@@ -25,3 +25,6 @@ blob-report/
 .claude/settings.local.json
 .DS_Store
 *.log
+
+# superpowers execution workspace
+.superpowers/
