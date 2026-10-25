@@ -3,10 +3,14 @@ packages:
   - packages/*
 
 allowBuilds:
+  '@parcel/watcher': false
   '@prisma/engines': true
   '@scarf/scarf': false
   '@swc/core': true
+  cpu-features: set this to true or false
   esbuild: true
   prisma: true
+  protobufjs: set this to true or false
+  ssh2: set this to true or false
 
 saveExact: true
