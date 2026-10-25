@@ -1,0 +1,31 @@
+{
+  "name": "@classloom/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tokens.css": "./src/tokens.css"
+  },
+  "files": [
+    "dist",
+    "src/tokens.css"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "tokens:css": "vitest run src/css.test.ts -u"
+  },
+  "devDependencies": {
+    "@classloom/config": "workspace:*",
+    "tsup": "9.0.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}

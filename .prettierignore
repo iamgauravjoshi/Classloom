@@ -10,3 +10,4 @@ packages/api-client/openapi.json
 **/storybook-static/
 **/playwright-report/
 **/test-results/
+packages/design-tokens/src/tokens.css

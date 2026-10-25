@@ -228,6 +228,21 @@ importers:
         specifier: 5.0.5
         version: 5.0.5(vite@8.3.5(jiti@2.7.0)(yaml@2.9.1))
 
+  packages/design-tokens:
+    devDependencies:
+      '@classloom/config':
+        specifier: workspace:*
+        version: link:../config
+      tsup:
+        specifier: 9.0.0
+        version: 9.0.0(jiti@2.7.0)(postcss@8.5.31)(typescript@6.0.3)(yaml@2.9.1)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.5
+        version: 5.0.5(vite@8.3.5(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/utils:
     devDependencies:
       '@classloom/config':
