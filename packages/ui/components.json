@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "base-nova",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "iconLibrary": "tabler",
+  "aliases": {
+    "components": "@classloom/ui/components",
+    "utils": "@classloom/ui/lib/utils",
+    "hooks": "@classloom/ui/hooks",
+    "lib": "@classloom/ui/lib",
+    "ui": "@classloom/ui/components/ui"
+  }
+}

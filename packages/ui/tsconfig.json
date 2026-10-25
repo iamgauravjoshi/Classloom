@@ -1,0 +1,10 @@
+{
+  "extends": "@classloom/config/tsconfig.library.json",
+  "compilerOptions": {
+    "paths": {
+      "@classloom/ui/*": ["./src/*"]
+    },
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
+  },
+  "include": ["src", ".storybook/*.ts", ".storybook/*.tsx", "*.config.ts"]
+}
