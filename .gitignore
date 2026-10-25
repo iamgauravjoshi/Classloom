@@ -28,3 +28,6 @@ blob-report/
 
 # superpowers execution workspace
 .superpowers/
+
+# generated clients
+apps/api/src/generated/
