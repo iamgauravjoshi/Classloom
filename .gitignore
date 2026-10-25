@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+.next/
+dist/
+build/
+out/
+coverage/
+storybook-static/
+.turbo/
+
+# test artifacts
+playwright-report/
+test-results/
+blob-report/
+
+# env
+.env
+.env.*
+!.env.example
+
+# local tooling
+.claude/settings.local.json
+.DS_Store
+*.log

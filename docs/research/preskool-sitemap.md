@@ -1,0 +1,468 @@
+# PreSkool demo — sitemap
+
+Source: https://preskool.dreamstechnologies.com/html/ (crawled 2026-10-25). Page paths are relative to that base URL. Use this map to find the pages to crawl when researching each module (master spec, section 7, step 1).
+  - Global International Primary campus — `https://preskool.dreamstechnologies.com/html/index.html`
+  - S Sunrise Public School North branch
+  - R Riverside Academy West branch
+  - Add new school
+
+## Main
+
+  - Dashboard
+  - Admin Dashboard — `https://preskool.dreamstechnologies.com/html/index.html`
+  - Teacher Dashboard — `https://preskool.dreamstechnologies.com/html/teacher-dashboard.html`
+  - Student Dashboard — `https://preskool.dreamstechnologies.com/html/student-dashboard.html`
+  - Parent Dashboard — `https://preskool.dreamstechnologies.com/html/parent-dashboard.html`
+  - Application
+  - Chat — `https://preskool.dreamstechnologies.com/html/chat.html`
+  - Call — `https://preskool.dreamstechnologies.com/html/call.html`
+  - Calendar — `https://preskool.dreamstechnologies.com/html/calendar.html`
+  - Email — `https://preskool.dreamstechnologies.com/html/email.html`
+  - To Do — `https://preskool.dreamstechnologies.com/html/todo.html`
+  - Notes — `https://preskool.dreamstechnologies.com/html/notes.html`
+  - File Manager — `https://preskool.dreamstechnologies.com/html/file-manager.html`
+  - Layouts
+  - Default — `https://preskool.dreamstechnologies.com/html/layout-default.html`
+  - Mini — `https://preskool.dreamstechnologies.com/html/layout-mini.html`
+  - RTL — `https://preskool.dreamstechnologies.com/html/layout-rtl.html`
+  - Box — `https://preskool.dreamstechnologies.com/html/layout-box.html`
+  - Dark — `https://preskool.dreamstechnologies.com/html/layout-dark.html`
+
+## People & Admission
+
+  - Students
+  - Students — `https://preskool.dreamstechnologies.com/html/students.html`
+  - Student Profile — `https://preskool.dreamstechnologies.com/html/student-details.html`
+  - Admissions — `https://preskool.dreamstechnologies.com/html/admissions.html`
+  - Student Promotion — `https://preskool.dreamstechnologies.com/html/student-promotion.html`
+  - Alumni — `https://preskool.dreamstechnologies.com/html/alumni.html`
+  - Student Attendance History — `https://preskool.dreamstechnologies.com/html/student-attendance-history.html`
+  - Student Documents — `https://preskool.dreamstechnologies.com/html/student-documents.html`
+  - Teachers
+  - Teachers — `https://preskool.dreamstechnologies.com/html/teachers.html`
+  - Add Teacher — `https://preskool.dreamstechnologies.com/html/add-teacher.html`
+  - Teacher Profile — `https://preskool.dreamstechnologies.com/html/teacher-details.html`
+  - Routine — `https://preskool.dreamstechnologies.com/html/routine-teachers.html`
+  - Parents — `https://preskool.dreamstechnologies.com/html/parent-grid.html`
+  - Guardians — `https://preskool.dreamstechnologies.com/html/guardian-grid.html`
+  - Staff
+  - Staff List — `https://preskool.dreamstechnologies.com/html/staffs.html`
+  - Departments — `https://preskool.dreamstechnologies.com/html/departments.html`
+  - Designation — `https://preskool.dreamstechnologies.com/html/designation.html`
+  - Users
+  - Users — `https://preskool.dreamstechnologies.com/html/users.html`
+  - Roles & Permissions — `https://preskool.dreamstechnologies.com/html/roles-permission.html`
+  - Delete Account Request — `https://preskool.dreamstechnologies.com/html/delete-account.html`
+
+## Academic
+
+  - Classes & Sections
+  - Classes — `https://preskool.dreamstechnologies.com/html/classes.html`
+  - Classrooms — `https://preskool.dreamstechnologies.com/html/classrooms.html`
+  - Sections — `https://preskool.dreamstechnologies.com/html/class-section.html`
+  - Class Routine — `https://preskool.dreamstechnologies.com/html/class-routine.html`
+  - Class Schedule — `https://preskool.dreamstechnologies.com/html/class-schedule.html`
+  - Academic Calendar — `https://preskool.dreamstechnologies.com/html/academic-calendar.html`
+  - Subjects & Curriculum
+  - Subjects — `https://preskool.dreamstechnologies.com/html/class-subject.html`
+  - Curriculum — `https://preskool.dreamstechnologies.com/html/curriculum.html`
+  - Syllabus Tracking — `https://preskool.dreamstechnologies.com/html/class-syllabus.html`
+  - Timetable
+  - Class Timetable — `https://preskool.dreamstechnologies.com/html/class-time-table.html`
+  - Teacher Timetable — `https://preskool.dreamstechnologies.com/html/teacher-time-table.html`
+  - Learning
+  - Lesson Planning — `https://preskool.dreamstechnologies.com/html/lesson-planning.html`
+  - Study Materials — `https://preskool.dreamstechnologies.com/html/study-materials.html`
+  - Homework — `https://preskool.dreamstechnologies.com/html/homework.html`
+  - Examination
+  - Exams — `https://preskool.dreamstechnologies.com/html/exams.html`
+  - Exam Types — `https://preskool.dreamstechnologies.com/html/exam-types.html`
+  - Schedule Exam — `https://preskool.dreamstechnologies.com/html/schedule-exam.html`
+  - Admit Card — `https://preskool.dreamstechnologies.com/html/admit-card.html`
+  - Marks Entry — `https://preskool.dreamstechnologies.com/html/marks-entry.html`
+  - Grade Setup — `https://preskool.dreamstechnologies.com/html/grade-setup.html`
+  - Exam Attendance — `https://preskool.dreamstechnologies.com/html/exam-attendance.html`
+  - Exam Results — `https://preskool.dreamstechnologies.com/html/exam-results.html`
+  - Report Cards — `https://preskool.dreamstechnologies.com/html/report-cards.html`
+  - Performance Analytics — `https://preskool.dreamstechnologies.com/html/performance-analytics.html`
+  - Subject Performance — `https://preskool.dreamstechnologies.com/html/subject-performance.html`
+  - Progress Reports — `https://preskool.dreamstechnologies.com/html/progress-reports.html`
+  - Ranking System — `https://preskool.dreamstechnologies.com/html/ranking-system.html`
+
+## HRM
+
+  - HR & Payroll
+  - Employee Payroll — `https://preskool.dreamstechnologies.com/html/employee-payroll.html`
+  - Salary Structure — `https://preskool.dreamstechnologies.com/html/salary-structure.html`
+  - Payslips — `https://preskool.dreamstechnologies.com/html/payslips.html`
+  - Leave Policies — `https://preskool.dreamstechnologies.com/html/leave-policies.html`
+  - Attendance Rules — `https://preskool.dreamstechnologies.com/html/attendance-rules.html`
+  - Holidays — `https://preskool.dreamstechnologies.com/html/holidays.html`
+  - Attendance
+  - Student Attendance — `https://preskool.dreamstechnologies.com/html/student-attendance.html`
+  - Teacher Attendance — `https://preskool.dreamstechnologies.com/html/teacher-attendance.html`
+  - Staff Attendance — `https://preskool.dreamstechnologies.com/html/staff-attendance.html`
+  - Biometric / RFID — `https://preskool.dreamstechnologies.com/html/biometric-rfid.html`
+  - Leave List — `https://preskool.dreamstechnologies.com/html/leave-list.html`
+
+## Finance & Accounts
+
+  - Fees
+  - Fee Structure — `https://preskool.dreamstechnologies.com/html/fees-master.html`
+  - Fees Assign — `https://preskool.dreamstechnologies.com/html/fees-assign.html`
+  - Fee Collection — `https://preskool.dreamstechnologies.com/html/collect-fees.html`
+  - Fees Type (Fee Categories) — `https://preskool.dreamstechnologies.com/html/fees-type.html`
+  - Fee Groups — `https://preskool.dreamstechnologies.com/html/fees-group.html`
+  - Fine Management — `https://preskool.dreamstechnologies.com/html/fine-management.html`
+  - Scholarships — `https://preskool.dreamstechnologies.com/html/scholarships.html`
+  - Due Reports — `https://preskool.dreamstechnologies.com/html/due-reports.html`
+  - Receipts — `https://preskool.dreamstechnologies.com/html/receipts.html`
+  - Billing
+  - Invoices — `https://preskool.dreamstechnologies.com/html/invoices.html`
+  - Invoice Details — `https://preskool.dreamstechnologies.com/html/invoice-details.html`
+  - Bank Transactions — `https://preskool.dreamstechnologies.com/html/bank-transactions.html`
+  - Online Payments — `https://preskool.dreamstechnologies.com/html/online-payments.html`
+  - Payment History — `https://preskool.dreamstechnologies.com/html/payment-history.html`
+  - Refunds — `https://preskool.dreamstechnologies.com/html/refunds.html`
+  - Accounts
+  - Expenses — `https://preskool.dreamstechnologies.com/html/expenses.html`
+  - Expense Category — `https://preskool.dreamstechnologies.com/html/expenses-category.html`
+  - Income — `https://preskool.dreamstechnologies.com/html/accounts-income.html`
+  - Ledger — `https://preskool.dreamstechnologies.com/html/ledger.html`
+  - Financial Reports — `https://preskool.dreamstechnologies.com/html/financial-reports.html`
+  - Tax Reports — `https://preskool.dreamstechnologies.com/html/tax-reports.html`
+
+## Campus Operations
+
+  - Library
+  - Books — `https://preskool.dreamstechnologies.com/html/library-books.html`
+  - Categories — `https://preskool.dreamstechnologies.com/html/library-categories.html`
+  - Issue Books — `https://preskool.dreamstechnologies.com/html/library-issue-book.html`
+  - Return Books — `https://preskool.dreamstechnologies.com/html/library-return.html`
+  - Members — `https://preskool.dreamstechnologies.com/html/library-members.html`
+  - Reports — `https://preskool.dreamstechnologies.com/html/library-reports.html`
+  - Reservations — `https://preskool.dreamstechnologies.com/html/library-reservations.html`
+  - Transport
+  - Routes — `https://preskool.dreamstechnologies.com/html/transport-routes.html`
+  - Pickup Points — `https://preskool.dreamstechnologies.com/html/transport-pickup-points.html`
+  - Vehicles — `https://preskool.dreamstechnologies.com/html/transport-vehicles.html`
+  - Drivers — `https://preskool.dreamstechnologies.com/html/transport-drivers.html`
+  - Assign Vehicle — `https://preskool.dreamstechnologies.com/html/transport-assign-vehicle.html`
+  - Assign Students — `https://preskool.dreamstechnologies.com/html/transport-assign-students.html`
+  - GPS Tracking — `https://preskool.dreamstechnologies.com/html/transport-gps-tracking.html`
+  - Route Scheduling — `https://preskool.dreamstechnologies.com/html/transport-route-scheduling.html`
+  - Sports
+  - Sports — `https://preskool.dreamstechnologies.com/html/sports.html`
+  - Players — `https://preskool.dreamstechnologies.com/html/players.html`
+  - Hostel
+  - Hostel List — `https://preskool.dreamstechnologies.com/html/hostel-list.html`
+  - Hostel Rooms — `https://preskool.dreamstechnologies.com/html/hostel-rooms.html`
+  - Room Types — `https://preskool.dreamstechnologies.com/html/hostel-room-type.html`
+  - Allocation — `https://preskool.dreamstechnologies.com/html/room-allocation.html`
+  - Fees — `https://preskool.dreamstechnologies.com/html/hostel-fees.html`
+  - Wardens — `https://preskool.dreamstechnologies.com/html/wardens.html`
+  - Visitor Log — `https://preskool.dreamstechnologies.com/html/hostel-visitor-log.html`
+  - Cafeteria
+  - Menu Management — `https://preskool.dreamstechnologies.com/html/cafeteria-menu.html`
+  - Meal Plans — `https://preskool.dreamstechnologies.com/html/meal-plans.html`
+  - Orders — `https://preskool.dreamstechnologies.com/html/cafeteria-orders.html`
+  - Billing — `https://preskool.dreamstechnologies.com/html/cafeteria-billing.html`
+  - Assets
+  - Assets — `https://preskool.dreamstechnologies.com/html/assets.html`
+  - Asset Allocation — `https://preskool.dreamstechnologies.com/html/asset-allocation.html`
+  - Asset Maintenance — `https://preskool.dreamstechnologies.com/html/asset-maintenance.html`
+  - Stock Management — `https://preskool.dreamstechnologies.com/html/stock-management.html`
+  - Security
+  - Gate Entry — `https://preskool.dreamstechnologies.com/html/gate-entry.html`
+  - Exit Pass — `https://preskool.dreamstechnologies.com/html/exit-pass.html`
+  - Staff Entry — `https://preskool.dreamstechnologies.com/html/staff-entry.html`
+  - Visitor Verification — `https://preskool.dreamstechnologies.com/html/visitor-verification.html`
+  - Visitor Log — `https://preskool.dreamstechnologies.com/html/visitor-log.html`
+  - Gate Pass — `https://preskool.dreamstechnologies.com/html/gate-pass.html`
+  - Appointment Requests — `https://preskool.dreamstechnologies.com/html/appointment-requests.html`
+  - Medical
+  - Sick Room Log — `https://preskool.dreamstechnologies.com/html/sick-room-log.html`
+  - Medical Visits — `https://preskool.dreamstechnologies.com/html/medical-visits.html`
+  - Health Alerts — `https://preskool.dreamstechnologies.com/html/health-alerts.html`
+
+## Communication
+
+  - Broadcast
+  - Announcements — `https://preskool.dreamstechnologies.com/html/announcements.html`
+  - Notice Board — `https://preskool.dreamstechnologies.com/html/notice-board.html`
+  - Broadcast Scheduler — `https://preskool.dreamstechnologies.com/html/broadcast-scheduler.html`
+  - SMS
+  - Send SMS — `https://preskool.dreamstechnologies.com/html/send-sms.html`
+  - Bulk SMS — `https://preskool.dreamstechnologies.com/html/bulk-sms.html`
+  - Templates — `https://preskool.dreamstechnologies.com/html/sms-templates.html`
+  - Logs — `https://preskool.dreamstechnologies.com/html/sms-logs.html`
+  - WhatsApp
+  - Send Message — `https://preskool.dreamstechnologies.com/html/send-whatsapp.html`
+  - Bulk Messaging — `https://preskool.dreamstechnologies.com/html/bulk-whatsapp.html`
+  - Templates — `https://preskool.dreamstechnologies.com/html/whatsapp-templates.html`
+  - Chat Inbox — `https://preskool.dreamstechnologies.com/html/chat-inbox.html`
+  - Notifications
+  - Email Notifications — `https://preskool.dreamstechnologies.com/html/email-notifications.html`
+  - Push Notifications — `https://preskool.dreamstechnologies.com/html/push-notifications.html`
+  - Parent Communication — `https://preskool.dreamstechnologies.com/html/parent-communication.html`
+  - Automation
+  - Workflow Rules — `https://preskool.dreamstechnologies.com/html/workflow-rules.html`
+  - Trigger Actions — `https://preskool.dreamstechnologies.com/html/trigger-actions.html`
+  - Scheduled Tasks — `https://preskool.dreamstechnologies.com/html/scheduled-tasks.html`
+
+## Reports
+
+  - Reports & Analytics
+  - Attendance Reports — `https://preskool.dreamstechnologies.com/html/attendance-reports.html`
+  - Academic Reports — `https://preskool.dreamstechnologies.com/html/academic-reports.html`
+  - Student Performance — `https://preskool.dreamstechnologies.com/html/student-performance.html`
+  - Class Analytics — `https://preskool.dreamstechnologies.com/html/class-analytics.html`
+  - Grade Reports — `https://preskool.dreamstechnologies.com/html/grade-reports.html`
+  - Fee Collection — `https://preskool.dreamstechnologies.com/html/fee-collection-report.html`
+  - Teacher Performance — `https://preskool.dreamstechnologies.com/html/teacher-performance.html`
+  - Custom Reports — `https://preskool.dreamstechnologies.com/html/custom-reports.html`
+  - AI Insights
+  - AI Command Center — `https://preskool.dreamstechnologies.com/html/ai-command-center.html`
+  - Attendance Predictor — `https://preskool.dreamstechnologies.com/html/ai-attendance-predictor.html`
+  - Risk Detection — `https://preskool.dreamstechnologies.com/html/ai-risk-detection.html`
+  - Student Intelligence — `https://preskool.dreamstechnologies.com/html/ai-student-intelligence.html`
+  - Report Generator — `https://preskool.dreamstechnologies.com/html/ai-report-generator.html`
+  - Timetable Optimizer — `https://preskool.dreamstechnologies.com/html/ai-timetable-optimizer.html`
+  - Homework Evaluation — `https://preskool.dreamstechnologies.com/html/ai-homework-evaluation.html`
+  - Teacher Productivity — `https://preskool.dreamstechnologies.com/html/ai-teacher-productivity.html`
+  - Parent Insights — `https://preskool.dreamstechnologies.com/html/ai-parent-insights.html`
+  - Fee Forecast — `https://preskool.dreamstechnologies.com/html/ai-fee-forecast.html`
+  - Student Assistant — `https://preskool.dreamstechnologies.com/html/ai-student-assistant.html`
+  - Achievements
+  - Student Awards — `https://preskool.dreamstechnologies.com/html/student-awards.html`
+  - Competitions — `https://preskool.dreamstechnologies.com/html/competitions.html`
+  - Certificate Records — `https://preskool.dreamstechnologies.com/html/certificate-records.html`
+  - Certificates
+  - Generate Certificates — `https://preskool.dreamstechnologies.com/html/generate-certificates.html`
+  - Student ID Cards — `https://preskool.dreamstechnologies.com/html/student-id-cards.html`
+  - Bonafide Certificate — `https://preskool.dreamstechnologies.com/html/bonafide-certificate.html`
+  - Transfer Certificate — `https://preskool.dreamstechnologies.com/html/transfer-certificate.html`
+  - ID Card Templates — `https://preskool.dreamstechnologies.com/html/id-card-templates.html`
+
+## Administration
+
+  - Events
+  - Events — `https://preskool.dreamstechnologies.com/html/events.html`
+  - Activities — `https://preskool.dreamstechnologies.com/html/activities.html`
+  - Multi School
+  - Tenant Settings — `https://preskool.dreamstechnologies.com/html/tenant-settings.html`
+  - Subscription Plans — `https://preskool.dreamstechnologies.com/html/subscription-plans.html`
+  - Plan Features — `https://preskool.dreamstechnologies.com/html/plan-features.html`
+  - Usage Limits — `https://preskool.dreamstechnologies.com/html/usage-limits.html`
+  - Branch Management — `https://preskool.dreamstechnologies.com/html/branch-management.html`
+  - Franchise Setup — `https://preskool.dreamstechnologies.com/html/franchise-setup.html`
+  - Central Dashboard — `https://preskool.dreamstechnologies.com/html/central-dashboard.html`
+  - Mobile App
+  - App Settings — `https://preskool.dreamstechnologies.com/html/app-settings.html`
+  - API Keys — `https://preskool.dreamstechnologies.com/html/api-keys.html`
+  - Push Configurations — `https://preskool.dreamstechnologies.com/html/push-configurations.html`
+
+## Settings
+
+  - General
+  - School Profile — `https://preskool.dreamstechnologies.com/html/school-profile.html`
+  - Academic Year — `https://preskool.dreamstechnologies.com/html/academic-year.html`
+  - Preferences — `https://preskool.dreamstechnologies.com/html/preferences.html`
+  - Account & Security
+  - Profile — `https://preskool.dreamstechnologies.com/html/profile-settings.html`
+  - Security — `https://preskool.dreamstechnologies.com/html/security-settings.html`
+  - OTP — `https://preskool.dreamstechnologies.com/html/otp-settings.html`
+  - Social Authentication — `https://preskool.dreamstechnologies.com/html/social-authentication.html`
+  - Session Management — `https://preskool.dreamstechnologies.com/html/session-management.html`
+  - Login Activity — `https://preskool.dreamstechnologies.com/html/login-activity.html`
+  - Activity Logs — `https://preskool.dreamstechnologies.com/html/activity-logs.html`
+  - Academic
+  - School Settings — `https://preskool.dreamstechnologies.com/html/school-settings.html`
+  - Class Settings — `https://preskool.dreamstechnologies.com/html/class-settings.html`
+  - Subject Settings — `https://preskool.dreamstechnologies.com/html/subject-settings.html`
+  - Grading Rules — `https://preskool.dreamstechnologies.com/html/grading-rules.html`
+  - Academic Settings — `https://preskool.dreamstechnologies.com/html/academic-settings.html`
+  - Religion — `https://preskool.dreamstechnologies.com/html/religion.html`
+  - Section Settings — `https://preskool.dreamstechnologies.com/html/section-settings.html`
+  - Timetable Settings — `https://preskool.dreamstechnologies.com/html/timetable-settings.html`
+  - Exam Settings — `https://preskool.dreamstechnologies.com/html/exam-settings.html`
+  - Financial Settings
+  - Payment Settings — `https://preskool.dreamstechnologies.com/html/payment-settings.html`
+  - Payment Gateways — `https://preskool.dreamstechnologies.com/html/payment-gateways.html`
+  - Tax Rates — `https://preskool.dreamstechnologies.com/html/tax-rates.html`
+  - Invoice Settings — `https://preskool.dreamstechnologies.com/html/invoice-settings.html`
+  - Fee Rules — `https://preskool.dreamstechnologies.com/html/fee-rules.html`
+  - Discount Rules — `https://preskool.dreamstechnologies.com/html/discount-rules.html`
+  - Communication
+  - Email Settings — `https://preskool.dreamstechnologies.com/html/email-settings.html`
+  - Email Templates — `https://preskool.dreamstechnologies.com/html/email-templates.html`
+  - SMS Settings — `https://preskool.dreamstechnologies.com/html/sms-settings.html`
+  - GDPR Cookies — `https://preskool.dreamstechnologies.com/html/gdpr-cookies.html`
+  - Localization
+  - Language — `https://preskool.dreamstechnologies.com/html/language.html`
+  - Localization — `https://preskool.dreamstechnologies.com/html/localization.html`
+  - Prefixes — `https://preskool.dreamstechnologies.com/html/prefixes.html`
+  - Integrations
+  - Connected Apps — `https://preskool.dreamstechnologies.com/html/connected-apps.html`
+  - Webhooks — `https://preskool.dreamstechnologies.com/html/webhooks.html`
+  - Appearance
+  - Theme Settings — `https://preskool.dreamstechnologies.com/html/theme-settings.html`
+  - Custom Fields — `https://preskool.dreamstechnologies.com/html/custom-fields.html`
+  - System
+  - Backup & Restore — `https://preskool.dreamstechnologies.com/html/backup-restore.html`
+  - Storage — `https://preskool.dreamstechnologies.com/html/storage.html`
+  - Ban IP — `https://preskool.dreamstechnologies.com/html/ban-ip.html`
+  - GDPR — `https://preskool.dreamstechnologies.com/html/gdpr.html`
+  - Logs — `https://preskool.dreamstechnologies.com/html/system-logs.html`
+  - Cache — `https://preskool.dreamstechnologies.com/html/cache.html`
+  - Maintenance Mode — `https://preskool.dreamstechnologies.com/html/maintenance-mode.html`
+
+## CMS & Pages
+
+  - Pages — `https://preskool.dreamstechnologies.com/html/pages.html`
+  - Blog
+  - All Blogs — `https://preskool.dreamstechnologies.com/html/blog.html`
+  - Categories — `https://preskool.dreamstechnologies.com/html/blog-categories.html`
+  - Comments — `https://preskool.dreamstechnologies.com/html/blog-comments.html`
+  - Tags — `https://preskool.dreamstechnologies.com/html/blog-tags.html`
+  - Location
+  - Countries — `https://preskool.dreamstechnologies.com/html/countries.html`
+  - States — `https://preskool.dreamstechnologies.com/html/states.html`
+  - Cities — `https://preskool.dreamstechnologies.com/html/cities.html`
+  - Testimonials — `https://preskool.dreamstechnologies.com/html/testimonials.html`
+  - FAQ — `https://preskool.dreamstechnologies.com/html/faq.html`
+  - Support
+  - Contact Messages — `https://preskool.dreamstechnologies.com/html/contact-messages.html`
+  - Tickets — `https://preskool.dreamstechnologies.com/html/tickets.html`
+  - Profile
+  - User Profile — `https://preskool.dreamstechnologies.com/html/profile.html`
+  - Blank Page — `https://preskool.dreamstechnologies.com/html/blank-page.html`
+  - Authentication
+  - Login
+  - Cover — `https://preskool.dreamstechnologies.com/html/login.html`
+  - Illustration — `https://preskool.dreamstechnologies.com/html/login-2.html`
+  - Basic — `https://preskool.dreamstechnologies.com/html/login-3.html`
+  - Register
+  - Cover — `https://preskool.dreamstechnologies.com/html/register.html`
+  - Illustration — `https://preskool.dreamstechnologies.com/html/register-2.html`
+  - Basic — `https://preskool.dreamstechnologies.com/html/register-3.html`
+  - Forgot Password
+  - Cover — `https://preskool.dreamstechnologies.com/html/forgot-password.html`
+  - Illustration — `https://preskool.dreamstechnologies.com/html/forgot-password-2.html`
+  - Basic — `https://preskool.dreamstechnologies.com/html/forgot-password-3.html`
+  - Reset Password
+  - Cover — `https://preskool.dreamstechnologies.com/html/reset-password.html`
+  - Illustration — `https://preskool.dreamstechnologies.com/html/reset-password-2.html`
+  - Basic — `https://preskool.dreamstechnologies.com/html/reset-password-3.html`
+  - Email Verification
+  - Cover — `https://preskool.dreamstechnologies.com/html/email-verification.html`
+  - Illustration — `https://preskool.dreamstechnologies.com/html/email-verification-2.html`
+  - Basic — `https://preskool.dreamstechnologies.com/html/email-verification-3.html`
+  - 2 Step Verification
+  - Cover — `https://preskool.dreamstechnologies.com/html/two-step-verification.html`
+  - Illustration — `https://preskool.dreamstechnologies.com/html/two-step-verification-2.html`
+  - Basic — `https://preskool.dreamstechnologies.com/html/two-step-verification-3.html`
+  - Lock Screen — `https://preskool.dreamstechnologies.com/html/lock-screen.html`
+  - Error Pages
+  - 404 Error — `https://preskool.dreamstechnologies.com/html/404-error.html`
+  - 500 Error — `https://preskool.dreamstechnologies.com/html/500-error.html`
+  - Coming Soon — `https://preskool.dreamstechnologies.com/html/coming-soon.html`
+  - Under Maintenance — `https://preskool.dreamstechnologies.com/html/under-maintenance.html`
+
+## UI Interface
+
+  - Base UI
+  - Alerts — `https://preskool.dreamstechnologies.com/html/ui-alerts.html`
+  - Accordion — `https://preskool.dreamstechnologies.com/html/ui-accordion.html`
+  - Avatar — `https://preskool.dreamstechnologies.com/html/ui-avatar.html`
+  - Badges — `https://preskool.dreamstechnologies.com/html/ui-badges.html`
+  - Buttons — `https://preskool.dreamstechnologies.com/html/ui-buttons.html`
+  - Button Group — `https://preskool.dreamstechnologies.com/html/ui-buttons-group.html`
+  - Breadcrumb — `https://preskool.dreamstechnologies.com/html/ui-breadcrumb.html`
+  - Card — `https://preskool.dreamstechnologies.com/html/ui-cards.html`
+  - Carousel — `https://preskool.dreamstechnologies.com/html/ui-carousel.html`
+  - Collapse — `https://preskool.dreamstechnologies.com/html/ui-collapse.html`
+- **Dropdowns**
+  - Grid — `https://preskool.dreamstechnologies.com/html/ui-grid.html`
+  - Images — `https://preskool.dreamstechnologies.com/html/ui-images.html`
+  - Links — `https://preskool.dreamstechnologies.com/html/ui-links.html`
+  - List Group — `https://preskool.dreamstechnologies.com/html/ui-list-group.html`
+  - Modals — `https://preskool.dreamstechnologies.com/html/ui-modals.html`
+  - Offcanvas — `https://preskool.dreamstechnologies.com/html/ui-offcanvas.html`
+  - Pagination — `https://preskool.dreamstechnologies.com/html/ui-pagination.html`
+  - Popovers — `https://preskool.dreamstechnologies.com/html/ui-popovers.html`
+  - Progress — `https://preskool.dreamstechnologies.com/html/ui-progress.html`
+  - Placeholders — `https://preskool.dreamstechnologies.com/html/ui-placeholders.html`
+  - Workspace — `https://preskool.dreamstechnologies.com/html/ui-workspace.html`
+  - Attendance — `https://preskool.dreamstechnologies.com/html/ui-attendance.html`
+  - Spinner — `https://preskool.dreamstechnologies.com/html/ui-spinner.html`
+  - Tabs — `https://preskool.dreamstechnologies.com/html/ui-nav-tabs.html`
+  - Tooltips — `https://preskool.dreamstechnologies.com/html/ui-tooltips.html`
+  - Typography — `https://preskool.dreamstechnologies.com/html/ui-typography.html`
+  - Dashboard UI
+  - Statistics — `https://preskool.dreamstechnologies.com/html/ui-statistics.html`
+  - Widgets — `https://preskool.dreamstechnologies.com/html/ui-widgets.html`
+  - Lists — `https://preskool.dreamstechnologies.com/html/ui-lists.html`
+  - Activity — `https://preskool.dreamstechnologies.com/html/ui-activity.html`
+  - Analytics — `https://preskool.dreamstechnologies.com/html/ui-analytics.html`
+  - Insights — `https://preskool.dreamstechnologies.com/html/ui-insights.html`
+  - Actions — `https://preskool.dreamstechnologies.com/html/ui-actions.html`
+  - Dashboard Cards — `https://preskool.dreamstechnologies.com/html/ui-dashboard-cards.html`
+  - Advanced UI
+  - Clipboard — `https://preskool.dreamstechnologies.com/html/ui-clipboard.html`
+  - Drag & Drop — `https://preskool.dreamstechnologies.com/html/ui-drag-drop.html`
+  - Scrollbar — `https://preskool.dreamstechnologies.com/html/ui-scrollbar.html`
+  - Sweet Alerts — `https://preskool.dreamstechnologies.com/html/ui-sweetalerts.html`
+  - Lightbox — `https://preskool.dreamstechnologies.com/html/ui-lightbox.html`
+  - Charts
+  - Apex Charts — `https://preskool.dreamstechnologies.com/html/chart-apex.html`
+  - Chart C3 — `https://preskool.dreamstechnologies.com/html/chart-c3.html`
+  - Chart Js — `https://preskool.dreamstechnologies.com/html/chart-js.html`
+  - Morris Charts — `https://preskool.dreamstechnologies.com/html/chart-morris.html`
+  - Flot Charts — `https://preskool.dreamstechnologies.com/html/chart-flot.html`
+  - Peity Charts — `https://preskool.dreamstechnologies.com/html/chart-peity.html`
+  - Icons
+  - Fontawesome Icons — `https://preskool.dreamstechnologies.com/html/icon-fontawesome.html`
+  - Feather Icons — `https://preskool.dreamstechnologies.com/html/icon-feather.html`
+  - Ionic Icons — `https://preskool.dreamstechnologies.com/html/icon-ionic.html`
+  - Material Icons — `https://preskool.dreamstechnologies.com/html/icon-material.html`
+  - Pe7 Icons — `https://preskool.dreamstechnologies.com/html/icon-pe7.html`
+  - Simpleline Icons — `https://preskool.dreamstechnologies.com/html/icon-simpleline.html`
+  - Themify Icons — `https://preskool.dreamstechnologies.com/html/icon-themify.html`
+  - Weather Icons — `https://preskool.dreamstechnologies.com/html/icon-weather.html`
+  - Typicon Icons — `https://preskool.dreamstechnologies.com/html/icon-typicon.html`
+  - Flag Icons — `https://preskool.dreamstechnologies.com/html/icon-flag.html`
+  - Forms
+  - Form Elements
+  - Basic Inputs — `https://preskool.dreamstechnologies.com/html/form-basic-inputs.html`
+  - Checkbox & Radios — `https://preskool.dreamstechnologies.com/html/form-checkbox-radios.html`
+  - Input Groups — `https://preskool.dreamstechnologies.com/html/form-input-groups.html`
+  - Grid & Gutters — `https://preskool.dreamstechnologies.com/html/form-grid-gutters.html`
+  - Form Select — `https://preskool.dreamstechnologies.com/html/form-select.html`
+  - Input Masks — `https://preskool.dreamstechnologies.com/html/form-mask.html`
+  - File Uploads — `https://preskool.dreamstechnologies.com/html/form-fileupload.html`
+  - Horizontal Form — `https://preskool.dreamstechnologies.com/html/form-horizontal.html`
+  - Vertical Form — `https://preskool.dreamstechnologies.com/html/form-vertical.html`
+  - Floating Labels — `https://preskool.dreamstechnologies.com/html/form-floating-labels.html`
+  - Form Validation — `https://preskool.dreamstechnologies.com/html/form-validation.html`
+  - Select2 — `https://preskool.dreamstechnologies.com/html/form-select2.html`
+  - Form Wizard — `https://preskool.dreamstechnologies.com/html/form-wizard.html`
+  - Tables
+  - Basic Tables — `https://preskool.dreamstechnologies.com/html/tables-basic.html`
+  - Data Table — `https://preskool.dreamstechnologies.com/html/data-tables.html`
+
+## Help
+
+  - Documentation — `https://preskool.dreamstechnologies.com/documentation/index.html`
+  - Changelog v2.0 — `https://preskool.dreamstechnologies.com/documentation/changelog.html`
+  - Multi Level
+  - Multilevel 1
+  - Multilevel 2
+  - Multilevel 2.1
+  - Multilevel 2.2
+  - Multilevel 2.2.1
+  - Multilevel 2.2.2
+  - Multilevel 3
+- **My Profile**
+- **Settings**
+- **Logout**
