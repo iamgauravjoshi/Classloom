@@ -21,11 +21,20 @@ export class RedisService implements OnModuleDestroy {
     this.client.connect().catch(() => undefined);
   }
 
+  /** PONG within `timeoutMs`, waiting for an in-progress connection (e.g. just after startup). */
   async ping(timeoutMs = 1000): Promise<boolean> {
     let timer: NodeJS.Timeout | undefined;
+    let onReady: (() => void) | undefined;
     try {
+      const ready =
+        this.client.status === 'ready'
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              onReady = resolve;
+              this.client.once('ready', resolve);
+            });
       const reply = await Promise.race([
-        this.client.ping(),
+        ready.then(() => this.client.ping()),
         new Promise<never>((_, reject) => {
           timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
         }),
@@ -35,6 +44,7 @@ export class RedisService implements OnModuleDestroy {
       return false;
     } finally {
       clearTimeout(timer);
+      if (onReady) this.client.off('ready', onReady);
     }
   }
 
