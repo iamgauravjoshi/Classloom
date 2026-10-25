@@ -35,9 +35,9 @@ export function AppShell({
       <AppSidebar permissions={session.permissions} campus={session.campus} />
       <SidebarInset className="min-w-0">
         <Topbar session={session} />
-        <main id="main" className={showTabBar ? 'flex-1 p-4 pb-24 md:p-6' : 'flex-1 p-4 md:p-6'}>
+        <div id="main" className={showTabBar ? 'flex-1 p-4 pb-24 md:p-6' : 'flex-1 p-4 md:p-6'}>
           {children}
-        </main>
+        </div>
       </SidebarInset>
       {showTabBar && <MobileTabBar />}
     </SidebarProvider>

@@ -35,19 +35,14 @@ export function UserMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t('shell.accountMenu')}
-            className="size-11 md:size-8"
-          />
-        }
+        render={<Button variant="ghost" size="icon" className="size-11 md:size-8" />}
       >
         <Avatar className="size-8">
           {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
           <AvatarFallback>{initials(user.name)}</AvatarFallback>
         </Avatar>
+        {/* Name is "<initials> Account menu": axe requires visible text (the initials) in the name. */}
+        <span className="sr-only">{t('shell.accountMenu')}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-52">
         <DropdownMenuGroup>

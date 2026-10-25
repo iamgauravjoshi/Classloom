@@ -25,8 +25,9 @@
       "cache": false
     },
     "e2e": {
-      "dependsOn": ["^build"],
-      "cache": false
+      "dependsOn": ["build"],
+      "cache": false,
+      "outputs": ["playwright-report/**", "test-results/**"]
     }
   }
 }

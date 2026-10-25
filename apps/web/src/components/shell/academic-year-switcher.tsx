@@ -29,17 +29,10 @@ export function AcademicYearSwitcher({ year }: { year: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={`${t('academicYear')}: ${selected}`}
-            className="h-11 min-w-11 md:h-7"
-          />
-        }
+        render={<Button variant="ghost" size="sm" className="h-11 min-w-11 md:h-7" />}
       >
         <IconCalendar data-icon="inline-start" />
-        <span className="hidden sm:inline">{t('academicYearValue', { year: selected })}</span>
+        <span className="sr-only sm:not-sr-only">{t('academicYearValue', { year: selected })}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>

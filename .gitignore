@@ -31,3 +31,7 @@ blob-report/
 
 # generated clients
 apps/api/src/generated/
+
+# TypeScript / Next.js generated files
+*.tsbuildinfo
+next-env.d.ts

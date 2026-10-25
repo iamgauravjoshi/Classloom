@@ -44,13 +44,15 @@ export function CommandSearch({ permissions }: { permissions: string[] }) {
       <Button
         variant="outline"
         size="sm"
-        aria-label={t('shell.search')}
         className="text-muted-foreground h-11 min-w-11 justify-start md:h-7 md:w-64"
         onClick={() => setOpen(true)}
       >
         <IconSearch data-icon="inline-start" />
-        <span className="hidden truncate md:inline">{t('shell.searchPlaceholder')}</span>
-        <kbd className="border-border ml-auto hidden rounded-sm border px-1.5 text-xs md:inline">
+        <span className="sr-only md:not-sr-only md:truncate">{t('shell.searchPlaceholder')}</span>
+        <kbd
+          aria-hidden="true"
+          className="border-border ml-auto hidden rounded-sm border px-1.5 text-xs md:inline"
+        >
           {t('shell.searchShortcut')}
         </kbd>
       </Button>

@@ -26,9 +26,7 @@ export function CampusSwitcher({ campus }: { campus: { id: string; name: string 
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<SidebarMenuButton size="lg" aria-label={t('switchCampus')} />}
-          >
+          <DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
             <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
               <IconSchool />
             </span>
