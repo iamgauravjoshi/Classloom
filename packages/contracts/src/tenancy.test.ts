@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
-import { BOARDS, INDIAN_STATES, schoolRegistrationRequestSchema } from './index';
+import {
+  BOARDS,
+  INDIAN_STATES,
+  type IndianStateCode,
+  type PublicSchool,
+  type SchoolRegistrationRequest,
+  schoolRegistrationRequestSchema,
+} from './index';
 
 const validPayload = {
   schoolName: 'Green Valley Public School',
@@ -86,10 +93,54 @@ describe('INDIAN_STATES', () => {
     expect(new Set(INDIAN_STATES.map((s) => s.code)).size).toBe(36);
   });
 
-  it('includes the ISO 3166-2:IN codes used for lookups', () => {
-    const codes = INDIAN_STATES.map((s) => s.code);
-    for (const code of ['UK', 'DL', 'JK', 'LA', 'DH', 'PY', 'LD', 'AN', 'CH', 'TS']) {
-      expect(codes).toContain(code);
-    }
+  it('has exactly the ISO 3166-2:IN codes, sorted', () => {
+    const codes = INDIAN_STATES.map((s) => s.code)
+      .slice()
+      .sort();
+    expect(codes).toEqual([
+      'AN',
+      'AP',
+      'AR',
+      'AS',
+      'BR',
+      'CG',
+      'CH',
+      'DH',
+      'DL',
+      'GA',
+      'GJ',
+      'HP',
+      'HR',
+      'JH',
+      'JK',
+      'KA',
+      'KL',
+      'LA',
+      'LD',
+      'MH',
+      'ML',
+      'MN',
+      'MP',
+      'MZ',
+      'NL',
+      'OD',
+      'PB',
+      'PY',
+      'RJ',
+      'SK',
+      'TG',
+      'TN',
+      'TR',
+      'UK',
+      'UP',
+      'WB',
+    ]);
+  });
+});
+
+describe('state type', () => {
+  it('keeps the literal union of state codes', () => {
+    expectTypeOf<SchoolRegistrationRequest['state']>().toEqualTypeOf<IndianStateCode>();
+    expectTypeOf<PublicSchool['state']>().toEqualTypeOf<IndianStateCode>();
   });
 });

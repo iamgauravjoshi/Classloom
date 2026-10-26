@@ -38,7 +38,7 @@ export const INDIAN_STATES = [
   { code: 'SK', name: 'Sikkim' },
   { code: 'TN', name: 'Tamil Nadu' },
   { code: 'TR', name: 'Tripura' },
-  { code: 'TS', name: 'Telangana' },
+  { code: 'TG', name: 'Telangana' },
   { code: 'UK', name: 'Uttarakhand' },
   { code: 'UP', name: 'Uttar Pradesh' },
   { code: 'WB', name: 'West Bengal' },
