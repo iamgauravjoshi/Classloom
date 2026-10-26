@@ -1,3 +1,4 @@
+import { TenantReassignmentError } from './errors';
 import { scopeArgs } from './tenant-scope.extension';
 
 const A = '0192d5e0-0000-7000-8000-00000000000a';
@@ -61,4 +62,33 @@ describe('scopeArgs', () => {
     scopeArgs('findUnique', args, A);
     expect(args).toEqual({ where: { id: 'c1' } });
   });
+});
+
+describe('scopeArgs rejects moving rows to another tenant', () => {
+  it.each(['update', 'updateMany', 'updateManyAndReturn'])('rejects data.tenantId on %s', (op) => {
+    expect(() => scopeArgs(op, { where: { id: 'c1' }, data: { tenantId: B } }, A)).toThrow(
+      TenantReassignmentError,
+    );
+  });
+
+  it('rejects data.tenant (relation connect) on update', () => {
+    expect(() =>
+      scopeArgs('update', { where: { id: 'c1' }, data: { tenant: { connect: { id: B } } } }, A),
+    ).toThrow(TenantReassignmentError);
+  });
+
+  it('rejects tenantId even when it equals the current tenant', () => {
+    expect(() => scopeArgs('update', { where: { id: 'c1' }, data: { tenantId: A } }, A)).toThrow(
+      TenantReassignmentError,
+    );
+  });
+
+  it.each([{ tenantId: B }, { tenant: { connect: { id: B } } }])(
+    'rejects upsert.update with %o',
+    (update) => {
+      expect(() =>
+        scopeArgs('upsert', { where: { id: 'c1' }, create: { name: 'x' }, update }, A),
+      ).toThrow(TenantReassignmentError);
+    },
+  );
 });

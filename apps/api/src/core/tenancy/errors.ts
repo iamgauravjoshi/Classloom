@@ -8,3 +8,14 @@ export class TenantContextMissingError extends Error {
     this.name = 'TenantContextMissingError';
   }
 }
+
+/**
+ * Thrown when a scoped update tries to set `tenantId` or the `tenant` relation. Rows never move
+ * between tenants through the scoped client; a caller attempting it has a bug.
+ */
+export class TenantReassignmentError extends Error {
+  constructor(operation: string) {
+    super(`${operation} may not change tenantId or tenant on a tenant-scoped row`);
+    this.name = 'TenantReassignmentError';
+  }
+}

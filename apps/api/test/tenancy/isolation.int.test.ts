@@ -1,7 +1,7 @@
 import { Client } from 'pg';
 
 import { PrismaService } from '../../src/core/prisma/prisma.service';
-import { TenantContextMissingError } from '../../src/core/tenancy/errors';
+import { TenantContextMissingError, TenantReassignmentError } from '../../src/core/tenancy/errors';
 import { TenantContext } from '../../src/core/tenancy/tenant-context';
 import { withTenant } from '../../src/core/tenancy/with-tenant';
 import { startTestInfra, type TestInfra } from '../setup-containers';
@@ -107,6 +107,19 @@ describe('tenant data isolation', () => {
         }),
       );
       expect(membership.tenantId).toBe(B);
+    });
+
+    it("cannot move A's campus to B through update", async () => {
+      const campusA = await withTenant(prisma, A, (tx) => tx.campus.findFirstOrThrow());
+      await expect(
+        ctx.run(A, () =>
+          prisma.scoped.campus.update({ where: { id: campusA.id }, data: { tenantId: B } }),
+        ),
+      ).rejects.toThrow(TenantReassignmentError);
+      const after = await withTenant(prisma, A, (tx) =>
+        tx.campus.findUnique({ where: { id: campusA.id } }),
+      );
+      expect(after?.tenantId).toBe(A);
     });
 
     it('rejects without a tenant context', async () => {

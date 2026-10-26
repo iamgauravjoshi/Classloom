@@ -1,8 +1,19 @@
 import type { PrismaClient } from '../../generated/prisma/client';
+import { TenantReassignmentError } from './errors';
 import type { TenantContext } from './tenant-context';
 import { isTenantScopedModel } from './tenant-scoped-models';
 
 type Args = Record<string, unknown>;
+
+/** Operations whose `data` (or `update`, for upsert) must not move rows between tenants. */
+const UPDATE_OPERATIONS = new Set(['update', 'updateMany', 'updateManyAndReturn']);
+
+function assertNoTenantChange(data: unknown, operation: string): void {
+  if (typeof data !== 'object' || data === null) return;
+  if (Object.hasOwn(data, 'tenantId') || Object.hasOwn(data, 'tenant')) {
+    throw new TenantReassignmentError(operation);
+  }
+}
 
 /** Operations whose `where` is narrowed to the current tenant. */
 const WHERE_OPERATIONS = new Set([
@@ -32,11 +43,14 @@ function withTenantId(data: unknown, tenantId: string): unknown {
 
 /**
  * Rewrites the arguments of a query on a tenant-scoped model so it can only touch the current
- * tenant's rows. A caller-supplied `tenantId` is overwritten, never trusted. Unknown operations
- * throw rather than run unscoped.
+ * tenant's rows. A caller-supplied `tenantId` in `where` or create `data` is overwritten, never
+ * trusted; one in update `data` (or upsert `update`) throws TenantReassignmentError, because rows
+ * never move between tenants. Unknown operations throw rather than run unscoped.
  */
 export function scopeArgs(operation: string, args: Args | undefined, tenantId: string): Args {
   const scoped: Args = { ...args };
+  if (UPDATE_OPERATIONS.has(operation)) assertNoTenantChange(scoped.data, operation);
+  if (operation === 'upsert') assertNoTenantChange(scoped.update, operation);
   if (WHERE_OPERATIONS.has(operation)) {
     scoped.where = { ...(scoped.where as Args | undefined), tenantId };
     if (operation === 'upsert') scoped.create = withTenantId(scoped.create, tenantId);
