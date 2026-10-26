@@ -1,0 +1,41 @@
+{
+  "name": "classloom",
+  "private": true,
+  "description": "Classloom — multi-school management SaaS for Indian schools",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:int": "turbo run test:int",
+    "e2e": "turbo run e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "infra:up": "docker compose -f docker/compose.yml --env-file .env up -d --wait",
+    "infra:down": "docker compose -f docker/compose.yml --env-file .env down",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
+    "eslint": "10.13.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.6.0",
+    "prettier": "3.9.10",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "turbo": "2.11.10",
+    "typescript": "6.0.3"
+  },
+  "lint-staged": {
+    "{apps,packages}/*/src/**/*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,mjs,cjs,json,md,css,yml,yaml}": "prettier --write --ignore-unknown"
+  }
+}

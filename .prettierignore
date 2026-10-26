@@ -1,0 +1,13 @@
+pnpm-lock.yaml
+.agents/
+.superpowers/
+docs/research/
+**/generated/**
+packages/api-client/openapi.json
+**/.next/
+**/dist/
+**/coverage/
+**/storybook-static/
+**/playwright-report/
+**/test-results/
+packages/design-tokens/src/tokens.css

@@ -1,0 +1,4 @@
+{
+  "extends": "@classloom/config/tsconfig.library.json",
+  "include": ["src", "*.config.ts"]
+}

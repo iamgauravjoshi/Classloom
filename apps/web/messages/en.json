@@ -1,0 +1,88 @@
+{
+  "metadata": {
+    "title": "Classloom",
+    "description": "One portal to run your school: admissions, students, staff, attendance, fees, exams and communication."
+  },
+  "app": {
+    "name": "Classloom",
+    "logoAlt": "Classloom home"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "students": "Students",
+    "admissions": "Admissions",
+    "parents": "Parents",
+    "staff": "Staff",
+    "classes": "Classes & sections",
+    "subjects": "Subjects",
+    "timetable": "Timetable",
+    "fees": "Fees",
+    "schoolProfile": "School profile",
+    "usersRoles": "Users & roles"
+  },
+  "navGroups": {
+    "main": "Main",
+    "people": "People",
+    "academic": "Academic",
+    "finance": "Finance",
+    "settings": "Settings"
+  },
+  "shell": {
+    "mainNavigation": "Main navigation",
+    "mobileNavigation": "Quick navigation",
+    "toggleSidebar": "Toggle sidebar",
+    "toggleTheme": "Toggle theme",
+    "search": "Search",
+    "searchPlaceholder": "Search pages…",
+    "searchShortcut": "Ctrl K",
+    "searchTitle": "Search Classloom",
+    "searchDescription": "Jump to any page you have access to.",
+    "noResults": "No results found.",
+    "pages": "Pages",
+    "notifications": "Notifications",
+    "academicYear": "Academic year",
+    "academicYearValue": "AY {year}",
+    "campus": "Campus",
+    "switchCampus": "Switch campus",
+    "addCampus": "Add campus",
+    "accountMenu": "Account menu",
+    "profile": "My profile",
+    "settings": "Settings",
+    "signOut": "Sign out",
+    "more": "More"
+  },
+  "roles": {
+    "admin": "School admin",
+    "teacher": "Teacher",
+    "parent": "Parent",
+    "student": "Student"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back, {name}",
+    "today": "Today is {date} · Academic year {year}",
+    "placeholderNote": "Live figures arrive with the Students & Admissions module.",
+    "stats": {
+      "students": "Total students",
+      "teachers": "Total teachers",
+      "staff": "Total staff",
+      "subjects": "Total subjects"
+    },
+    "notAvailable": "—"
+  },
+  "api": {
+    "online": "API online",
+    "offline": "API offline",
+    "checking": "Checking API…"
+  },
+  "comingSoon": {
+    "title": "{section} is coming soon",
+    "body": "This module is on the Classloom roadmap and will be built module by module.",
+    "back": "Back to dashboard"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you are looking for does not exist or has moved.",
+    "back": "Go to dashboard"
+  }
+}

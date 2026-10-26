@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@classloom/design-tokens/tokens.css';
+
+@source '../**/*.{ts,tsx}';
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}

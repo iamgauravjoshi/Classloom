@@ -1,0 +1,17 @@
+packages:
+  - apps/*
+  - packages/*
+
+allowBuilds:
+  # Optional native add-ons / postinstall checks pulled in by testcontainers (docker-modem); not needed.
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
+  '@parcel/watcher': false
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  '@swc/core': true
+  esbuild: true
+  prisma: true
+
+saveExact: true
