@@ -141,7 +141,8 @@ const light: SemanticTheme = {
   'muted-foreground': palette.grey[700],
   'subtle-foreground': palette.grey[600],
   border: palette.grey[100],
-  input: palette.grey[100],
+  // Input borders identify the field, so they need 3:1 (WCAG 1.4.11); card borders stay soft.
+  input: palette.grey[500],
   primary: brand.primary,
   'primary-foreground': brand.white,
   'primary-text': brand.primary,
@@ -169,7 +170,7 @@ const dark: SemanticTheme = {
   'muted-foreground': palette.dark[300],
   'subtle-foreground': palette.dark[400],
   border: palette.dark[600],
-  input: palette.dark[600],
+  input: palette.dark[400],
   primary: brand.primary,
   'primary-foreground': brand.white,
   'primary-text': palette.primary[600],

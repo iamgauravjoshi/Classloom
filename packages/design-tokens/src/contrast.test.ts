@@ -49,3 +49,18 @@ describe.each(['light', 'dark'] as const)('%s semantic tokens', (mode) => {
     expect(contrastRatio(s[`${hue}-strong`], s[`${hue}-tint`])).toBeGreaterThanOrEqual(AA);
   });
 });
+
+describe.each(['light', 'dark'] as const)('%s component pairs', (mode) => {
+  const s = semantic[mode];
+
+  // WCAG 1.4.11: a text input's border is what identifies it, so it needs 3:1.
+  it('input borders meet 3:1 on cards and canvas', () => {
+    expect(contrastRatio(s.input, s.card)).toBeGreaterThanOrEqual(UI);
+    expect(contrastRatio(s.input, s.background)).toBeGreaterThanOrEqual(UI);
+  });
+
+  // Destructive menu items and ghost-style buttons put danger text straight on the card.
+  it.each(STATUS_HUES)('%s-strong text meets AA on cards', (hue) => {
+    expect(contrastRatio(s[`${hue}-strong`], s.card)).toBeGreaterThanOrEqual(AA);
+  });
+});
