@@ -281,9 +281,9 @@ Isolation is enforced in three layers, so a failure in one is caught by the next
 - Unique across all tenants, case-insensitive. Codes held by `PENDING_VERIFICATION` tenants count as taken until they expire.
 - **Reserved codes** (rejected so codes stay safe as future subdomains): `ADMIN`, `API`, `APP`, `WWW`, `MAIL`, `CLASSLOOM`, `SUPPORT`, `HELP`, `STATUS`, `DOCS`, `BLOG`, `STATIC`, `ASSETS`, `CDN`, `TEST`, `DEMO`, `ROOT`, `SYSTEM`.
 - **Suggestion** (`suggestSchoolCode(name, city)` in `@classloom/utils`):
-  1. Take the initials of the name's significant words; skip the filler words "of, the, and, school, academy, vidyalaya" unless that leaves nothing.
+  1. Take the initials of the name's significant words; skip only the joining words "of", "the", "and" and "&" (school, academy, vidyalaya etc. count, e.g. "Kendriya Vidyalaya" → KV).
   2. Append the first letter of the city ("Global International School", "Dehradun" → `GISD`).
-  3. Pad to at least 3 characters with further letters of the first word.
+  3. If shorter than 3 characters, insert further letters of the first word after its initial ("Academy", "Pune" → `ACP`). Only ASCII letters A–Z are used. If the name gives none, use the first 3 letters of the city, and finally `SCH`.
   4. If the code is taken, the API tries `-2`, `-3`, … and returns the first free one.
 - A code can be changed only by the platform owner (CLI) in Part 1, because it is printed on letters and used at sign-in.
 
