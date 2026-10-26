@@ -32,4 +32,17 @@ describe('database roles', () => {
   it('does not let the app role create tables', async () => {
     await expect(client.query('CREATE TABLE x (id int)')).rejects.toThrow(/permission denied/);
   });
+
+  it('lets the owner role bypass RLS and create databases for migrations', async () => {
+    const owner = new Client({ connectionString: infra.env.DATABASE_MIGRATION_URL });
+    await owner.connect();
+    try {
+      const res = await owner.query<{ rolbypassrls: boolean; rolcreatedb: boolean }>(
+        'SELECT rolbypassrls, rolcreatedb FROM pg_roles WHERE rolname = current_user',
+      );
+      expect(res.rows[0]).toEqual({ rolbypassrls: true, rolcreatedb: true });
+    } finally {
+      await owner.end();
+    }
+  });
 });

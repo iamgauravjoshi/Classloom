@@ -6,11 +6,16 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'classloom_owner') THEN
-    CREATE ROLE classloom_owner LOGIN PASSWORD 'classloom_owner' NOSUPERUSER NOBYPASSRLS;
+    CREATE ROLE classloom_owner LOGIN PASSWORD 'classloom_owner';
   END IF;
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'classloom_app') THEN
     CREATE ROLE classloom_app LOGIN PASSWORD 'classloom_app' NOSUPERUSER NOBYPASSRLS;
   END IF;
+
+  -- Always applied so volumes created by an earlier version of this script converge.
+  -- The owner bypasses RLS (migrations, platform CLI) and needs CREATEDB for Prisma's shadow database.
+  ALTER ROLE classloom_owner LOGIN NOSUPERUSER BYPASSRLS CREATEDB;
+  ALTER ROLE classloom_app LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB;
 
   EXECUTE format('ALTER DATABASE %I OWNER TO classloom_owner', current_database());
   ALTER SCHEMA public OWNER TO classloom_owner;
