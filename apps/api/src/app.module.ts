@@ -5,9 +5,11 @@ import { ZodValidationPipe } from 'nestjs-zod';
 
 import { ConfigModule } from './core/config/config.module';
 import type { Env } from './core/config/env.schema';
+import { EmailModule } from './core/email/email.module';
 import { HealthModule } from './core/health/health.module';
 import { ProblemFilter } from './core/http/problem.filter';
 import { PrismaModule } from './core/prisma/prisma.module';
+import { QueueModule } from './core/queue/queue.module';
 import { RedisModule } from './core/redis/redis.module';
 import { TenancyCoreModule } from './core/tenancy/tenancy-core.module';
 
@@ -33,6 +35,8 @@ export class AppModule {
         TenancyCoreModule,
         PrismaModule,
         RedisModule,
+        QueueModule.forRoot(env),
+        EmailModule,
         HealthModule,
       ],
       providers: [

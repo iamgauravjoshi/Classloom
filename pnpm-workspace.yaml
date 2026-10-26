@@ -13,5 +13,7 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   prisma: true
+  # Optional native speed-up for msgpackr (bullmq); it falls back to pure JS.
+  msgpackr-extract: false
 
 saveExact: true

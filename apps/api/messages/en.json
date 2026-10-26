@@ -1,0 +1,14 @@
+{
+  "email": {
+    "verifyRegistration": {
+      "subject": "Verify your school registration on Classloom",
+      "heading": "Verify your school registration",
+      "intro": "Thanks for registering {schoolName} on Classloom. Use the code below, or the button, to confirm your email address.",
+      "codeLabel": "Your verification code",
+      "button": "Verify registration",
+      "linkFallback": "Or open this link in your browser:",
+      "expiry": "This code and link expire on {date} at {time} IST.",
+      "ignore": "If you didn't register this school, you can ignore this email."
+    }
+  }
+}
