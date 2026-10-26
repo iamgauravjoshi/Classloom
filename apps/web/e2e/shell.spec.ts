@@ -87,10 +87,38 @@ test('unknown pages show the localized 404', async ({ page }) => {
 test('the PWA manifest is served', async ({ request }) => {
   const res = await request.get('/manifest.webmanifest');
   expect(res.ok()).toBe(true);
-  const manifest = (await res.json()) as { name: string; icons: { src: string }[] };
+  const manifest = (await res.json()) as {
+    name: string;
+    orientation?: string;
+    icons: { src: string }[];
+  };
   expect(manifest.name).toBe('Classloom');
+  // WCAG 1.3.4: the installed app must not lock orientation (tablets are used in landscape).
+  expect(manifest.orientation ?? 'any').toBe('any');
   for (const icon of manifest.icons) {
     const image = await request.get(icon.src);
     expect(image.headers()['content-type'], icon.src).toBe('image/png');
   }
+});
+
+test('touch targets are at least 44px on touch devices', async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.use.hasTouch, 'Pointer devices use the compact desktop sizes');
+  await openDashboard(page);
+  const controls = [
+    sidebarTrigger(page),
+    page.getByRole('button', { name: 'Search pages…' }),
+    page.getByRole('button', { name: /^AY / }),
+    page.getByRole('button', { name: 'Toggle theme' }),
+    page.getByRole('button', { name: 'Notifications' }),
+    page.getByRole('button', { name: /Account menu/ }),
+  ];
+  for (const control of controls) {
+    const box = await control.boundingBox();
+    expect(box, String(control)).not.toBeNull();
+    expect(box!.height, String(control)).toBeGreaterThanOrEqual(44);
+    expect(box!.width, String(control)).toBeGreaterThanOrEqual(44);
+  }
+  if (isSheetLayout(page)) await sidebarTrigger(page).click();
+  const link = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Students' });
+  expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });

@@ -13,7 +13,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon-sm"
       aria-label={t('toggleTheme')}
-      className="size-11 md:size-7"
+      className="size-7 pointer-coarse:size-11"
       onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
     >
       {/* Both icons render so server and client markup match; CSS shows the right one. */}

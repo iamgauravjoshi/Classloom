@@ -44,7 +44,7 @@ export function CommandSearch({ permissions }: { permissions: string[] }) {
       <Button
         variant="outline"
         size="sm"
-        className="text-muted-foreground h-11 min-w-11 justify-start md:h-7 md:w-64"
+        className="text-muted-foreground h-7 justify-start md:w-64 pointer-coarse:h-11 pointer-coarse:min-w-11"
         onClick={() => setOpen(true)}
       >
         <IconSearch data-icon="inline-start" />

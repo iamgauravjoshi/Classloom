@@ -15,7 +15,7 @@ export function Topbar({ session }: { session: ShellSession }) {
   const t = useTranslations('shell');
   return (
     <header className="border-border bg-card sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b px-3 md:px-4">
-      <SidebarTrigger aria-label={t('toggleSidebar')} className="size-11 md:size-7" />
+      <SidebarTrigger aria-label={t('toggleSidebar')} className="size-7 pointer-coarse:size-11" />
       <CommandSearch permissions={session.permissions} />
       <div className="ml-auto flex min-w-0 items-center gap-1">
         <AcademicYearSwitcher year={session.academicYear} />
@@ -24,7 +24,7 @@ export function Topbar({ session }: { session: ShellSession }) {
           variant="ghost"
           size="icon-sm"
           aria-label={t('notifications')}
-          className="size-11 md:size-7"
+          className="size-7 pointer-coarse:size-11"
         >
           <IconBell />
         </Button>

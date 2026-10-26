@@ -1,8 +1,9 @@
 /// <reference lib="esnext" />
 /// <reference lib="webworker" />
-import { defaultCache } from '@serwist/turbopack/worker';
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-import { Serwist } from 'serwist';
+import { CacheFirst, ExpirationPlugin, Serwist } from 'serwist';
+
+import { isCacheableStaticAsset } from '../lib/sw-cache-rules';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -17,7 +18,16 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  // Deliberately not Serwist's `defaultCache`: it caches cross-origin API responses and pages.
+  runtimeCaching: [
+    {
+      matcher: isCacheableStaticAsset,
+      handler: new CacheFirst({
+        cacheName: 'static-assets',
+        plugins: [new ExpirationPlugin({ maxEntries: 300, maxAgeSeconds: 30 * 24 * 60 * 60 })],
+      }),
+    },
+  ],
 });
 
 serwist.addEventListeners();
