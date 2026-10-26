@@ -7,6 +7,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 2 : 0,
+  // Fail fast instead of hanging a CI runner: the whole suite normally takes ~5 minutes.
+  globalTimeout: CI ? 20 * 60_000 : undefined,
   workers: CI ? 2 : undefined,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {

@@ -13,6 +13,7 @@ jobs:
   checks:
     name: Lint, typecheck, unit tests, build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -33,6 +34,7 @@ jobs:
   integration:
     name: API integration tests (Testcontainers)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -46,6 +48,7 @@ jobs:
   e2e:
     name: Cross-device E2E and accessibility
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -57,7 +60,9 @@ jobs:
       - run: cp .env.example .env
       - run: pnpm infra:up
       - run: pnpm --filter @classloom/web exec playwright install --with-deps chromium firefox webkit
-      - run: pnpm e2e
+      - run: pnpm build
+      # Run Playwright directly (not via turbo) so its output streams live in the job log.
+      - run: pnpm --filter @classloom/web exec playwright test
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
