@@ -1,12 +1,15 @@
 import { createHash } from 'node:crypto';
 
+import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
+import type { Queue } from 'bullmq';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 
-import { EmailService } from '../../src/core/email/email.service';
+import { EMAIL_QUEUE, EmailService } from '../../src/core/email/email.service';
 import { PrismaService } from '../../src/core/prisma/prisma.service';
 import { createApp } from '../../src/main';
+import { REGISTRATION_QUEUE } from '../../src/modules/tenancy/school-registration.service';
 import { startTestInfra, type TestInfra } from '../setup-containers';
 
 interface MailpitSummary {
@@ -168,6 +171,15 @@ describe('school registration', () => {
       .send({ email: 'asha@school.in', code: 'NOPE' });
     expect(wrongEmail.status).toBe(202);
     expect(unknown.status).toBe(202);
+    // The resend job runs in the background: wait for it to finish, then confirm no email.
+    const jobs = app.get<Queue>(getQueueToken(REGISTRATION_QUEUE));
+    const deadline = Date.now() + 5000;
+    while (
+      Date.now() < deadline &&
+      (await jobs.getActiveCount()) + (await jobs.getWaitingCount()) > 0
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(await mails(1)).toHaveLength(1);
   });
@@ -217,6 +229,21 @@ describe('school registration', () => {
     expect(await prisma.tenant.count({ where: { code: 'SCHD' } })).toBe(0);
     expect(await prisma.user.count({ where: { email: 'asha@school.in' } })).toBe(1);
     expect(await mails(3)).toHaveLength(3);
+  });
+
+  it('keeps no completed email jobs (they hold live verification links)', async () => {
+    await request(server).post('/school-registrations').send(payload());
+    await mails(1);
+    const queue = app.get<Queue>(getQueueToken(EMAIL_QUEUE));
+    const deadline = Date.now() + 5000;
+    while (
+      Date.now() < deadline &&
+      (await queue.getActiveCount()) + (await queue.getWaitingCount()) > 0
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await queue.getCompletedCount()).toBe(0);
   });
 
   it('rolls everything back when the email cannot be queued', async () => {

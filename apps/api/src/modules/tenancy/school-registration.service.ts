@@ -2,7 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import type { SchoolRegistrationRequest } from '@classloom/contracts';
 import { suggestSchoolCode } from '@classloom/utils';
+import { InjectQueue } from '@nestjs/bullmq';
 import { ConflictException, GoneException, Inject, Injectable, Logger } from '@nestjs/common';
+import type { Queue } from 'bullmq';
 
 import { ENV } from '../../core/config/config.module';
 import type { Env } from '../../core/config/env.schema';
@@ -15,6 +17,8 @@ import { withNewTenant, withTenant } from '../../core/tenancy/with-tenant';
 import { maskEmail } from './mask-email';
 import { SchoolCodeService } from './school-code.service';
 
+export const REGISTRATION_QUEUE = 'registration';
+export const RESEND_JOB = 'resend-verification';
 const MAX_PENDING_PER_EMAIL = 3;
 const RESEND_LIMIT = 3;
 const RESEND_WINDOW_SECONDS = 3600;
@@ -35,6 +39,7 @@ export class SchoolRegistrationService {
     private readonly redis: RedisService,
     private readonly codes: SchoolCodeService,
     @Inject(ENV) private readonly env: Env,
+    @InjectQueue(REGISTRATION_QUEUE) private readonly queue: Queue,
   ) {}
 
   async register(input: SchoolRegistrationRequest): Promise<{ maskedEmail: string }> {
@@ -108,7 +113,16 @@ export class SchoolRegistrationService {
     if (attempts > RESEND_LIMIT) {
       throw new TooManyRequestsException('Too many requests. Try again later.');
     }
+    await this.queue.add(RESEND_JOB, input, {
+      removeOnComplete: true,
+      removeOnFail: { age: 24 * 3600 },
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 2000 },
+    });
+  }
 
+  /** Runs in the `resend-verification` job, so the HTTP response never depends on a match. */
+  async processResend(input: { email: string; code: string }): Promise<void> {
     const tenant = await this.prisma.tenant.findFirst({
       where: { code: input.code, contactEmail: input.email, status: 'PENDING_VERIFICATION' },
     });

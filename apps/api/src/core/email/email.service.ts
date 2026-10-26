@@ -14,7 +14,9 @@ export class EmailService {
     await this.queue.add('send', message, {
       attempts: 5,
       backoff: { type: 'exponential', delay: 2000 },
-      removeOnComplete: 1000,
+      removeOnComplete: true,
+      // Job data holds a live verification link, so failed jobs must not outlive its 24h TTL.
+      removeOnFail: { age: 24 * 3600 },
     });
   }
 }
