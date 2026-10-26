@@ -12,6 +12,7 @@ import { PrismaModule } from './core/prisma/prisma.module';
 import { QueueModule } from './core/queue/queue.module';
 import { RedisModule } from './core/redis/redis.module';
 import { TenancyCoreModule } from './core/tenancy/tenancy-core.module';
+import { TenancyModule } from './modules/tenancy/tenancy.module';
 
 const LOG_LEVEL: Record<Env['NODE_ENV'], string> = {
   development: 'debug',
@@ -38,6 +39,7 @@ export class AppModule {
         QueueModule.forRoot(env),
         EmailModule,
         HealthModule,
+        TenancyModule,
       ],
       providers: [
         { provide: APP_PIPE, useClass: ZodValidationPipe },
