@@ -23,8 +23,9 @@ async function exportOpenApi(): Promise<void> {
   );
   const target = resolve(__dirname, '../../../packages/api-client/openapi.json');
   writeFileSync(target, `${JSON.stringify(buildOpenApiDocument(app), null, 2)}\n`);
-  await app.close();
   console.log(`OpenAPI written to ${target}`);
+  // The app was never initialised (no Redis or database), so Nest's shutdown hooks may throw.
+  await app.close().catch(() => undefined);
 }
 
-void exportOpenApi();
+void exportOpenApi().then(() => process.exit(0));

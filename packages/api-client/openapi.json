@@ -32,6 +32,191 @@
           "health"
         ]
       }
+    },
+    "/schools/code-availability": {
+      "get": {
+        "operationId": "getCodeAvailability",
+        "parameters": [
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "city",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeAvailabilityResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 60 checks per minute from this address"
+          }
+        },
+        "summary": "Check a school code",
+        "tags": [
+          "schools"
+        ]
+      }
+    },
+    "/schools/{code}/public": {
+      "get": {
+        "operationId": "getPublicSchool",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSchoolDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active school with this code"
+          }
+        },
+        "summary": "Public profile of an active school",
+        "tags": [
+          "schools"
+        ]
+      }
+    },
+    "/school-registrations": {
+      "post": {
+        "operationId": "createSchoolRegistration",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchoolRegistrationRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolRegistrationAcceptedDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The school code is already taken"
+          },
+          "429": {
+            "description": "Too many registrations from this address"
+          }
+        },
+        "summary": "Register a school and email a verification link",
+        "tags": [
+          "school-registrations"
+        ]
+      }
+    },
+    "/school-registrations/resend": {
+      "post": {
+        "operationId": "resendSchoolRegistration",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendRegistrationRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted whether or not a matching registration exists"
+          },
+          "429": {
+            "description": "More than 3 resends in an hour"
+          }
+        },
+        "summary": "Email a new verification link; always 202",
+        "tags": [
+          "school-registrations"
+        ]
+      }
+    },
+    "/school-registrations/verify": {
+      "post": {
+        "operationId": "verifySchoolRegistration",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRegistrationRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyRegistrationResponseDto"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The link is unknown, used or expired"
+          }
+        },
+        "summary": "Verify a school registration",
+        "tags": [
+          "school-registrations"
+        ]
+      }
     }
   },
   "info": {
@@ -81,6 +266,243 @@
         "required": [
           "status",
           "checks"
+        ]
+      },
+      "CodeAvailabilityResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "taken",
+              "reserved",
+              "invalid"
+            ]
+          },
+          "suggestion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "available"
+        ]
+      },
+      "PublicSchoolDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AN",
+              "AP",
+              "AR",
+              "AS",
+              "BR",
+              "CG",
+              "CH",
+              "DH",
+              "DL",
+              "GA",
+              "GJ",
+              "HP",
+              "HR",
+              "JH",
+              "JK",
+              "KA",
+              "KL",
+              "LA",
+              "LD",
+              "MH",
+              "ML",
+              "MN",
+              "MP",
+              "MZ",
+              "NL",
+              "OD",
+              "PB",
+              "PY",
+              "RJ",
+              "SK",
+              "TN",
+              "TR",
+              "TG",
+              "UK",
+              "UP",
+              "WB"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "city",
+          "state"
+        ]
+      },
+      "SchoolRegistrationRequestDto": {
+        "type": "object",
+        "properties": {
+          "schoolName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "board": {
+            "type": "string",
+            "enum": [
+              "CBSE",
+              "ICSE",
+              "STATE",
+              "IB",
+              "CAMBRIDGE",
+              "OTHER"
+            ]
+          },
+          "city": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AN",
+              "AP",
+              "AR",
+              "AS",
+              "BR",
+              "CG",
+              "CH",
+              "DH",
+              "DL",
+              "GA",
+              "GJ",
+              "HP",
+              "HR",
+              "JH",
+              "JK",
+              "KA",
+              "KL",
+              "LA",
+              "LD",
+              "MH",
+              "ML",
+              "MN",
+              "MP",
+              "MZ",
+              "NL",
+              "OD",
+              "PB",
+              "PY",
+              "RJ",
+              "SK",
+              "TN",
+              "TR",
+              "TG",
+              "UK",
+              "UP",
+              "WB"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "adminName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "email": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "acceptTerms": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "schoolName",
+          "board",
+          "city",
+          "state",
+          "code",
+          "adminName",
+          "email",
+          "acceptTerms"
+        ]
+      },
+      "SchoolRegistrationAcceptedDto": {
+        "type": "object",
+        "properties": {
+          "maskedEmail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "maskedEmail"
+        ]
+      },
+      "ResendRegistrationRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "code"
+        ]
+      },
+      "VerifyRegistrationRequestDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "VerifyRegistrationResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
         ]
       }
     }
