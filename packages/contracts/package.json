@@ -20,6 +20,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@classloom/utils": "workspace:*",
     "zod": "4.6.7"
   },
   "devDependencies": {
