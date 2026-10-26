@@ -63,3 +63,32 @@ describe('apiFetch', () => {
     await expect(apiFetch({ url: '/x', method: 'DELETE' })).resolves.toBeUndefined();
   });
 });
+
+describe('apiFetch error normalisation', () => {
+  it('synthesises a problem when a JSON error body is not problem details', async () => {
+    respond(502, JSON.stringify({ message: 'upstream down' }), 'application/json');
+    await expect(apiFetch({ url: '/x', method: 'GET' })).rejects.toMatchObject({
+      status: 502,
+      problem: { type: 'about:blank', title: 'Bad Gateway', status: 502 },
+    });
+  });
+
+  it('wraps network failures in ApiError with status 0', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+    const error = await apiFetch({ url: '/x', method: 'GET' }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status: 0, problem: { title: 'Network Error', status: 0 } });
+  });
+
+  it('lets aborts propagate unchanged so TanStack Query can cancel', async () => {
+    const abort = new DOMException('Aborted', 'AbortError');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(abort)),
+    );
+    await expect(apiFetch({ url: '/x', method: 'GET' })).rejects.toBe(abort);
+  });
+});

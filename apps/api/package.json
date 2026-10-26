@@ -6,7 +6,7 @@
     "build": "prisma generate && nest build",
     "dev": "prisma generate && nest start --watch --env-file ../../.env",
     "start": "node --env-file-if-exists=../../.env dist/main.js",
-    "lint": "eslint .",
+    "lint": "prisma generate && eslint .",
     "typecheck": "prisma generate && tsc --noEmit",
     "test": "vitest run",
     "openapi:export": "prisma generate && nest build && node dist/openapi.js",

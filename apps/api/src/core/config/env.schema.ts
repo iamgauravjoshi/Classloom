@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // Required: defaulting to development would expose stack traces if a deploy forgot it.
+  NODE_ENV: z.enum(['development', 'test', 'production']),
   API_PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   REDIS_URL: z.url({ protocol: /^rediss?$/ }),

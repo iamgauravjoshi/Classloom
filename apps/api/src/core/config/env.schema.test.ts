@@ -17,13 +17,18 @@ describe('parseEnv', () => {
     expect(parseEnv(validEnv).API_PORT).toBe(4000);
   });
 
-  it('defaults NODE_ENV, API_PORT and WEB_ORIGIN', () => {
-    const env = parseEnv({ DATABASE_URL: validEnv.DATABASE_URL, REDIS_URL: validEnv.REDIS_URL });
-    expect(env).toMatchObject({
-      NODE_ENV: 'development',
-      API_PORT: 4000,
-      WEB_ORIGIN: 'http://localhost:3000',
+  it('requires NODE_ENV so production never silently runs as development', () => {
+    const { NODE_ENV: _omit, ...rest } = validEnv;
+    expect(() => parseEnv(rest)).toThrow(/NODE_ENV/);
+  });
+
+  it('defaults API_PORT and WEB_ORIGIN', () => {
+    const env = parseEnv({
+      NODE_ENV: 'production',
+      DATABASE_URL: validEnv.DATABASE_URL,
+      REDIS_URL: validEnv.REDIS_URL,
     });
+    expect(env).toMatchObject({ API_PORT: 4000, WEB_ORIGIN: 'http://localhost:3000' });
   });
 
   it('rejects a malformed database URL', () => {

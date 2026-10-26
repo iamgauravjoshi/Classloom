@@ -1,4 +1,4 @@
-import type { ProblemDetails } from '@classloom/contracts';
+import { type ProblemDetails, problemDetailsSchema } from '@classloom/contracts';
 
 /** Request shape Orval passes to its custom mutator. */
 export interface ApiRequestConfig {
@@ -46,30 +46,47 @@ function buildUrl(url: string, params?: object): string {
   return target.toString();
 }
 
+const synthesise = (status: number, title = STATUS_TITLES[status] ?? 'Error'): ProblemDetails => ({
+  type: 'about:blank',
+  title,
+  status,
+});
+
+/** The RFC 7807 body when the API sent one; anything else (proxy pages, foreign JSON) is synthesised. */
 async function readProblem(res: Response): Promise<ProblemDetails> {
   const type = res.headers.get('content-type') ?? '';
   if (type.includes('json')) {
     try {
-      return (await res.json()) as ProblemDetails;
+      const parsed = problemDetailsSchema.safeParse(await res.json());
+      if (parsed.success) return parsed.data;
     } catch {
       // fall through to a synthesised problem
     }
   }
-  return { type: 'about:blank', title: STATUS_TITLES[res.status] ?? 'Error', status: res.status };
+  return synthesise(res.status);
 }
+
+const isAbort = (error: unknown) => error instanceof DOMException && error.name === 'AbortError';
 
 /** Orval mutator: `fetch` against the Classloom API with cookies, JSON bodies and problem+json errors. */
 export async function apiFetch<T>(config: ApiRequestConfig): Promise<T> {
   const headers = new Headers(config.headers);
   const hasBody = config.data !== undefined;
   if (hasBody) headers.set('content-type', 'application/json');
-  const res = await fetch(buildUrl(config.url, config.params), {
-    method: config.method.toUpperCase(),
-    headers,
-    body: hasBody ? JSON.stringify(config.data) : undefined,
-    credentials: 'include',
-    signal: config.signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(buildUrl(config.url, config.params), {
+      method: config.method.toUpperCase(),
+      headers,
+      body: hasBody ? JSON.stringify(config.data) : undefined,
+      credentials: 'include',
+      signal: config.signal,
+    });
+  } catch (error) {
+    // Aborts must propagate as-is so TanStack Query treats them as cancellations.
+    if (isAbort(error)) throw error;
+    throw new ApiError(0, synthesise(0, 'Network Error'));
+  }
   if (!res.ok) throw new ApiError(res.status, await readProblem(res));
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
