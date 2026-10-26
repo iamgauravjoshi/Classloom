@@ -29,5 +29,6 @@
       "cache": false,
       "outputs": ["playwright-report/**", "test-results/**"]
     }
-  }
+  },
+  "globalPassThroughEnv": ["CI"]
 }

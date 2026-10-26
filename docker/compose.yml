@@ -32,7 +32,7 @@ services:
   # S3-compatible object storage. RustFS replaces MinIO, whose community images are no longer
   # published. The API creates the bucket on startup (files module, Phase 1).
   s3:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.4
     environment:
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-classloom}
       RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-classloom-secret}
@@ -49,7 +49,7 @@ services:
       retries: 20
 
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.31.2
     ports:
       - '1025:1025'
       - '8025:8025'
