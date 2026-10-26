@@ -18,8 +18,14 @@ Multi-school management SaaS for Indian schools: one portal for admissions, stud
 pnpm install
 cp .env.example .env
 pnpm infra:up      # postgres, redis, s3 (RustFS), mailpit, gotenberg
+pnpm db:migrate    # apply database migrations as the owner role
 pnpm dev           # web on :3000, api on :4000
 ```
+
+The Postgres roles (`classloom_owner`, `classloom_app`) are created by `docker/postgres/init` only
+when the data volume is first initialised. If your local volume predates them, run
+`docker compose -f docker/compose.yml down -v` once and then `pnpm infra:up` again (this wipes local
+data).
 
 ## Commands
 
@@ -33,6 +39,7 @@ pnpm dev           # web on :3000, api on :4000
 | `pnpm e2e`                          | Playwright across desktop and mobile device projects (needs `pnpm infra:up`) |
 | `pnpm format`                       | Prettier                                                                     |
 | `pnpm infra:up` / `pnpm infra:down` | Start / stop local infrastructure                                            |
+| `pnpm db:migrate`                   | Apply Prisma migrations (owner role)                                         |
 
 ## Ports
 

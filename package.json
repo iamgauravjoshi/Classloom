@@ -16,6 +16,7 @@
     "e2e": "turbo run e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "db:migrate": "pnpm --filter @classloom/api db:migrate",
     "infra:up": "docker compose -f docker/compose.yml --env-file .env up -d --wait",
     "infra:down": "docker compose -f docker/compose.yml --env-file .env down",
     "prepare": "husky"

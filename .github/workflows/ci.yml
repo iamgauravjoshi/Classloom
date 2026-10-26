@@ -59,6 +59,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: cp .env.example .env
       - run: pnpm infra:up
+      - run: pnpm db:migrate
       - run: pnpm --filter @classloom/web exec playwright install --with-deps chromium firefox webkit
       - run: pnpm build
       # Run Playwright directly (not via turbo) so its output streams live in the job log.
