@@ -1,5 +1,5 @@
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
-import { type BeforeApplicationShutdown, type OnModuleInit } from '@nestjs/common';
+import { type BeforeApplicationShutdown, Logger, type OnModuleInit } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 
 import { QueueConnection } from '../../core/queue/queue.module';
@@ -15,6 +15,8 @@ export class PendingCleanupProcessor
   extends WorkerHost
   implements OnModuleInit, BeforeApplicationShutdown
 {
+  private readonly logger = new Logger(PendingCleanupProcessor.name);
+
   constructor(
     private readonly cleanup: PendingCleanupService,
     private readonly connection: QueueConnection,
@@ -24,20 +26,29 @@ export class PendingCleanupProcessor
   }
 
   /** Upserting by a fixed scheduler id keeps one schedule across restarts and instances. */
-  async onModuleInit(): Promise<void> {
-    await this.queue.upsertJobScheduler(
-      PURGE_PENDING_JOB,
-      { every: 3_600_000 },
-      {
-        name: PURGE_PENDING_JOB,
-        data: {},
-        opts: { removeOnComplete: true, removeOnFail: 100 },
-      },
-    );
+  onModuleInit(): Promise<void> {
+    // Not awaited: with Redis unreachable the queue connection retries forever, and boot must
+    // not hang on it (the API starts without Redis; health reports it down).
+    this.queue
+      .upsertJobScheduler(
+        PURGE_PENDING_JOB,
+        { every: 3_600_000 },
+        {
+          name: PURGE_PENDING_JOB,
+          data: {},
+          opts: { removeOnComplete: true, removeOnFail: 100 },
+        },
+      )
+      .catch((error: unknown) => {
+        this.logger.warn(`Could not schedule ${PURGE_PENDING_JOB}: ${String(error)}`);
+      });
+    return Promise.resolve();
   }
 
   async process(): Promise<{ tenants: number; users: number }> {
-    return this.cleanup.purgeExpired();
+    const counts = await this.cleanup.purgeExpired();
+    this.logger.log(`Purged expired pending registrations: ${JSON.stringify(counts)}`);
+    return counts;
   }
 
   /** See EmailProcessor: force-close when Redis is unreachable so shutdown cannot hang. */
