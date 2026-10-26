@@ -9,6 +9,7 @@ import { HealthModule } from './core/health/health.module';
 import { ProblemFilter } from './core/http/problem.filter';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { RedisModule } from './core/redis/redis.module';
+import { TenancyCoreModule } from './core/tenancy/tenancy-core.module';
 
 const LOG_LEVEL: Record<Env['NODE_ENV'], string> = {
   development: 'debug',
@@ -29,6 +30,7 @@ export class AppModule {
             redact: ['req.headers.authorization', 'req.headers.cookie'],
           },
         }),
+        TenancyCoreModule,
         PrismaModule,
         RedisModule,
         HealthModule,
