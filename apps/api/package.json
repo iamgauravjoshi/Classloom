@@ -10,7 +10,7 @@
     "typecheck": "prisma generate && tsc --noEmit",
     "test": "vitest run",
     "openapi:export": "prisma generate && nest build && node dist/openapi.js",
-    "test:int": "vitest run -c vitest.int.config.ts"
+    "test:int": "prisma generate && vitest run -c vitest.int.config.ts"
   },
   "dependencies": {
     "@classloom/contracts": "workspace:*",
