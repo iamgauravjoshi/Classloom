@@ -23,7 +23,11 @@ describe('platform owner CLI', () => {
   const status = async (code: string) =>
     (await platform.tenant.findUniqueOrThrow({ where: { code } })).status;
 
-  async function seed(code: string, email: string) {
+  async function seed(
+    code: string,
+    email: string,
+    tenantStatus: 'ACTIVE' | 'PENDING_VERIFICATION' = 'ACTIVE',
+  ) {
     const user = await platform.user.create({
       data: { email, name: email, emailVerifiedAt: new Date() },
     });
@@ -36,7 +40,7 @@ describe('platform owner CLI', () => {
         state: 'UK',
         contactEmail: email,
         termsAcceptedAt: new Date(),
-        status: 'ACTIVE',
+        status: tenantStatus,
         campuses: { create: { name: 'Main', isPrimary: true, city: 'Dehradun', state: 'UK' } },
         memberships: { create: { userId: user.id, role: 'OWNER' } },
       },
@@ -66,6 +70,7 @@ describe('platform owner CLI', () => {
     const row = lines.find((l) => l.includes('GISD'));
     expect(row).toContain('ACTIVE');
     expect(row).toContain('owner@gisd.in');
+    expect(row).toContain('Dehradun');
   });
 
   it('filters the list by status', async () => {
@@ -90,6 +95,23 @@ describe('platform owner CLI', () => {
     expect(await status('GISD')).toBe('ACTIVE');
     expect(JSON.parse(lines[0]!)).toMatchObject({ action: 'activate', before: 'SUSPENDED' });
     expect((await request(server).get('/schools/GISD/public')).status).toBe(200);
+  });
+
+  it('activates a pending school whose email never arrived', async () => {
+    await seed('PEND', 'owner@pend.in', 'PENDING_VERIFICATION');
+    const server = http.getHttpServer() as App;
+    expect((await request(server).get('/schools/PEND/public')).status).toBe(404);
+    await run('schools:activate', 'PEND');
+    expect(await status('PEND')).toBe('ACTIVE');
+    expect(JSON.parse(lines[0]!)).toMatchObject({
+      before: 'PENDING_VERIFICATION',
+      after: 'ACTIVE',
+    });
+    expect((await request(server).get('/schools/PEND/public')).status).toBe(200);
+  });
+
+  it('refuses to activate an already active school', async () => {
+    await expect(run('schools:activate', 'OTHR')).rejects.toThrow(/ACTIVE/);
   });
 
   it('rejects a reserved or invalid new code', async () => {

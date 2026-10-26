@@ -46,7 +46,11 @@ export function buildCli(app: INestApplicationContext, out: (line: string) => vo
       });
       for (const t of tenants) {
         const owner = t.memberships[0]?.user.email ?? '-';
-        out([t.code.toUpperCase(), t.status, t.name, owner, t.createdAt.toISOString()].join('\t'));
+        out(
+          [t.code.toUpperCase(), t.status, t.name, t.city, owner, t.createdAt.toISOString()].join(
+            '\t',
+          ),
+        );
       }
     });
 
@@ -79,12 +83,14 @@ export function buildCli(app: INestApplicationContext, out: (line: string) => vo
     .argument('<code>')
     .action(async (raw: string) => {
       const tenant = await find(raw);
-      if (tenant.status !== 'SUSPENDED') {
-        throw new Error(`School ${tenant.code.toUpperCase()} is ${tenant.status}, not SUSPENDED`);
+      if (tenant.status !== 'SUSPENDED' && tenant.status !== 'PENDING_VERIFICATION') {
+        throw new Error(
+          `School ${tenant.code.toUpperCase()} is ${tenant.status}, not SUSPENDED or PENDING_VERIFICATION`,
+        );
       }
       await platform.tenant.update({
         where: { id: tenant.id },
-        data: { status: 'ACTIVE', suspendedAt: null },
+        data: { status: 'ACTIVE', suspendedAt: null, verifiedAt: tenant.verifiedAt ?? new Date() },
       });
       audit({
         action: 'activate',
