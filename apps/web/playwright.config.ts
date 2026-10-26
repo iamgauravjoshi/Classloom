@@ -24,22 +24,26 @@ export default defineConfig({
     { name: 'iphone-14', use: { ...devices['iPhone 14'] } },
     { name: 'ipad', use: { ...devices['iPad (gen 7)'] } },
   ],
-  // Both servers run production builds against the docker infrastructure (`pnpm infra:up`).
+  // Both servers run production builds (`pnpm build` first) against the docker infrastructure.
+  // They are started with `node` directly: launched through pnpm, the node child outlives
+  // Playwright's kill on Linux and teardown hangs until the global timeout.
   webServer: [
     {
       name: 'api',
-      command: 'pnpm --filter @classloom/api build && pnpm --filter @classloom/api start',
-      cwd: '../..',
+      command: 'node --env-file-if-exists=../../.env dist/main.js',
+      cwd: '../api',
       url: 'http://localhost:4000/health',
       reuseExistingServer: !CI,
       timeout: 120_000,
+      gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
     },
     {
       name: 'web',
-      command: 'pnpm start',
+      command: 'node node_modules/next/dist/bin/next start -p 3000',
       url: 'http://localhost:3000/en/dashboard',
       reuseExistingServer: !CI,
       timeout: 120_000,
+      gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
     },
   ],
 });
