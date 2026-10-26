@@ -54,12 +54,14 @@ export class ProblemFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const title = titleFor(status);
-      const detail = detailOf(exception.getResponse());
+      const response = exception.getResponse();
+      const detail = detailOf(response);
       return {
         type: 'about:blank',
         title,
         status,
         ...(detail && detail !== title ? { detail } : {}),
+        ...extrasOf(response),
       };
     }
     this.logger.error(exception);
@@ -70,6 +72,16 @@ export class ProblemFilter implements ExceptionFilter {
     }
     return problem;
   }
+}
+
+/** Field `errors[]` and a `suggestion` that a service attached to an HttpException body. */
+function extrasOf(response: string | object): Pick<ProblemDetails, 'errors' | 'suggestion'> {
+  if (typeof response === 'string') return {};
+  const { errors, suggestion } = response as { errors?: unknown; suggestion?: unknown };
+  return {
+    ...(Array.isArray(errors) ? { errors: errors as ProblemDetails['errors'] } : {}),
+    ...(typeof suggestion === 'string' ? { suggestion } : {}),
+  };
 }
 
 function detailOf(response: string | object): string | undefined {

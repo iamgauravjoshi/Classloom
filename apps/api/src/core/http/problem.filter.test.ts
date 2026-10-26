@@ -1,4 +1,9 @@
-import { type ArgumentsHost, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  type ArgumentsHost,
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ZodValidationException } from 'nestjs-zod';
 import { z } from 'zod';
 
@@ -51,6 +56,24 @@ describe('ProblemFilter', () => {
       status: 400,
       title: 'Bad Request',
       detail: 'Section is full',
+    });
+  });
+
+  it('passes errors[] and suggestion from an HttpException body through', () => {
+    const { host, res } = mockHost();
+    new ProblemFilter('production').catch(
+      new ConflictException({
+        message: 'Code taken',
+        errors: [{ path: 'code', message: 'This school code is already taken.' }],
+        suggestion: 'GISD-2',
+      }),
+      host,
+    );
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toMatchObject({
+      detail: 'Code taken',
+      errors: [{ path: 'code', message: 'This school code is already taken.' }],
+      suggestion: 'GISD-2',
     });
   });
 

@@ -8,6 +8,8 @@ export const problemDetailsSchema = z.object({
   detail: z.string().optional(),
   instance: z.string().optional(),
   errors: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
+  /** Set on a 409 for a taken school code: the next free code. */
+  suggestion: z.string().optional(),
 });
 
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;

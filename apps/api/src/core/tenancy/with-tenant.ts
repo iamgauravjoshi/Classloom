@@ -18,3 +18,20 @@ export function withTenant<T>(
     return fn(tx);
   });
 }
+
+/**
+ * For creating a tenant and its tenant-owned rows atomically: runs `createTenant` first (the
+ * `tenants` table is not row-level secured), then scopes the same transaction to the new tenant's
+ * id and runs `fn`. A failure anywhere rolls back the tenant too.
+ */
+export function withNewTenant<TTenant extends { id: string }, T>(
+  prisma: PrismaService,
+  createTenant: (tx: Prisma.TransactionClient) => Promise<TTenant>,
+  fn: (tx: Prisma.TransactionClient, tenant: TTenant) => Promise<T>,
+): Promise<T> {
+  return prisma.$transaction(async (tx) => {
+    const tenant = await createTenant(tx);
+    await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenant.id}, true)`;
+    return fn(tx, tenant);
+  });
+}
