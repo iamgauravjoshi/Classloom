@@ -1,5 +1,5 @@
 import type { SchoolRegistrationAccepted, VerifyRegistrationResponse } from '@classloom/contracts';
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiConflictResponse,
@@ -9,7 +9,10 @@ import {
   ApiTags,
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 
+import { PublicThrottlerGuard } from '../../core/http/public-throttler.guard';
+import { AVAILABILITY_THROTTLER } from '../../core/http/throttler-names';
 import {
   ResendRegistrationRequestDto,
   SchoolRegistrationAcceptedDto,
@@ -25,6 +28,8 @@ export class SchoolRegistrationsController {
   constructor(private readonly registrations: SchoolRegistrationService) {}
 
   @Post()
+  @UseGuards(PublicThrottlerGuard)
+  @SkipThrottle({ [AVAILABILITY_THROTTLER]: true })
   @HttpCode(202)
   @ApiOperation({
     operationId: 'createSchoolRegistration',
@@ -32,6 +37,7 @@ export class SchoolRegistrationsController {
   })
   @ApiAcceptedResponse({ type: SchoolRegistrationAcceptedDto })
   @ApiConflictResponse({ description: 'The school code is already taken' })
+  @ApiTooManyRequestsResponse({ description: 'Too many registrations from this address' })
   create(@Body() body: SchoolRegistrationRequestDto): Promise<SchoolRegistrationAccepted> {
     return this.registrations.register(body);
   }

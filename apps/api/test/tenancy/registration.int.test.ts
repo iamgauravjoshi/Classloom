@@ -67,7 +67,10 @@ describe('school registration', () => {
 
   beforeAll(async () => {
     infra = await startTestInfra({ mailpit: true });
-    app = await createApp(infra.env, { logger: false });
+    app = await createApp(
+      { ...infra.env, REGISTRATION_RATE_LIMIT_PER_HOUR: 1000 },
+      { logger: false },
+    );
     await app.init();
     server = app.getHttpServer() as App;
     prisma = app.get(PrismaService);
