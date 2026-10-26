@@ -48,4 +48,17 @@ describe('RedisThrottlerStorage', () => {
       timeToBlockExpire: 0,
     });
   });
+
+  it('fails open when Redis hangs', async () => {
+    const { storage } = storageWith(() => new Promise(() => undefined));
+    const started = Date.now();
+    const record = await storage.increment('k', 60_000, 5, 0, 'x');
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(record).toEqual({
+      totalHits: 1,
+      timeToExpire: 60,
+      isBlocked: false,
+      timeToBlockExpire: 0,
+    });
+  });
 });

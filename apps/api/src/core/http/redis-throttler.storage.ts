@@ -35,6 +35,9 @@ end
 return { hits, ttl, 0, 0 }
 `;
 
+/** A stalled (connected but unresponsive) Redis must not hang public requests. */
+const STORAGE_TIMEOUT_MS = 500;
+
 /**
  * Throttler counters in Redis so limits hold across API instances. Fails open: if Redis is
  * unreachable the request is let through (and a warning logged); per-email caps and the unique
@@ -54,8 +57,9 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
     throttlerName: string,
   ): Promise<ThrottlerStorageRecord> {
     const base = `throttle:${throttlerName}:${key}`;
+    let timer: NodeJS.Timeout | undefined;
     try {
-      const [hits, ttlMs, blocked, blockMs] = (await this.redis.client.eval(
+      const reply = this.redis.client.eval(
         INCREMENT_SCRIPT,
         2,
         `${base}:hits`,
@@ -63,7 +67,16 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
         ttl,
         limit,
         blockDuration,
-      )) as [number, number, number, number];
+      );
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('timed out')), STORAGE_TIMEOUT_MS);
+      });
+      const [hits, ttlMs, blocked, blockMs] = (await Promise.race([reply, timeout])) as [
+        number,
+        number,
+        number,
+        number,
+      ];
       return {
         totalHits: hits,
         timeToExpire: Math.ceil(ttlMs / 1000),
@@ -80,6 +93,8 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
         isBlocked: false,
         timeToBlockExpire: 0,
       };
+    } finally {
+      clearTimeout(timer);
     }
   }
 }
