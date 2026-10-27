@@ -191,7 +191,8 @@
       "resendReady": "Didn't get it? You can ask for another link.",
       "resent": "If that registration is still pending, a new link is on its way.",
       "resendError": "We couldn't resend the link. Please try again shortly.",
-      "differentEmail": "Use a different email"
+      "differentEmail": "Use a different email",
+      "differentEmailError": "We couldn't release this registration to change the email. Check your connection and try again."
     },
     "verify": {
       "title": "Verify your school",

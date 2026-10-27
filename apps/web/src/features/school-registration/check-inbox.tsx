@@ -17,10 +17,20 @@ interface CheckInboxProps {
   /** Needed for the resend call; never rendered. */
   email: string;
   code: string;
+  /** True while the pending registration is being withdrawn. */
+  changingEmail: boolean;
+  changeEmailFailed: boolean;
   onChangeEmail: () => void;
 }
 
-export function CheckInbox({ maskedEmail, email, code, onChangeEmail }: CheckInboxProps) {
+export function CheckInbox({
+  maskedEmail,
+  email,
+  code,
+  changingEmail,
+  changeEmailFailed,
+  onChangeEmail,
+}: CheckInboxProps) {
   const t = useTranslations('registration.checkInbox');
   const resend = useResendSchoolRegistration();
   const [secondsLeft, setSecondsLeft] = useState(RESEND_COOLDOWN_SECONDS);
@@ -90,10 +100,17 @@ export function CheckInbox({ maskedEmail, email, code, onChangeEmail }: CheckInb
         type="button"
         variant="link"
         className="text-primary-text h-auto p-0"
+        disabled={changingEmail}
         onClick={onChangeEmail}
       >
+        {changingEmail ? <Spinner aria-hidden="true" /> : null}
         {t('differentEmail')}
       </Button>
+      {changeEmailFailed ? (
+        <Alert variant="destructive">
+          <AlertDescription>{t('differentEmailError')}</AlertDescription>
+        </Alert>
+      ) : null}
     </section>
   );
 }

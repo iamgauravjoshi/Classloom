@@ -1,6 +1,11 @@
 'use client';
 
-import { ApiError, getCodeAvailability, useCreateSchoolRegistration } from '@classloom/api-client';
+import {
+  ApiError,
+  getCodeAvailability,
+  useCancelSchoolRegistration,
+  useCreateSchoolRegistration,
+} from '@classloom/api-client';
 import { schoolRegistrationRequestSchema } from '@classloom/contracts';
 import { Alert, AlertDescription } from '@classloom/ui/components/ui/alert';
 import { Button } from '@classloom/ui/components/ui/button';
@@ -62,6 +67,8 @@ interface Submitted {
   maskedEmail: string;
   email: string;
   code: string;
+  /** Withdraws this pending registration. Held in memory only, never in the stored draft. */
+  cancelToken: string;
 }
 
 /** Waits for the stored draft to be readable so server and client markup match. */
@@ -87,6 +94,8 @@ function RegistrationFormBody({
 }: Pick<RegistrationDraftApi, 'draft' | 'save' | 'clear'>) {
   const t = useTranslations('registration');
   const create = useCreateSchoolRegistration();
+  const cancel = useCancelSchoolRegistration();
+  const [cancelFailed, setCancelFailed] = useState(false);
 
   const [values, setValues] = useState<FormValues>(() => initialValues(draft));
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -206,6 +215,7 @@ function RegistrationFormBody({
         maskedEmail: response.maskedEmail,
         email: parsed.data.email,
         code: parsed.data.code,
+        cancelToken: response.cancelToken,
       });
       clear();
     } catch (error) {
@@ -244,16 +254,32 @@ function RegistrationFormBody({
     else setFormError(t('errors.generic'));
   }
 
+  /**
+   * "Use a different email": withdraw the pending registration first, so its code is free to
+   * submit again and the mistyped address's link stops working. If that fails, stay here: going
+   * back would only end in "code taken".
+   */
+  async function onChangeEmail(pending: Submitted) {
+    setCancelFailed(false);
+    try {
+      await cancel.mutateAsync({ data: { cancelToken: pending.cancelToken } });
+    } catch {
+      setCancelFailed(true);
+      return;
+    }
+    setSubmitted(null);
+    setValues((current) => ({ ...current, acceptTerms: false }));
+  }
+
   if (submitted) {
     return (
       <CheckInbox
         maskedEmail={submitted.maskedEmail}
         email={submitted.email}
         code={submitted.code}
-        onChangeEmail={() => {
-          setSubmitted(null);
-          setValues((current) => ({ ...current, acceptTerms: false }));
-        }}
+        changingEmail={cancel.isPending}
+        changeEmailFailed={cancelFailed}
+        onChangeEmail={() => void onChangeEmail(submitted)}
       />
     );
   }

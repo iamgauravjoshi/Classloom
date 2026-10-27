@@ -144,6 +144,31 @@ test.describe('school registration', () => {
     expect(page.url()).not.toContain('token=');
   });
 
+  test('"Use a different email" frees the code for the corrected registration', async ({
+    page,
+    request,
+  }, testInfo) => {
+    const { email, code } = uniqueData(testInfo);
+    await register(page, email, code);
+    const mistypedLink = await linkFor(request, email);
+
+    await page.getByRole('button', { name: 'Use a different email' }).click();
+    const emailField = page.getByLabel('Email address');
+    await expect(emailField).toHaveValue(email);
+    const corrected = email.replace('@example.com', '.fixed@example.com');
+    await emailField.fill(corrected);
+    await page.getByRole('checkbox', { name: TERMS }).check();
+    await page.getByRole('button', { name: 'Register school' }).click();
+    await expect(page.getByRole('heading', { name: 'Check your inbox' })).toBeVisible();
+
+    // The link sent to the mistyped address is dead; the corrected one verifies the same code.
+    await page.goto(mistypedLink);
+    await expect(page.getByRole('heading', { name: /no longer valid/ })).toBeVisible();
+    await page.goto(await linkFor(request, corrected));
+    await expect(page.getByRole('heading', { name: /is ready/ })).toBeVisible();
+    await expect(page.getByText(code, { exact: true })).toBeVisible();
+  });
+
   test('a scriptless GET of the link does not use it up', async ({ page, request }, testInfo) => {
     const { email, code } = uniqueData(testInfo);
     await register(page, email, code);
