@@ -10,6 +10,8 @@ export const problemDetailsSchema = z.object({
   errors: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
   /** Set on a 409 for a taken school code: the next free code. */
   suggestion: z.string().optional(),
+  /** Set on a 429 `sign-in-paused`: seconds until the pause ends (also sent as `Retry-After`). */
+  retryAfter: z.number().int().optional(),
 });
 
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;

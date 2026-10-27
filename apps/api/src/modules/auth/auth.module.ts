@@ -7,21 +7,26 @@ import { AUTH_MAINTENANCE_QUEUE, AuthCleanupProcessor } from './auth-cleanup.pro
 import { AuthEventsService } from './auth-events.service';
 import { OriginCheckMiddleware } from './origin-check.middleware';
 import { PasswordService } from './password.service';
+import { PasswordSignInService } from './password-sign-in.service';
 import { SessionController } from './session.controller';
 import { SessionMiddleware } from './session.middleware';
 import { SessionService } from './session.service';
+import { SignInController } from './sign-in.controller';
+import { SignInPauseService } from './sign-in-pause.service';
 
 @Module({
   imports: [BullModule.registerQueue({ name: AUTH_MAINTENANCE_QUEUE })],
-  controllers: [SessionController],
+  controllers: [SessionController, SignInController],
   providers: [
     SessionService,
     AuthEventsService,
     PasswordService,
+    SignInPauseService,
+    PasswordSignInService,
     AuthCleanupProcessor,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [SessionService, AuthEventsService, PasswordService],
+  exports: [SessionService, AuthEventsService, PasswordService, SignInPauseService],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

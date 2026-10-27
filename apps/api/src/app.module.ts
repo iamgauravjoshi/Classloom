@@ -12,8 +12,11 @@ import { ProblemFilter } from './core/http/problem.filter';
 import { RedisThrottlerStorage } from './core/http/redis-throttler.storage';
 import {
   AVAILABILITY_THROTTLER,
+  CODE_REQUEST_THROTTLER,
+  PASSWORD_RESET_THROTTLER,
   REGISTRATION_THROTTLER,
   RESEND_THROTTLER,
+  SIGN_IN_THROTTLER,
 } from './core/http/throttler-names';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { QueueModule } from './core/queue/queue.module';
@@ -65,6 +68,21 @@ export class AppModule {
               {
                 name: RESEND_THROTTLER,
                 limit: env.RESEND_RATE_LIMIT_PER_HOUR,
+                ttl: 3_600_000,
+              },
+              {
+                name: SIGN_IN_THROTTLER,
+                limit: env.SIGN_IN_RATE_LIMIT_PER_15_MIN,
+                ttl: 900_000,
+              },
+              {
+                name: CODE_REQUEST_THROTTLER,
+                limit: env.CODE_REQUEST_RATE_LIMIT_PER_HOUR,
+                ttl: 3_600_000,
+              },
+              {
+                name: PASSWORD_RESET_THROTTLER,
+                limit: env.PASSWORD_RESET_RATE_LIMIT_PER_HOUR,
                 ttl: 3_600_000,
               },
             ],

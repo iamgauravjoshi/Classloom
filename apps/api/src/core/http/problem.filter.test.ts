@@ -2,6 +2,7 @@ import {
   type ArgumentsHost,
   BadRequestException,
   ConflictException,
+  HttpException,
   NotFoundException,
 } from '@nestjs/common';
 import { ZodValidationException } from 'nestjs-zod';
@@ -47,6 +48,24 @@ describe('ProblemFilter', () => {
       status: 404,
       instance: '/nope',
     });
+  });
+
+  it('carries a custom type, title and retryAfter, and sends Retry-After', () => {
+    const { host, res } = mockHost();
+    new ProblemFilter('production').catch(
+      new HttpException(
+        { message: 'Paused', type: 'sign-in-paused', title: 'Paused.', retryAfter: 90 },
+        429,
+      ),
+      host,
+    );
+    expect(res.body).toMatchObject({
+      type: 'sign-in-paused',
+      title: 'Paused.',
+      status: 429,
+      retryAfter: 90,
+    });
+    expect(res.headers['retry-after']).toBe('90');
   });
 
   it('keeps a custom HttpException message as the detail', () => {
