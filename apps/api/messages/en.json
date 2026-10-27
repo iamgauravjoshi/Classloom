@@ -9,6 +9,14 @@
       "linkFallback": "Or open this link in your browser:",
       "expiry": "This link expires on {date} at {time} IST.",
       "ignore": "If you didn't register this school, you can ignore this email."
+    },
+    "signInCode": {
+      "subject": "{code} is your Classloom sign-in code",
+      "heading": "Your sign-in code",
+      "intro": "Use this code to sign in to {schoolName} on Classloom.",
+      "codeLabel": "Your sign-in code",
+      "expiry": "Expires in {minutes} minutes.",
+      "ignore": "If you didn't try to sign in, you can ignore this email; your account is safe."
     }
   }
 }

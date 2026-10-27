@@ -3,8 +3,8 @@ import { parseIdentifier } from '@classloom/utils';
 import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 
 import { PrismaService } from '../../core/prisma/prisma.service';
-import { withTenant } from '../../core/tenancy/with-tenant';
 import { AuthEventsService } from './auth-events.service';
+import { findActiveMembership, findActiveTenant } from './member-lookup';
 import { PasswordService } from './password.service';
 import { SessionService } from './session.service';
 import { PAUSE_SECONDS, SignInPauseService } from './sign-in-pause.service';
@@ -32,9 +32,6 @@ export class SignInPausedException extends HttpException {
   }
 }
 
-/** Matches no membership; used so an unknown identifier still runs the lookup. */
-const NO_USER_ID = '00000000-0000-0000-0000-000000000000';
-
 export interface SignInMeta {
   ip?: string;
   userAgent?: string;
@@ -58,10 +55,7 @@ export class PasswordSignInService {
   ): Promise<{ token: string; session: AuthSession; remember: boolean }> {
     const eventBase = { method: 'PASSWORD', ip: meta.ip, userAgent: meta.userAgent } as const;
 
-    const tenant = await this.prisma.tenant.findFirst({
-      where: { code: input.schoolCode, status: 'ACTIVE' },
-      select: { id: true, code: true, name: true, status: true },
-    });
+    const tenant = await findActiveTenant(this.prisma, input.schoolCode);
     if (!tenant) {
       await this.passwords.verifyDummy(input.password);
       await this.events.record({ type: 'SIGN_IN_FAILED', ...eventBase });
@@ -74,12 +68,7 @@ export class PasswordSignInService {
 
     const user = await this.findUser(input.identifier);
     // Also runs for an unknown identifier, so a known user pays for no extra transaction.
-    const membership = await withTenant(this.prisma, tenant.id, (tx) =>
-      tx.membership.findFirst({
-        where: { tenantId: tenant.id, userId: user?.id ?? NO_USER_ID, status: 'ACTIVE' },
-        select: { id: true, role: true },
-      }),
-    );
+    const membership = await findActiveMembership(this.prisma, tenant.id, user?.id);
 
     const hash = user?.passwordHash;
     // Every failure path runs one argon2 verification, so they all take the same time.

@@ -2,9 +2,12 @@ import { BullModule } from '@nestjs/bullmq';
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 
+import { EmailModule } from '../../core/email/email.module';
 import { AuthGuard } from './auth.guard';
+import { AuthProcessor } from './auth.processor';
 import { AUTH_MAINTENANCE_QUEUE, AuthCleanupProcessor } from './auth-cleanup.processor';
 import { AuthEventsService } from './auth-events.service';
+import { AUTH_QUEUE, EmailCodeService } from './email-code.service';
 import { OriginCheckMiddleware } from './origin-check.middleware';
 import { PasswordService } from './password.service';
 import { PasswordSignInService } from './password-sign-in.service';
@@ -15,7 +18,10 @@ import { SignInController } from './sign-in.controller';
 import { SignInPauseService } from './sign-in-pause.service';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: AUTH_MAINTENANCE_QUEUE })],
+  imports: [
+    EmailModule,
+    BullModule.registerQueue({ name: AUTH_MAINTENANCE_QUEUE }, { name: AUTH_QUEUE }),
+  ],
   controllers: [SessionController, SignInController],
   providers: [
     SessionService,
@@ -23,6 +29,8 @@ import { SignInPauseService } from './sign-in-pause.service';
     PasswordService,
     SignInPauseService,
     PasswordSignInService,
+    EmailCodeService,
+    AuthProcessor,
     AuthCleanupProcessor,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
