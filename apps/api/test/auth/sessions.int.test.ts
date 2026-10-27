@@ -208,7 +208,8 @@ describe('sessions, auth events and clean-up', () => {
       cookieRefresh: false,
     });
     const later = new Date(Date.now() + 10 * 60_000);
-    expect(await sessions.touch(session, later)).toEqual({ cookieRefresh: true });
+    // A slide 10 minutes in does not re-send the cookie.
+    expect(await sessions.touch(session, later)).toEqual({ cookieRefresh: false });
 
     const row = await owner.session.findUniqueOrThrow({ where: { id: session.id } });
     expect(row.lastSeenAt).toEqual(later);
@@ -216,10 +217,36 @@ describe('sessions, auth events and clean-up', () => {
     expect(await sessions.resolve(token, later)).not.toBeNull();
 
     const temp = await create(s, false);
-    expect(await sessions.touch(temp.session, later)).toEqual({ cookieRefresh: false });
+    await sessions.touch(temp.session, later);
     const tempRow = await owner.session.findUniqueOrThrow({ where: { id: temp.session.id } });
     expect(tempRow.idleExpiresAt).toEqual(new Date(later.getTime() + 2 * HOUR));
     expect(tempRow.expiresAt).toEqual(temp.session.expiresAt);
+  });
+
+  it('re-sends the cookie 25 hours after the last refresh, but not again within the day', async () => {
+    const s = await school();
+    const { session } = await create(s, true);
+    const day = new Date(session.authenticatedAt.getTime() + 25 * HOUR);
+
+    expect(await sessions.touch(session, day)).toEqual({ cookieRefresh: true });
+    const fresh = await owner.session.findUniqueOrThrow({ where: { id: session.id } });
+    const soon = new Date(day.getTime() + 10 * 60_000);
+    expect(await sessions.touch(fresh, soon)).toEqual({ cookieRefresh: false });
+  });
+
+  it('never refreshes the cookie of a session that is not remembered', async () => {
+    const s = await school();
+    const { session } = await create(s, false);
+    const late = new Date(session.authenticatedAt.getTime() + 25 * HOUR);
+    expect(await sessions.touch(session, late)).toEqual({ cookieRefresh: false });
+  });
+
+  it('never refreshes the cookie of a revoked session', async () => {
+    const s = await school();
+    const { session } = await create(s, true);
+    await sessions.revoke(session.id, 'SIGNED_OUT');
+    const late = new Date(session.authenticatedAt.getTime() + 25 * HOUR);
+    expect(await sessions.touch(session, late)).toEqual({ cookieRefresh: false });
   });
 
   it('builds the contract session with the primary campus', async () => {

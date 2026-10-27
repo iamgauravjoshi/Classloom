@@ -9,10 +9,11 @@ import type {
   SessionRevokedReason,
   TenantStatus,
 } from '../../generated/prisma/client';
+import { MAX_USER_AGENT_LENGTH } from './auth-events.service';
 import { randomToken, sha256 } from './crypto';
 import { initialExpiry, isExpired, slidExpiry } from './session-expiry';
 
-const MAX_USER_AGENT_LENGTH = 512;
+const DAY = 86_400_000;
 
 /** Prisma's Bytes type wants a Uint8Array over a plain ArrayBuffer, which a Buffer is not. */
 const tokenHash = (token: string): Uint8Array<ArrayBuffer> => new Uint8Array(sha256(token));
@@ -81,18 +82,24 @@ export class SessionService {
   }
 
   /**
-   * Slides the expiry and `last_seen_at`, at most once every 5 minutes. `cookieRefresh` tells the
-   * caller to re-issue the persistent cookie (remembered sessions only; the cookie of a session
-   * that is not remembered has no lifetime of its own).
+   * Slides the expiry and `last_seen_at`, at most once every 5 minutes. `cookieRefresh` asks the
+   * caller to re-send the persistent cookie, about once a day: only for a remembered session,
+   * only when a live row was actually updated, and only when this touch crosses into a new
+   * 24-hour period since sign-in. No stored field records when the cookie was last issued
+   * (`expires_at` moves on every slide), so the period is derived from `authenticated_at` and the
+   * previous `last_seen_at`.
    */
   async touch(session: Session, now = new Date()): Promise<{ cookieRefresh: boolean }> {
     const slid = slidExpiry(session, now);
     if (!slid) return { cookieRefresh: false };
-    await this.prisma.session.updateMany({
+    const { count } = await this.prisma.session.updateMany({
       where: { id: session.id, revokedAt: null },
       data: { lastSeenAt: now, ...slid },
     });
-    return { cookieRefresh: session.remember };
+    if (count === 0 || !session.remember) return { cookieRefresh: false };
+    const period = (at: Date) =>
+      Math.floor((at.getTime() - session.authenticatedAt.getTime()) / DAY);
+    return { cookieRefresh: period(now) > period(session.lastSeenAt) };
   }
 
   async revoke(sessionId: string, reason: SessionRevokedReason): Promise<void> {
