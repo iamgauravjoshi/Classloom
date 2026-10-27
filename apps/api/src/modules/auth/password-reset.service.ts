@@ -174,16 +174,11 @@ export class PasswordResetService {
     const consumed = await this.redisCall(() => this.redis.client.getdel(key));
     if (consumed !== user.id) throw new ResetLinkGoneException();
 
-    const now = new Date();
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash,
-        passwordChangedAt: now,
-        emailVerifiedAt: user.emailVerifiedAt ?? now,
-      },
+    await this.sessions.changePassword(user.id, {
+      passwordHash,
+      reason: 'PASSWORD_RESET',
+      verifyEmail: true,
     });
-    await this.sessions.revokeAllForUser(user.id, 'PASSWORD_RESET');
     await this.events.record({
       type: 'PASSWORD_RESET',
       method: 'RESET_LINK',

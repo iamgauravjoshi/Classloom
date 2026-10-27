@@ -124,6 +124,43 @@ export class SessionService {
     });
   }
 
+  /**
+   * Stores a new password and revokes the user's sessions in ONE transaction, so the password can
+   * never change while an old session survives. `exceptSessionId` keeps the caller's own session;
+   * `verifyEmail` also stamps `email_verified_at` when it is still empty (a reset link proves it).
+   */
+  async changePassword(
+    userId: string,
+    input: {
+      passwordHash: string;
+      reason: SessionRevokedReason;
+      exceptSessionId?: string;
+      verifyEmail?: boolean;
+    },
+  ): Promise<void> {
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { passwordHash: input.passwordHash, passwordChangedAt: now },
+      });
+      if (input.verifyEmail) {
+        await tx.user.updateMany({
+          where: { id: userId, emailVerifiedAt: null },
+          data: { emailVerifiedAt: now },
+        });
+      }
+      await tx.session.updateMany({
+        where: {
+          userId,
+          revokedAt: null,
+          ...(input.exceptSessionId ? { id: { not: input.exceptSessionId } } : {}),
+        },
+        data: { revokedAt: now, revokedReason: input.reason },
+      });
+    });
+  }
+
   async toAuthSession(
     resolved: ResolvedSession,
     membership: { role: MembershipRole },
