@@ -228,7 +228,7 @@ function Invalid() {
 
       <Link
         href="/register-school"
-        className={cn(buttonVariants({ variant: 'link' }), 'h-auto p-0')}
+        className={cn(buttonVariants({ variant: 'link' }), 'text-primary-text h-auto p-0')}
       >
         {t('register')}
       </Link>

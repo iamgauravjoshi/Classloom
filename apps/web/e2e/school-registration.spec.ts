@@ -88,8 +88,44 @@ async function axeViolations(page: Page) {
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
   return results.violations.map(
-    (v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 160)).join(' | ')}`,
+    (v) =>
+      `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 160) + ' @ ' + n.target.join(' ') + ' ' + (n.any[0]?.message ?? '')).join(' | ')}`,
   );
+}
+
+/**
+ * Registers a school and visits every screen once (steps 1 to 3, the sent screen, verify success,
+ * verify invalid with its resend form), calling `check` on each when it has settled.
+ */
+async function walkAllScreens(
+  page: Page,
+  request: APIRequestContext,
+  testInfo: TestInfo,
+  check: () => Promise<void>,
+) {
+  const { email, code } = uniqueData(testInfo);
+  await openForm(page);
+  await check();
+  await fillSchool(page);
+  await expect(page.getByLabel('School code')).toBeVisible();
+  await check();
+  await fillCode(page, code);
+  await expect(page.getByLabel('Your full name')).toBeVisible();
+  await fillAdmin(page, email);
+  await check();
+  await page.getByRole('button', { name: 'Register school' }).click();
+  await expect(page.getByRole('heading', { name: 'Check your inbox' })).toBeVisible();
+  await check();
+
+  const link = await linkFor(request, email);
+  await page.goto(link);
+  await expect(page.getByRole('heading', { name: /is ready/ })).toBeVisible();
+  await check();
+
+  await page.goto(link);
+  await expect(page.getByRole('heading', { name: /no longer valid/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Request a new link' })).toBeVisible();
+  await check();
 }
 
 test.describe('school registration', () => {
@@ -178,16 +214,31 @@ test.describe('school registration', () => {
     await expectNoOverflow(page);
   });
 
-  test('every step has no WCAG 2.1 AA violations', async ({ page }, testInfo) => {
-    const { code } = uniqueData(testInfo);
-    await openForm(page);
-    expect(await axeViolations(page)).toEqual([]);
-    await fillSchool(page);
-    await expect(page.getByLabel('School code')).toBeVisible();
-    expect(await axeViolations(page)).toEqual([]);
-    await fillCode(page, code);
-    await expect(page.getByLabel('Your full name')).toBeVisible();
-    expect(await axeViolations(page)).toEqual([]);
+  for (const theme of ['light', 'dark'] as const) {
+    test(`every screen has no WCAG 2.1 AA violations (${theme})`, async ({
+      page,
+      request,
+    }, testInfo) => {
+      await page.addInitScript((value) => window.localStorage.setItem('theme', value), theme);
+      await walkAllScreens(page, request, testInfo, async () => {
+        expect(await axeViolations(page)).toEqual([]);
+      });
+    });
+  }
+
+  test('has no horizontal overflow at 375px on any screen', async ({ page, request }, testInfo) => {
+    test.skip(
+      !['desktop-chrome', 'iphone-14'].includes(testInfo.project.name),
+      'a layout check, run on one desktop and one phone engine',
+    );
+    await page.setViewportSize({ width: 375, height: 812 });
+    await walkAllScreens(page, request, testInfo, async () => {
+      const { scrollWidth, innerWidth } = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        innerWidth: window.innerWidth,
+      }));
+      expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+    });
   });
 
   test('completes with the keyboard only', async ({ page, request }, testInfo) => {

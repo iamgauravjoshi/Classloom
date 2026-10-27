@@ -86,7 +86,12 @@ export function CheckInbox({ maskedEmail, email, code, onChangeEmail }: CheckInb
         </Alert>
       ) : null}
 
-      <Button type="button" variant="link" className="h-auto p-0" onClick={onChangeEmail}>
+      <Button
+        type="button"
+        variant="link"
+        className="text-primary-text h-auto p-0"
+        onClick={onChangeEmail}
+      >
         {t('differentEmail')}
       </Button>
     </section>
