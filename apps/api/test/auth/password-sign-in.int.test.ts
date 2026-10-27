@@ -232,6 +232,27 @@ describe('POST /auth/sign-in/password', () => {
     expect(old.revokedAt).not.toBeNull();
     const fresh = await owner.session.findFirstOrThrow({ where: { userId: b.userId } });
     expect(fresh.revokedAt).toBeNull();
+    const stale = await request(server).get('/auth/session').set('Cookie', cookie);
+    expect(stale.status).toBe(401);
+  });
+
+  it('does not let parallel guesses past the limit', async () => {
+    const s = await school();
+    const results = await Promise.all([
+      ...Array.from({ length: 7 }, () =>
+        post({ schoolCode: s.code, identifier: s.email, password: 'wrong password!' }),
+      ),
+      post({ schoolCode: s.code, identifier: s.email, password: PASSWORD }),
+    ]);
+    expect(results.map((r) => r.status)).not.toContain(200);
+    expect(results.every((r) => [401, 429].includes(r.status))).toBe(true);
+    expect(await owner.session.count({ where: { userId: s.userId } })).toBe(0);
+    const paused = await owner.authEvent.count({
+      where: { tenantId: s.tenantId, type: 'SIGN_IN_PAUSED' },
+    });
+    expect(paused).toBe(1);
+    const after = await post({ schoolCode: s.code, identifier: s.email, password: PASSWORD });
+    expect(after.status).toBe(429);
   });
 
   it('re-hashes a password stored with old parameters', async () => {
@@ -285,6 +306,11 @@ describe('POST /auth/sign-in/password', () => {
       }).timeout(15_000);
       expect(res.status).toBe(200);
       expect(warn).toHaveBeenCalled();
+      expect(
+        warn.mock.contexts.some(
+          (c) => (c as { context?: string }).context === 'SignInPauseService',
+        ),
+      ).toBe(true);
     } finally {
       warn.mockRestore();
     }

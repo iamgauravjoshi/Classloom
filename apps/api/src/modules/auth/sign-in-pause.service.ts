@@ -8,6 +8,16 @@ import { identifierKey } from './crypto';
 export const MAX_PASSWORD_FAILURES = 5;
 export const PAUSE_SECONDS = 15 * 60;
 
+/** Atomic: paused -> {-1, seconds left}; attempt over the limit -> {-2, seconds left}; else {n, 0}. */
+const RESERVE_SCRIPT = `
+local p = redis.call('PTTL', KEYS[2])
+if p > 0 then return {-1, math.ceil(p / 1000)} end
+local c = redis.call('INCR', KEYS[1])
+if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[2]) end
+if c > tonumber(ARGV[1]) then return {-2, math.max(redis.call('TTL', KEYS[1]), 1)} end
+return {c, 0}
+`;
+
 /**
  * Per school and identifier: 5 failed passwords pause password sign-in for 15 minutes. Keys hold
  * an HMAC of the identifier, never the raw email or mobile. Redis errors fail open (a warning is
@@ -38,17 +48,72 @@ export class SignInPauseService {
     }
   }
 
-  async recordFailure(tenantId: string, identifier: string): Promise<{ paused: boolean }> {
+  /**
+   * Counts this attempt before the password is checked, in one atomic step, so parallel requests
+   * cannot get more than 5 guesses per window. `blockedFor` is set (seconds) when the identifier
+   * is paused or the window's 5 attempts are already used; then the password must not be checked.
+   */
+  async reserveAttempt(
+    tenantId: string,
+    identifier: string,
+  ): Promise<{ blockedFor: number | null; attempt: number }> {
     const { fail, pause } = this.keys(tenantId, identifier);
     try {
-      const count = await this.redis.client.incr(fail);
-      if (count === 1) await this.redis.client.expire(fail, PAUSE_SECONDS);
-      if (count < MAX_PASSWORD_FAILURES) return { paused: false };
-      await this.redis.client.multi().set(pause, '1', 'EX', PAUSE_SECONDS).del(fail).exec();
-      return { paused: true };
+      const [state, value] = (await this.redis.client.eval(
+        RESERVE_SCRIPT,
+        2,
+        fail,
+        pause,
+        MAX_PASSWORD_FAILURES,
+        PAUSE_SECONDS,
+      )) as [number, number];
+      return state < 0 ? { blockedFor: value, attempt: 0 } : { blockedFor: null, attempt: state };
     } catch (error) {
-      this.logger.warn(`Failure not counted, Redis unavailable: ${String(error)}`);
-      return { paused: false };
+      this.logger.warn(`Attempt not counted, Redis unavailable: ${String(error)}`);
+      return { blockedFor: null, attempt: 0 };
+    }
+  }
+
+  /**
+   * After a wrong password on reserved attempt `attempt`: from the 5th on, sets the pause with
+   * SET NX. `started` is true only for the request that created it, so it is recorded once.
+   */
+  async recordFailure(
+    tenantId: string,
+    identifier: string,
+    attempt: number,
+  ): Promise<{ paused: boolean; started: boolean }> {
+    if (attempt < MAX_PASSWORD_FAILURES) return { paused: false, started: false };
+    try {
+      const won = await this.redis.client.set(
+        this.keys(tenantId, identifier).pause,
+        '1',
+        'EX',
+        PAUSE_SECONDS,
+        'NX',
+      );
+      return { paused: true, started: won === 'OK' };
+    } catch (error) {
+      this.logger.warn(`Pause not set, Redis unavailable: ${String(error)}`);
+      return { paused: false, started: false };
+    }
+  }
+
+  /**
+   * Re-check after a correct password: false when a concurrent flood has used up the window's
+   * attempts or set the pause, so a parallel guess cannot sign in past the limit.
+   */
+  async allowsSuccess(tenantId: string, identifier: string): Promise<boolean> {
+    const { fail, pause } = this.keys(tenantId, identifier);
+    try {
+      const [count, paused] = await Promise.all([
+        this.redis.client.get(fail),
+        this.redis.client.exists(pause),
+      ]);
+      return paused === 0 && Number(count ?? 0) <= MAX_PASSWORD_FAILURES;
+    } catch (error) {
+      this.logger.warn(`Pause re-check skipped, Redis unavailable: ${String(error)}`);
+      return true;
     }
   }
 

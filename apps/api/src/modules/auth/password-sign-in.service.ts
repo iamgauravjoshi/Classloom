@@ -32,6 +32,9 @@ export class SignInPausedException extends HttpException {
   }
 }
 
+/** Matches no membership; used so an unknown identifier still runs the lookup. */
+const NO_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 export interface SignInMeta {
   ip?: string;
   userAgent?: string;
@@ -65,18 +68,18 @@ export class PasswordSignInService {
       throw new InvalidCredentialsException();
     }
 
-    const secondsLeft = await this.pauses.isPaused(tenant.id, input.identifier);
-    if (secondsLeft !== null) throw new SignInPausedException(secondsLeft);
+    // Counted before the password is checked, so parallel guesses cannot exceed the limit.
+    const { blockedFor, attempt } = await this.pauses.reserveAttempt(tenant.id, input.identifier);
+    if (blockedFor !== null) throw new SignInPausedException(blockedFor);
 
     const user = await this.findUser(input.identifier);
-    const membership = user
-      ? await withTenant(this.prisma, tenant.id, (tx) =>
-          tx.membership.findFirst({
-            where: { tenantId: tenant.id, userId: user.id, status: 'ACTIVE' },
-            select: { id: true, role: true },
-          }),
-        )
-      : null;
+    // Also runs for an unknown identifier, so a known user pays for no extra transaction.
+    const membership = await withTenant(this.prisma, tenant.id, (tx) =>
+      tx.membership.findFirst({
+        where: { tenantId: tenant.id, userId: user?.id ?? NO_USER_ID, status: 'ACTIVE' },
+        select: { id: true, role: true },
+      }),
+    );
 
     const hash = user?.passwordHash;
     // Every failure path runs one argon2 verification, so they all take the same time.
@@ -86,13 +89,20 @@ export class PasswordSignInService {
         : await this.passwords.verifyDummy(input.password);
 
     if (!ok || !user || !membership) {
-      const { paused } = await this.pauses.recordFailure(tenant.id, input.identifier);
-      await this.events.record({
-        type: paused ? 'SIGN_IN_PAUSED' : 'SIGN_IN_FAILED',
-        userId: user?.id,
-        tenantId: tenant.id,
-        ...eventBase,
-      });
+      const { paused, started } = await this.pauses.recordFailure(
+        tenant.id,
+        input.identifier,
+        attempt,
+      );
+      // Only the request that set the pause records it, so it is logged once.
+      if (!paused || started) {
+        await this.events.record({
+          type: paused ? 'SIGN_IN_PAUSED' : 'SIGN_IN_FAILED',
+          userId: user?.id,
+          tenantId: tenant.id,
+          ...eventBase,
+        });
+      }
       if (paused) {
         throw new SignInPausedException(
           (await this.pauses.isPaused(tenant.id, input.identifier)) ?? PAUSE_SECONDS,
@@ -101,6 +111,12 @@ export class PasswordSignInService {
       throw new InvalidCredentialsException();
     }
 
+    // A concurrent flood may have used up the window or set the pause since this attempt began.
+    if (!(await this.pauses.allowsSuccess(tenant.id, input.identifier))) {
+      throw new SignInPausedException(
+        (await this.pauses.isPaused(tenant.id, input.identifier)) ?? PAUSE_SECONDS,
+      );
+    }
     await this.pauses.clear(tenant.id, input.identifier);
     let passwordHash = user.passwordHash;
     if (hash && this.passwords.needsRehash(hash)) {
