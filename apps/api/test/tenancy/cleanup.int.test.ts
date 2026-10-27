@@ -183,6 +183,19 @@ describe('pending registration clean-up', () => {
            FROM pg_proc p WHERE p.proname = 'purge_pending_registrations'`,
       );
       expect(res.rows).toEqual([{ app: true, stranger: false, definer: true }]);
+
+      // If the owner ever lost BYPASSRLS, forced RLS would hide memberships and the orphan check
+      // would delete members of active schools. row_security=off makes that an error instead.
+      const config = await admin.query<{ proname: string; proconfig: string[] }>(
+        `SELECT proname, proconfig FROM pg_proc
+          WHERE proname IN ('purge_pending_registrations', 'cancel_pending_registration')
+          ORDER BY proname`,
+      );
+      expect(config.rows.map((row) => row.proname)).toEqual([
+        'cancel_pending_registration',
+        'purge_pending_registrations',
+      ]);
+      for (const row of config.rows) expect(row.proconfig).toContain('row_security=off');
     } finally {
       await admin.query('DROP ROLE IF EXISTS stranger');
       await admin.end();
