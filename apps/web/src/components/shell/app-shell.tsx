@@ -3,20 +3,11 @@
 import { SidebarInset, SidebarProvider } from '@classloom/ui/components/ui/sidebar';
 import type { ReactNode } from 'react';
 
-import type { Role } from '@/lib/mock-session';
+import type { Role, ShellSession } from '@/lib/session';
 
 import { AppSidebar } from './app-sidebar';
 import { MobileTabBar } from './mobile-tab-bar';
 import { Topbar } from './topbar';
-
-/** Serializable slice of the session passed from the server layout. */
-export interface ShellSession {
-  user: { name: string; avatarUrl?: string };
-  role: Role;
-  permissions: string[];
-  campus: { id: string; name: string };
-  academicYear: string;
-}
 
 const TAB_BAR_ROLES: ReadonlySet<Role> = new Set(['teacher', 'parent', 'student']);
 

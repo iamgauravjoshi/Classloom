@@ -12,6 +12,37 @@ function respond(status: number, body: string, contentType: string) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
+describe('apiFetch base URL', () => {
+  it('calls the same-origin /api proxy in the browser, sending cookies same-origin only', async () => {
+    // A minimal browser window at the E2E web origin.
+    vi.stubGlobal('window', { location: new URL('http://localhost:3200/en/dashboard') });
+    const fetchMock = respond(200, '{}', 'application/json');
+    await apiFetch({ url: '/auth/session', method: 'GET' });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('http://localhost:3200/api/auth/session');
+    expect(init.credentials).toBe('same-origin');
+  });
+
+  it('calls API_INTERNAL_URL directly on the server', async () => {
+    vi.stubGlobal('window', undefined);
+    vi.stubEnv('API_INTERNAL_URL', 'http://api:4000');
+    const fetchMock = respond(200, '{}', 'application/json');
+    await apiFetch({ url: '/auth/session', method: 'GET' });
+    const [url] = fetchMock.mock.calls[0] as unknown as [string];
+    expect(url).toBe('http://api:4000/auth/session');
+  });
+
+  it('falls back to localhost:4000 on the server when API_INTERNAL_URL is unset', async () => {
+    vi.stubGlobal('window', undefined);
+    vi.stubEnv('API_INTERNAL_URL', undefined);
+    const fetchMock = respond(200, '{}', 'application/json');
+    await apiFetch({ url: '/health', method: 'GET', params: { a: 1 } });
+    const [url] = fetchMock.mock.calls[0] as unknown as [string];
+    expect(url).toBe('http://localhost:4000/health?a=1');
+  });
 });
 
 describe('apiFetch', () => {
@@ -31,7 +62,7 @@ describe('apiFetch', () => {
     });
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('http://localhost:4000/students?page=2');
-    expect(init.credentials).toBe('include');
+    expect(init.credentials).toBe('same-origin');
     expect(init.body).toBe('{"name":"Asha"}');
     expect(new Headers(init.headers).get('content-type')).toBe('application/json');
   });

@@ -17,6 +17,8 @@ export function buildOpenApiDocument(app: INestApplication, env: Env): OpenAPIOb
     .setTitle('Classloom API')
     .setDescription('Multi-school management SaaS for Indian schools')
     .setVersion('0.0.0')
+    // nestjs-zod writes nested nullables as `type: [..., 'null']`, which only 3.1 allows.
+    .setOpenAPIVersion('3.1.0')
     .addCookieAuth(sessionCookieName(env))
     .build();
   return cleanupOpenApiDoc(SwaggerModule.createDocument(app, config));

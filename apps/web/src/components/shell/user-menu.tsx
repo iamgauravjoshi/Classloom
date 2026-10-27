@@ -1,5 +1,6 @@
 'use client';
 
+import { useSignOut } from '@classloom/api-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@classloom/ui/components/ui/avatar';
 import { Button } from '@classloom/ui/components/ui/button';
 import {
@@ -11,10 +12,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@classloom/ui/components/ui/dropdown-menu';
-import { IconLogout, IconSettings, IconUser } from '@tabler/icons-react';
+import { IconLogout, IconUser } from '@tabler/icons-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import type { Role } from '@/lib/mock-session';
+import { Link, useRouter } from '@/i18n/navigation';
+import type { Role } from '@/lib/session';
 
 const initials = (name: string) =>
   name
@@ -32,6 +35,18 @@ export function UserMenu({
   role: Role;
 }) {
   const t = useTranslations();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const signOut = useSignOut({
+    mutation: {
+      // Leave even if the call failed: a 401 means the session had already ended.
+      onSettled: () => {
+        queryClient.clear();
+        router.replace('/sign-in');
+      },
+    },
+  });
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -53,18 +68,14 @@ export function UserMenu({
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem render={<Link href="/account" />}>
             <IconUser />
-            {t('shell.profile')}
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <IconSettings />
-            {t('shell.settings')}
+            {t('shell.myAccount')}
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem disabled={signOut.isPending} onClick={() => signOut.mutate()}>
             <IconLogout />
             {t('shell.signOut')}
           </DropdownMenuItem>

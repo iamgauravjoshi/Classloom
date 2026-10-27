@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.1.0",
   "paths": {
     "/health": {
       "get": {
@@ -245,6 +245,349 @@
           "school-registrations"
         ]
       }
+    },
+    "/auth/session": {
+      "get": {
+        "operationId": "getAuthSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The signed-in user, school and role",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/sign-out": {
+      "post": {
+        "operationId": "signOut",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Signed out, also when there was no session"
+          }
+        },
+        "summary": "End the current session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/sign-in/password": {
+      "post": {
+        "operationId": "signInWithPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordSignInRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Email/mobile or password is incorrect."
+          },
+          "429": {
+            "description": "Paused after 5 wrong passwords (type sign-in-paused), or too many from this address"
+          }
+        },
+        "summary": "Sign in to a school with an email or mobile and a password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/otp/request": {
+      "post": {
+        "operationId": "requestSignInCode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeRequestAcceptedDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this address"
+          },
+          "503": {
+            "description": "The queue is unreachable"
+          }
+        },
+        "summary": "Email a 6-digit sign-in code (the answer is the same whether or not the account exists)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/otp/verify": {
+      "post": {
+        "operationId": "verifySignInCode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeVerifyRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "That code is incorrect or has expired."
+          },
+          "429": {
+            "description": "Too many attempts from this address"
+          }
+        },
+        "summary": "Sign in to a school with an emailed code",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password/forgot": {
+      "post": {
+        "operationId": "requestPasswordReset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted; a link is emailed if an account matches."
+          },
+          "400": {
+            "description": "The identifier is not an email or a mobile number"
+          },
+          "429": {
+            "description": "Too many requests from this address"
+          },
+          "503": {
+            "description": "The queue is unreachable"
+          }
+        },
+        "summary": "Email a password reset link (the answer is the same whether or not the account exists)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password/reset": {
+      "post": {
+        "operationId": "resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The password was changed."
+          },
+          "400": {
+            "description": "The new password breaks the policy (errors[] with path newPassword and a code)"
+          },
+          "410": {
+            "description": "The link is unknown, expired or already used"
+          }
+        },
+        "summary": "Set a new password with a reset link token; signs everyone out and does not sign in",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The signed-in user",
+        "tags": [
+          "me"
+        ]
+      },
+      "patch": {
+        "operationId": "updateMe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The name or mobile is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "409": {
+            "description": "The mobile belongs to another account (errors[] path mobile)"
+          },
+          "429": {
+            "description": "More than 20 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Change your name or mobile number (null clears the mobile); 20 changes per hour",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/password": {
+      "put": {
+        "operationId": "setPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPasswordRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The password was saved."
+          },
+          "400": {
+            "description": "The current password is missing or wrong (path currentPassword), or the new one breaks the policy (path newPassword)"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "First set without a sign-in in the last 10 minutes (type recent-sign-in-required)"
+          },
+          "429": {
+            "description": "Password attempts are paused (type sign-in-paused)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Set a first password or change it; signs out your other sessions",
+        "tags": [
+          "me"
+        ]
+      }
     }
   },
   "info": {
@@ -256,6 +599,13 @@
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "cl_session"
+      }
+    },
     "schemas": {
       "HealthResponseDto": {
         "type": "object",
@@ -464,9 +814,7 @@
           },
           "acceptTerms": {
             "type": "boolean",
-            "enum": [
-              true
-            ]
+            "const": true
           }
         },
         "required": [
@@ -548,6 +896,266 @@
         "required": [
           "code",
           "name"
+        ]
+      },
+      "AuthSessionDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "mobile": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hasPassword": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "email",
+              "mobile",
+              "hasPassword"
+            ]
+          },
+          "school": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ]
+          },
+          "campus": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "const": "OWNER"
+          },
+          "remember": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "user",
+          "school",
+          "campus",
+          "role",
+          "remember",
+          "expiresAt"
+        ]
+      },
+      "PasswordSignInRequestDto": {
+        "type": "object",
+        "properties": {
+          "schoolCode": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "remember": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schoolCode",
+          "identifier",
+          "password",
+          "remember"
+        ]
+      },
+      "CodeRequestDto": {
+        "type": "object",
+        "properties": {
+          "schoolCode": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schoolCode",
+          "email"
+        ]
+      },
+      "CodeRequestAcceptedDto": {
+        "type": "object",
+        "properties": {
+          "maskedEmail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "maskedEmail"
+        ]
+      },
+      "CodeVerifyRequestDto": {
+        "type": "object",
+        "properties": {
+          "schoolCode": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "remember": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schoolCode",
+          "email",
+          "code",
+          "remember"
+        ]
+      },
+      "ForgotPasswordRequestDto": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "identifier"
+        ]
+      },
+      "ResetPasswordRequestDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
+        ]
+      },
+      "MeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "mobile": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "hasPassword": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "emailVerified",
+          "mobile",
+          "hasPassword"
+        ]
+      },
+      "UpdateMeRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "mobile": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SetPasswordRequestDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "newPassword"
         ]
       }
     }

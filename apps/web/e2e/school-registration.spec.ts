@@ -3,6 +3,9 @@ import { type APIRequestContext, expect, type Page, test, type TestInfo } from '
 
 import { latestEmailTo, verificationLink } from './support/mailpit';
 
+// Registration is for people who are not signed in.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 const PAGE_URL = '/en/register-school';
 const TERMS = /I accept the Terms/;
 const PROJECTS = [

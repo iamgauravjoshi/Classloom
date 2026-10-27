@@ -5,7 +5,7 @@ const POLL_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 250;
 
 interface MailpitSearch {
-  messages?: { ID: string }[];
+  messages?: { ID: string; Subject: string }[];
 }
 
 interface MailpitMessage {
@@ -13,10 +13,14 @@ interface MailpitMessage {
   Text: string;
 }
 
-/** Polls Mailpit for the newest message to `address`, then returns its subject and text part. */
+/**
+ * Polls Mailpit for the newest message to `address` (whose subject matches `subject`, when given),
+ * then returns its subject and text part.
+ */
 export async function latestEmailTo(
   request: APIRequestContext,
   address: string,
+  subject?: RegExp,
 ): Promise<{ subject: string; text: string }> {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
   const query = encodeURIComponent(`to:"${address}"`);
@@ -24,14 +28,14 @@ export async function latestEmailTo(
     const search = await request.get(`${MAILPIT_URL}/api/v1/search?query=${query}`);
     if (search.ok()) {
       const { messages } = (await search.json()) as MailpitSearch;
-      const id = messages?.[0]?.ID;
-      if (id) {
-        const message = await request.get(`${MAILPIT_URL}/api/v1/message/${id}`);
+      const match = subject ? messages?.find((m) => subject.test(m.Subject)) : messages?.[0];
+      if (match) {
+        const message = await request.get(`${MAILPIT_URL}/api/v1/message/${match.ID}`);
         const body = (await message.json()) as MailpitMessage;
         return { subject: body.Subject, text: body.Text };
       }
     }
-    if (Date.now() > deadline) throw new Error(`No email to ${address} within 10 s`);
+    if (Date.now() > deadline) throw new Error(`No matching email to ${address} within 10 s`);
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 }

@@ -5,8 +5,9 @@ import { SidebarTrigger } from '@classloom/ui/components/ui/sidebar';
 import { IconBell } from '@tabler/icons-react';
 import { useTranslations } from 'next-intl';
 
+import type { ShellSession } from '@/lib/session';
+
 import { AcademicYearSwitcher } from './academic-year-switcher';
-import type { ShellSession } from './app-shell';
 import { CommandSearch } from './command-search';
 import { ThemeToggle } from './theme-toggle';
 import { UserMenu } from './user-menu';
