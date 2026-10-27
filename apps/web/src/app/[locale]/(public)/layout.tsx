@@ -29,7 +29,7 @@ export default async function PublicLayout({ children, params }: LayoutProps<'/[
             ))}
           </ul>
         </div>
-        <p className="text-sm opacity-80">© Classloom</p>
+        <p className="text-sm">© Classloom</p>
       </aside>
       <main className="flex flex-col items-center px-4 py-6 sm:px-8 lg:justify-center lg:py-10">
         <div className="mb-6 flex items-center gap-2 self-start text-lg font-semibold lg:hidden">

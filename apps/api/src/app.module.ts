@@ -52,7 +52,11 @@ export class AppModule {
                 limit: env.REGISTRATION_RATE_LIMIT_PER_HOUR,
                 ttl: 3_600_000,
               },
-              { name: AVAILABILITY_THROTTLER, limit: 60, ttl: 60_000 },
+              {
+                name: AVAILABILITY_THROTTLER,
+                limit: env.CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE,
+                ttl: 60_000,
+              },
             ],
           }),
         }),
