@@ -1,22 +1,28 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import type { Queue } from 'bullmq';
+import { Client } from 'pg';
+import request from 'supertest';
+import type { App } from 'supertest/types';
 
 import { PlatformPrismaService } from '../../src/core/prisma/platform-prisma.service';
+import { PrismaService } from '../../src/core/prisma/prisma.service';
+import type { PrismaClient } from '../../src/generated/prisma/client';
 import { createApp } from '../../src/main';
 import {
   MAINTENANCE_QUEUE,
   PendingCleanupService,
   PURGE_PENDING_JOB,
 } from '../../src/modules/tenancy/pending-cleanup.service';
-import { startTestInfra, type TestInfra } from '../setup-containers';
+import { ownerPrisma, startTestInfra, type TestInfra } from '../setup-containers';
 
 const HOUR = 3_600_000;
 
 describe('pending registration clean-up', () => {
   let infra: TestInfra;
   let app: INestApplication;
-  let platform: PlatformPrismaService;
+  /** Owner-role client for seeding and checking rows across tenants; the app never holds it. */
+  let platform: PrismaClient;
   let cleanup: PendingCleanupService;
   const now = new Date();
 
@@ -61,9 +67,11 @@ describe('pending registration clean-up', () => {
 
   beforeAll(async () => {
     infra = await startTestInfra();
-    app = await createApp(infra.env, { logger: false });
+    // The API runs without the owner credential: the purge goes through a SECURITY DEFINER
+    // function that the app role may only execute.
+    app = await createApp({ ...infra.env, DATABASE_MIGRATION_URL: undefined }, { logger: false });
     await app.init();
-    platform = app.get(PlatformPrismaService);
+    platform = ownerPrisma(infra.env);
     cleanup = app.get(PendingCleanupService, { strict: false });
 
     // The app schedules the purge on boot and runs it straight away. Stop the schedule and let
@@ -81,6 +89,7 @@ describe('pending registration clean-up', () => {
 
   afterAll(async () => {
     await app?.close();
+    await platform?.$disconnect();
     await infra?.stop();
   });
 
@@ -147,5 +156,36 @@ describe('pending registration clean-up', () => {
 
     expect(await cleanup.purgeExpired(now)).toEqual({ tenants: 1, users: 1 });
     expect(await cleanup.purgeExpired(now)).toEqual({ tenants: 0, users: 0 });
+  });
+
+  it('boots and serves without the owner database URL', async () => {
+    const res = await request(app.getHttpServer() as App).get('/health');
+    expect(res.status).toBe(200);
+  });
+
+  it('gives the API no owner-role client', () => {
+    expect(() => app.get(PlatformPrismaService, { strict: false })).toThrow();
+  });
+
+  it('purges as the app role through an execute-only SECURITY DEFINER function', async () => {
+    const prisma = app.get(PrismaService);
+    const [who] = await prisma.$queryRaw<{ current_user: string }[]>`SELECT current_user`;
+    expect(who?.current_user).toBe('classloom_app');
+
+    const admin = new Client({ connectionString: infra.postgres.getConnectionUri() });
+    await admin.connect();
+    try {
+      await admin.query('CREATE ROLE stranger NOLOGIN');
+      const res = await admin.query<{ app: boolean; stranger: boolean; definer: boolean }>(
+        `SELECT has_function_privilege('classloom_app', p.oid, 'EXECUTE') AS app,
+                has_function_privilege('stranger', p.oid, 'EXECUTE') AS stranger,
+                p.prosecdef AS definer
+           FROM pg_proc p WHERE p.proname = 'purge_pending_registrations'`,
+      );
+      expect(res.rows).toEqual([{ app: true, stranger: false, definer: true }]);
+    } finally {
+      await admin.query('DROP ROLE IF EXISTS stranger');
+      await admin.end();
+    }
   });
 });

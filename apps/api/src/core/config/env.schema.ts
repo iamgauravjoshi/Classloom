@@ -5,7 +5,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
   API_PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
-  DATABASE_MIGRATION_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  // Owner role (BYPASSRLS): migrations and the platform CLI only. The API never needs it.
+  DATABASE_MIGRATION_URL: z.url({ protocol: /^postgres(ql)?$/ }).optional(),
   SMTP_URL: z.url({ protocol: /^smtps?$/ }),
   EMAIL_FROM: z.string().min(1).default('Classloom <no-reply@classloom.local>'),
   REGISTRATION_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(5),

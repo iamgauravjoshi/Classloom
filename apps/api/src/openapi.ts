@@ -10,7 +10,6 @@ async function exportOpenApi(): Promise<void> {
       NODE_ENV: 'test',
       API_PORT: 0,
       DATABASE_URL: 'postgresql://openapi:openapi@127.0.0.1:1/openapi',
-      DATABASE_MIGRATION_URL: 'postgresql://openapi:openapi@127.0.0.1:1/openapi',
       REDIS_URL: 'redis://127.0.0.1:1',
       SMTP_URL: 'smtp://127.0.0.1:1',
       EMAIL_FROM: 'Classloom <no-reply@classloom.local>',

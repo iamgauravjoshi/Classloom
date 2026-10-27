@@ -3,12 +3,14 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
 import { Client } from 'pg';
 import { GenericContainer, type StartedTestContainer } from 'testcontainers';
 
 import type { Env } from '../src/core/config/env.schema';
+import { PrismaClient } from '../src/generated/prisma/client';
 
 const execFileAsync = promisify(execFile);
 const apiDir = path.resolve(__dirname, '..');
@@ -21,6 +23,13 @@ export interface TestInfra {
   mailpit?: StartedTestContainer;
   mailpitApiUrl?: string;
   stop(): Promise<void>;
+}
+
+/** An owner-role (BYPASSRLS) client for tests that seed or inspect rows across tenants. */
+export function ownerPrisma(env: Env): PrismaClient {
+  return new PrismaClient({
+    adapter: new PrismaPg({ connectionString: env.DATABASE_MIGRATION_URL }),
+  });
 }
 
 function urlAs(connectionUri: string, role: string): string {

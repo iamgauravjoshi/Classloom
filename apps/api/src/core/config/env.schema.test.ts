@@ -43,9 +43,15 @@ describe('parseEnv', () => {
     });
   });
 
-  it('requires the migration database URL', () => {
+  it('does not require the owner-role migration URL (only migrations and the CLI use it)', () => {
     const { DATABASE_MIGRATION_URL: _omit, ...rest } = validEnv;
-    expect(() => parseEnv(rest)).toThrow(/DATABASE_MIGRATION_URL/);
+    expect(parseEnv(rest).DATABASE_MIGRATION_URL).toBeUndefined();
+  });
+
+  it('still validates the migration URL when it is set', () => {
+    expect(() => parseEnv({ ...validEnv, DATABASE_MIGRATION_URL: 'not a url' })).toThrow(
+      /DATABASE_MIGRATION_URL/,
+    );
   });
 
   it('rejects a non-SMTP SMTP_URL', () => {
