@@ -20,6 +20,7 @@ import { QueueModule } from './core/queue/queue.module';
 import { RedisModule } from './core/redis/redis.module';
 import { RedisService } from './core/redis/redis.service';
 import { TenancyCoreModule } from './core/tenancy/tenancy-core.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { TenancyModule } from './modules/tenancy/tenancy.module';
 
 const LOG_LEVEL: Record<Env['NODE_ENV'], string> = {
@@ -73,6 +74,7 @@ export class AppModule {
         EmailModule,
         HealthModule,
         TenancyModule,
+        AuthModule,
       ],
       providers: [
         { provide: APP_PIPE, useClass: ZodValidationPipe },
