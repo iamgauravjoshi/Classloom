@@ -46,7 +46,7 @@ The work is built **module by module**. Each module goes through spec → plan �
 
 - NestJS (modular monolith) · Prisma ORM (multi-file schema) · PostgreSQL 17 · Redis
 - `nestjs-zod` (shared Zod schemas → validation + OpenAPI) · `@nestjs/swagger` → **Orval** generates a typed client and TanStack Query hooks for web
-- Auth: `argon2` (passwords) · JWT access token (15 min) + rotating refresh token in an httpOnly cookie · OTP hashed in Redis with TTL and rate limits · `otplib` (TOTP 2FA)
+- Auth: `argon2` (passwords) · database sessions behind a first-party httpOnly cookie (the web app proxies `/api`; see the Auth spec) · OTP hashed in Redis with TTL and rate limits · `otplib` (TOTP 2FA)
 - Authorization: CASL (role + permission + scope rules)
 - BullMQ (jobs: email, web push, PDF generation, imports, reports; SMS/WhatsApp later) · `@nestjs/event-emitter` + transactional outbox for domain events
 - `nestjs-pino` (structured logs) · `@nestjs/throttler` · Helmet · `@nestjs/terminus` (health checks)
@@ -118,7 +118,7 @@ classloom/
 
 - `User` is a global identity (phone and/or email). `Membership` links a user to a tenant with roles and campus scope. One parent can hold children in two schools on the platform.
 - Default roles: Platform Super Admin, School Owner/Trustee, Principal, School Admin, Accountant, Teacher, Class Teacher (scoped to a section), Librarian, Transport Manager, Receptionist, Parent, Student. Custom roles are composed from permission keys (`students.read`, `fees.collect`, …).
-- Login flow: enter email or mobile → email: OTP or password; mobile: password (SMS OTP later) → optional TOTP for staff → access JWT + refresh cookie. Includes device/session list, login activity, lockout and rate limits.
+- Login flow: enter email or mobile → email: OTP or password; mobile: password (SMS OTP later) → optional TOTP for staff → session cookie (school code chosen first). Includes device/session list, login activity, lockout and rate limits.
 
 **Cross-cutting conventions:**
 
@@ -193,7 +193,7 @@ Phases run in order. Each part is a shippable slice with its own spec, plan, tes
 **Phase 1 — Platform core**
 
 1. Tenancy: tenant + campus model, school code, tenant resolution from session/header (subdomain resolver later), RLS, platform super-admin tenant CRUD.
-2. Auth: email OTP or password, mobile + password, refresh rotation, forgot/reset, TOTP 2FA, sessions, login activity, rate limits (all PreSkool auth screens re-designed).
+2. Auth: email OTP or password, mobile + password, sessions, forgot/reset, TOTP 2FA, sessions list, login activity, rate limits (all PreSkool auth screens re-designed). Split into 2a (sign-in, sessions, passwords) and 2b (security settings, 2FA, login history).
 3. IAM: users, roles, permission matrix UI, role-filtered navigation.
 4. School onboarding wizard: profile (name, board, UDISE+ code, affiliation no., logo, address), academic year (April–March) and terms, campuses.
 5. Academic structure: classes (Nursery–XII), sections, streams (Sci/Com/Arts for XI–XII), subjects (scholastic/co-scholastic, board codes), class-subject mapping, houses, rooms.
