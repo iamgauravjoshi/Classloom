@@ -1,5 +1,7 @@
-import { normalizeIndianMobile, parseIdentifier, validateSchoolCode } from '@classloom/utils';
+import { normalizeIndianMobile, validateSchoolCode } from '@classloom/utils';
 import { z } from 'zod';
+
+import { emailField } from './fields';
 
 export const BOARDS = ['CBSE', 'ICSE', 'STATE', 'IB', 'CAMBRIDGE', 'OTHER'] as const;
 export type Board = (typeof BOARDS)[number];
@@ -61,15 +63,6 @@ const schoolCodeField = z.string().transform((raw, ctx) => {
     return z.NEVER;
   }
   return check.code;
-});
-
-const emailField = z.string().transform((raw, ctx) => {
-  const id = parseIdentifier(raw);
-  if (id.kind !== 'email') {
-    ctx.addIssue({ code: 'custom', message: 'Enter a valid email address', input: raw });
-    return z.NEVER;
-  }
-  return id.value;
 });
 
 const optionalMobileField = z
