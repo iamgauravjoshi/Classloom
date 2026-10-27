@@ -18,6 +18,7 @@ import {
   RESEND_THROTTLER,
   skipAllBut,
 } from '../../core/http/throttler-names';
+import { Public } from '../auth/public.decorator';
 import {
   CancelRegistrationRequestDto,
   ResendRegistrationRequestDto,
@@ -29,6 +30,7 @@ import {
 import { SchoolRegistrationService } from './school-registration.service';
 
 @ApiTags('school-registrations')
+@Public()
 @Controller('school-registrations')
 export class SchoolRegistrationsController {
   constructor(private readonly registrations: SchoolRegistrationService) {}

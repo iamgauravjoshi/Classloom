@@ -1,0 +1,66 @@
+import { Inject, Injectable, type NestMiddleware } from '@nestjs/common';
+import type { NextFunction, Request, Response } from 'express';
+
+import { ENV } from '../../core/config/config.module';
+import type { Env } from '../../core/config/env.schema';
+import { PrismaService } from '../../core/prisma/prisma.service';
+import { TenantContext } from '../../core/tenancy/tenant-context';
+import { SessionService } from './session.service';
+import { clearSessionCookie, readSessionToken, setSessionCookie } from './session-cookie';
+
+/**
+ * Runs before guards. A valid cookie attaches `request.auth` and runs the rest of the request
+ * inside the session school's tenant context. Anything invalid is anonymous and clears the cookie.
+ */
+@Injectable()
+export class SessionMiddleware implements NestMiddleware {
+  constructor(
+    @Inject(ENV) private readonly env: Env,
+    private readonly sessions: SessionService,
+    private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContext,
+  ) {}
+
+  async use(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const token = readSessionToken(req, this.env);
+      if (!token) return next();
+
+      const resolved = await this.sessions.resolve(token);
+      const membership = resolved
+        ? await this.tenantContext.run(resolved.tenant.id, () =>
+            this.prisma.scoped.membership.findFirst({
+              where: {
+                id: resolved.session.membershipId,
+                userId: resolved.session.userId,
+                status: 'ACTIVE',
+              },
+              select: { role: true },
+            }),
+          )
+        : null;
+      if (!resolved || !membership) {
+        clearSessionCookie(res, this.env);
+        return next();
+      }
+
+      const { session } = resolved;
+      const { cookieRefresh } = await this.sessions.touch(session);
+      if (cookieRefresh) setSessionCookie(res, this.env, token, session.remember);
+
+      req.auth = {
+        sessionId: session.id,
+        userId: session.userId,
+        tenantId: session.tenantId,
+        membershipId: session.membershipId,
+        role: membership.role,
+        remember: session.remember,
+        authenticatedAt: session.authenticatedAt,
+      };
+      // Express runs the rest of the chain synchronously from next(), so it stays in the context.
+      this.tenantContext.run(session.tenantId, () => next());
+    } catch (error) {
+      next(error);
+    }
+  }
+}
