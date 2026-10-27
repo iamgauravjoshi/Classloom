@@ -38,6 +38,7 @@ describe('parseEnv', () => {
       EMAIL_FROM: 'Classloom <no-reply@classloom.local>',
       REGISTRATION_RATE_LIMIT_PER_HOUR: 5,
       CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE: 60,
+      RESEND_RATE_LIMIT_PER_HOUR: 10,
       REGISTRATION_TOKEN_TTL_HOURS: 24,
       PENDING_TENANT_TTL_HOURS: 48,
     });
@@ -51,6 +52,18 @@ describe('parseEnv', () => {
   it('still validates the migration URL when it is set', () => {
     expect(() => parseEnv({ ...validEnv, DATABASE_MIGRATION_URL: 'not a url' })).toThrow(
       /DATABASE_MIGRATION_URL/,
+    );
+  });
+
+  it('reads the per-address resend limit and rejects a non-positive or fractional one', () => {
+    expect(
+      parseEnv({ ...validEnv, RESEND_RATE_LIMIT_PER_HOUR: '25' }).RESEND_RATE_LIMIT_PER_HOUR,
+    ).toBe(25);
+    expect(() => parseEnv({ ...validEnv, RESEND_RATE_LIMIT_PER_HOUR: '0' })).toThrow(
+      /RESEND_RATE_LIMIT_PER_HOUR/,
+    );
+    expect(() => parseEnv({ ...validEnv, RESEND_RATE_LIMIT_PER_HOUR: '2.5' })).toThrow(
+      /RESEND_RATE_LIMIT_PER_HOUR/,
     );
   });
 

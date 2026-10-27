@@ -82,6 +82,7 @@ export async function startTestInfra(options: { mailpit?: boolean } = {}): Promi
     EMAIL_FROM: 'Classloom <no-reply@classloom.local>',
     REGISTRATION_RATE_LIMIT_PER_HOUR: 5,
     CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE: 60,
+    RESEND_RATE_LIMIT_PER_HOUR: 10,
     REGISTRATION_TOKEN_TTL_HOURS: 24,
     PENDING_TENANT_TTL_HOURS: 48,
   };

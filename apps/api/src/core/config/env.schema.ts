@@ -11,6 +11,8 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().min(1).default('Classloom <no-reply@classloom.local>'),
   REGISTRATION_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(5),
   CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
+  // Per client address, on resend and cancel (each counted on its own).
+  RESEND_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(10),
   REGISTRATION_TOKEN_TTL_HOURS: z.coerce.number().int().positive().default(24),
   PENDING_TENANT_TTL_HOURS: z.coerce.number().int().positive().default(48),
   REDIS_URL: z.url({ protocol: /^rediss?$/ }),

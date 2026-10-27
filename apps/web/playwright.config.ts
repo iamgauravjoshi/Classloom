@@ -42,6 +42,7 @@ export default defineConfig({
         WEB_ORIGIN,
         REGISTRATION_RATE_LIMIT_PER_HOUR: '1000',
         CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE: '10000',
+        RESEND_RATE_LIMIT_PER_HOUR: '1000',
       },
       reuseExistingServer: !CI,
       timeout: 120_000,

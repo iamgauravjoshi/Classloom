@@ -174,7 +174,7 @@
             "description": "Accepted whether or not a matching registration exists"
           },
           "429": {
-            "description": "More than 3 resends in an hour"
+            "description": "More than 3 resends in an hour for one email and code, or too many from this address"
           }
         },
         "summary": "Email a new verification link; always 202",

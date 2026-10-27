@@ -12,7 +12,11 @@ import {
 import { SkipThrottle } from '@nestjs/throttler';
 
 import { PublicThrottlerGuard } from '../../core/http/public-throttler.guard';
-import { AVAILABILITY_THROTTLER } from '../../core/http/throttler-names';
+import {
+  REGISTRATION_THROTTLER,
+  RESEND_THROTTLER,
+  skipAllBut,
+} from '../../core/http/throttler-names';
 import {
   ResendRegistrationRequestDto,
   SchoolRegistrationAcceptedDto,
@@ -29,7 +33,7 @@ export class SchoolRegistrationsController {
 
   @Post()
   @UseGuards(PublicThrottlerGuard)
-  @SkipThrottle({ [AVAILABILITY_THROTTLER]: true })
+  @SkipThrottle(skipAllBut(REGISTRATION_THROTTLER))
   @HttpCode(202)
   @ApiOperation({
     operationId: 'createSchoolRegistration',
@@ -43,13 +47,18 @@ export class SchoolRegistrationsController {
   }
 
   @Post('resend')
+  @UseGuards(PublicThrottlerGuard)
+  @SkipThrottle(skipAllBut(RESEND_THROTTLER))
   @HttpCode(202)
   @ApiOperation({
     operationId: 'resendSchoolRegistration',
     summary: 'Email a new verification link; always 202',
   })
   @ApiAcceptedResponse({ description: 'Accepted whether or not a matching registration exists' })
-  @ApiTooManyRequestsResponse({ description: 'More than 3 resends in an hour' })
+  @ApiTooManyRequestsResponse({
+    description:
+      'More than 3 resends in an hour for one email and code, or too many from this address',
+  })
   async resend(@Body() body: ResendRegistrationRequestDto): Promise<void> {
     await this.registrations.resend(body);
   }

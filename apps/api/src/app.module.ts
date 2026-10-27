@@ -10,7 +10,11 @@ import { EmailModule } from './core/email/email.module';
 import { HealthModule } from './core/health/health.module';
 import { ProblemFilter } from './core/http/problem.filter';
 import { RedisThrottlerStorage } from './core/http/redis-throttler.storage';
-import { AVAILABILITY_THROTTLER, REGISTRATION_THROTTLER } from './core/http/throttler-names';
+import {
+  AVAILABILITY_THROTTLER,
+  REGISTRATION_THROTTLER,
+  RESEND_THROTTLER,
+} from './core/http/throttler-names';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { QueueModule } from './core/queue/queue.module';
 import { RedisModule } from './core/redis/redis.module';
@@ -56,6 +60,11 @@ export class AppModule {
                 name: AVAILABILITY_THROTTLER,
                 limit: env.CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE,
                 ttl: 60_000,
+              },
+              {
+                name: RESEND_THROTTLER,
+                limit: env.RESEND_RATE_LIMIT_PER_HOUR,
+                ttl: 3_600_000,
               },
             ],
           }),

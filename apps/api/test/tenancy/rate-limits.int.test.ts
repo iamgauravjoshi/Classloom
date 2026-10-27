@@ -60,6 +60,19 @@ describe('rate limits on public endpoints', () => {
     expect(res.status).not.toBe(429);
   });
 
+  it('limits resend to 10 per hour per client, across emails and codes', async () => {
+    const resend = (n: number) =>
+      request(server)
+        .post('/school-registrations/resend')
+        .send({ email: `someone${n}@school.in`, code: `RSD${n}` });
+    for (let n = 1; n <= 10; n++) expect((await resend(n)).status).toBe(202);
+    const res = await resend(11);
+    expect(res.status).toBe(429);
+    expect(res.headers['content-type']).toContain('application/problem+json');
+    expect(res.body).toMatchObject({ status: 429, title: 'Too Many Requests' });
+    expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
+  });
+
   it('limits code availability to 60 per minute', async () => {
     for (let i = 0; i < 60; i++) {
       const res = await request(server).get('/schools/code-availability').query({ code: 'gisd' });

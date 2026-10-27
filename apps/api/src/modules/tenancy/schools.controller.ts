@@ -11,7 +11,7 @@ import {
 import { SkipThrottle } from '@nestjs/throttler';
 
 import { PublicThrottlerGuard } from '../../core/http/public-throttler.guard';
-import { REGISTRATION_THROTTLER } from '../../core/http/throttler-names';
+import { AVAILABILITY_THROTTLER, skipAllBut } from '../../core/http/throttler-names';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { CodeAvailabilityQueryDto, CodeAvailabilityResponseDto, PublicSchoolDto } from './dto';
 import { SchoolCodeService } from './school-code.service';
@@ -27,7 +27,7 @@ export class SchoolsController {
   // Declared before `:code/public`; the two paths cannot collide (different segment counts).
   @Get('code-availability')
   @UseGuards(PublicThrottlerGuard)
-  @SkipThrottle({ [REGISTRATION_THROTTLER]: true })
+  @SkipThrottle(skipAllBut(AVAILABILITY_THROTTLER))
   @ApiOperation({ operationId: 'getCodeAvailability', summary: 'Check a school code' })
   @ApiOkResponse({ type: CodeAvailabilityResponseDto })
   @ApiTooManyRequestsResponse({ description: 'More than 60 checks per minute from this address' })
