@@ -118,7 +118,7 @@ Part 2 adds password and session columns; nothing in Part 1 depends on them.
 | `expires_at` | timestamptz  | Issued + 24 hours                                                              |
 | `used_at`    | timestamptz? | Single use                                                                     |
 
-Issuing a new token (resend) invalidates earlier unused tokens for that tenant.
+Issuing a new token (resend) invalidates earlier unused tokens for that tenant. A token never outlives its registration: `expires_at` is capped at the tenant's purge time (`created_at` + `PENDING_TENANT_TTL_HOURS`), so the expiry stated in the email is always true.
 
 ## 5. Data isolation
 
@@ -134,6 +134,7 @@ Isolation is enforced in three layers, so a failure in one is caught by the next
      - `classloom_app` is used by the API at runtime. It has no `BYPASSRLS` and cannot alter tables, so even a raw `SELECT * FROM campuses` from the app sees only the current tenant's rows.
    - Platform-level tables (`tenants`, `users`, `registration_tokens`) are not row-level secured; only the tenancy and registration services touch them.
    - Local docker and CI create both roles. `DATABASE_URL` uses the app role; a new `DATABASE_MIGRATION_URL` uses the owner role.
+   - **The API process never holds the owner credential.** Work that must see across tenants (the expiry purge and registration cancel) runs through owner-defined `SECURITY DEFINER` SQL functions with a pinned `search_path`, executable only by `classloom_app`. `DATABASE_MIGRATION_URL` is optional for the API and required only by migrations and the platform CLI.
 
 ## 6. School code rules
 
@@ -169,8 +170,9 @@ A three-step form on one page, following the Figma sign-up screens' layout: bran
 | Method & path                                            | Body / params                                                                          | Success                                                                                    | Errors                                                                                                   |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | `GET /schools/code-availability?code=GISD&name=…&city=…` | `code` optional; `name`/`city` for a suggestion                                        | `200 { code, available, reason?, suggestion? }`; `reason` ∈ `taken`, `reserved`, `invalid` | `400` bad params                                                                                         |
-| `POST /school-registrations`                             | school name, board, city, state, code, admin name, email, mobile?, `acceptTerms: true` | `202 { maskedEmail }`                                                                      | `400` validation (field `errors[]`), `409` code taken (`errors: [{ path: 'code' }]`), `429` rate limited |
+| `POST /school-registrations`                             | school name, board, city, state, code, admin name, email, mobile?, `acceptTerms: true` | `202 { maskedEmail, cancelToken }`                                                         | `400` validation (field `errors[]`), `409` code taken (`errors: [{ path: 'code' }]`), `429` rate limited |
 | `POST /school-registrations/resend`                      | `{ email, code }`                                                                      | `202` always (no information leak)                                                         | `429`                                                                                                    |
+| `POST /school-registrations/cancel`                      | `{ cancelToken }`                                                                      | `204` always (no information leak)                                                         | `429`                                                                                                    |
 | `POST /school-registrations/verify`                      | `{ token }`                                                                            | `200 { code, name }`                                                                       | `410 Gone` when expired, used or unknown (one response for all three)                                    |
 | `GET /schools/:code/public`                              | none                                                                                   | `200 { code, name, city, state }` for `ACTIVE` schools                                     | `404` for unknown, pending, suspended or closed                                                          |
 
@@ -191,10 +193,12 @@ A three-step form on one page, following the Figma sign-up screens' layout: bran
   - The token is marked used.
   - A second click on a used link returns `410`. The web page then shows "This link was already used. If you registered this school, it's ready; sign-in arrives soon."
 - **Expiry clean-up:** a repeatable BullMQ job runs every hour and deletes tenants still `PENDING_VERIFICATION` 48 hours after creation. Campuses, memberships and tokens cascade. Users with no remaining memberships and no verified email are deleted. The job is idempotent and logs counts.
-- **Rate limits** (`@nestjs/throttler` with Redis storage, per client IP):
-  - `POST /school-registrations`: 5 per hour.
-  - `/resend`: 3 per hour per email+code.
-  - `/code-availability`: 60 per minute.
+- **Cancel ("Use a different email"):** the `202` carries an opaque `cancelToken` (32 random bytes; only its SHA-256 is stored). The registering browser keeps it in memory only. Cancel deletes the school only while it is still `PENDING_VERIFICATION`, freeing its code, so a mistyped address can be corrected without the wrong recipient becoming the owner. Verification clears the cancel hash.
+- **Queue outages:** job producers fail fast when Redis is unreachable (no offline queue, ~2 s backstop), so registration returns an error and rolls back instead of hanging.
+- **Rate limits** (`@nestjs/throttler` with Redis storage, per client IP unless noted):
+  - `POST /school-registrations`: 5 per hour (`REGISTRATION_RATE_LIMIT_PER_HOUR`).
+  - `/resend` and `/cancel`: 10 per hour per IP (`RESEND_RATE_LIMIT_PER_HOUR`); resend is also limited to 3 per hour per email+code.
+  - `/code-availability`: 60 per minute (`CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE`).
 
   Limits come from env vars so tests can lower them.
 
