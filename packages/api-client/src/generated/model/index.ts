@@ -6,8 +6,21 @@
  * OpenAPI spec version: 0.0.0
  */
 
+export * from './cancelRegistrationRequestDto';
+export * from './codeAvailabilityResponseDto';
+export * from './codeAvailabilityResponseDtoReason';
+export * from './getCodeAvailabilityParams';
 export * from './healthResponseDto';
 export * from './healthResponseDtoChecks';
 export * from './healthResponseDtoChecksDatabase';
 export * from './healthResponseDtoChecksRedis';
 export * from './healthResponseDtoStatus';
+export * from './publicSchoolDto';
+export * from './publicSchoolDtoState';
+export * from './resendRegistrationRequestDto';
+export * from './schoolRegistrationAcceptedDto';
+export * from './schoolRegistrationRequestDto';
+export * from './schoolRegistrationRequestDtoBoard';
+export * from './schoolRegistrationRequestDtoState';
+export * from './verifyRegistrationRequestDto';
+export * from './verifyRegistrationResponseDto';

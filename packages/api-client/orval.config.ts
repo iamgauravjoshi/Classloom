@@ -12,7 +12,7 @@ export default defineConfig({
       clean: true,
       override: {
         mutator: { path: './src/fetcher.ts', name: 'apiFetch' },
-        query: { useQuery: true, useSuspenseQuery: false },
+        query: { useSuspenseQuery: false },
       },
     },
   },

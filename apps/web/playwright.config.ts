@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const CI = Boolean(process.env.CI);
+// Locally the web port can be moved aside (E2E_WEB_PORT) when something else holds 3000.
+const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3000);
+const WEB_ORIGIN = `http://localhost:${WEB_PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
@@ -12,7 +15,7 @@ export default defineConfig({
   workers: CI ? 2 : undefined,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: WEB_ORIGIN,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -33,14 +36,22 @@ export default defineConfig({
       command: 'node --env-file-if-exists=../../.env dist/main.js',
       cwd: '../api',
       url: 'http://localhost:4000/health',
+      // CORS and the emailed verification links must point at the E2E web server, and the public
+      // throttles must not trip over the many registrations the suite makes.
+      env: {
+        WEB_ORIGIN,
+        REGISTRATION_RATE_LIMIT_PER_HOUR: '1000',
+        CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE: '10000',
+        RESEND_RATE_LIMIT_PER_HOUR: '1000',
+      },
       reuseExistingServer: !CI,
       timeout: 120_000,
       gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
     },
     {
       name: 'web',
-      command: 'node node_modules/next/dist/bin/next start -p 3000',
-      url: 'http://localhost:3000/en/dashboard',
+      command: `node node_modules/next/dist/bin/next start -p ${WEB_PORT}`,
+      url: `${WEB_ORIGIN}/en/dashboard`,
       reuseExistingServer: !CI,
       timeout: 120_000,
       gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },

@@ -3,7 +3,9 @@ import { parseEnv } from './env.schema';
 const validEnv = {
   NODE_ENV: 'development',
   API_PORT: '4000',
-  DATABASE_URL: 'postgresql://classloom:classloom@localhost:5432/classloom',
+  DATABASE_URL: 'postgresql://classloom_app:classloom_app@localhost:5432/classloom',
+  DATABASE_MIGRATION_URL: 'postgresql://classloom_owner:classloom_owner@localhost:5432/classloom',
+  SMTP_URL: 'smtp://localhost:1025',
   REDIS_URL: 'redis://localhost:6379',
   WEB_ORIGIN: 'http://localhost:3000',
 };
@@ -26,9 +28,47 @@ describe('parseEnv', () => {
     const env = parseEnv({
       NODE_ENV: 'production',
       DATABASE_URL: validEnv.DATABASE_URL,
+      DATABASE_MIGRATION_URL: validEnv.DATABASE_MIGRATION_URL,
+      SMTP_URL: validEnv.SMTP_URL,
       REDIS_URL: validEnv.REDIS_URL,
     });
-    expect(env).toMatchObject({ API_PORT: 4000, WEB_ORIGIN: 'http://localhost:3000' });
+    expect(env).toMatchObject({
+      API_PORT: 4000,
+      WEB_ORIGIN: 'http://localhost:3000',
+      EMAIL_FROM: 'Classloom <no-reply@classloom.local>',
+      REGISTRATION_RATE_LIMIT_PER_HOUR: 5,
+      CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE: 60,
+      RESEND_RATE_LIMIT_PER_HOUR: 10,
+      REGISTRATION_TOKEN_TTL_HOURS: 24,
+      PENDING_TENANT_TTL_HOURS: 48,
+    });
+  });
+
+  it('does not require the owner-role migration URL (only migrations and the CLI use it)', () => {
+    const { DATABASE_MIGRATION_URL: _omit, ...rest } = validEnv;
+    expect(parseEnv(rest).DATABASE_MIGRATION_URL).toBeUndefined();
+  });
+
+  it('still validates the migration URL when it is set', () => {
+    expect(() => parseEnv({ ...validEnv, DATABASE_MIGRATION_URL: 'not a url' })).toThrow(
+      /DATABASE_MIGRATION_URL/,
+    );
+  });
+
+  it('reads the per-address resend limit and rejects a non-positive or fractional one', () => {
+    expect(
+      parseEnv({ ...validEnv, RESEND_RATE_LIMIT_PER_HOUR: '25' }).RESEND_RATE_LIMIT_PER_HOUR,
+    ).toBe(25);
+    expect(() => parseEnv({ ...validEnv, RESEND_RATE_LIMIT_PER_HOUR: '0' })).toThrow(
+      /RESEND_RATE_LIMIT_PER_HOUR/,
+    );
+    expect(() => parseEnv({ ...validEnv, RESEND_RATE_LIMIT_PER_HOUR: '2.5' })).toThrow(
+      /RESEND_RATE_LIMIT_PER_HOUR/,
+    );
+  });
+
+  it('rejects a non-SMTP SMTP_URL', () => {
+    expect(() => parseEnv({ ...validEnv, SMTP_URL: 'http://x' })).toThrow(/SMTP_URL/);
   });
 
   it('rejects a malformed database URL', () => {

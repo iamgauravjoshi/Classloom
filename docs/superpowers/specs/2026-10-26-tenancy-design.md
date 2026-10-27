@@ -118,7 +118,7 @@ Part 2 adds password and session columns; nothing in Part 1 depends on them.
 | `expires_at` | timestamptz  | Issued + 24 hours                                                              |
 | `used_at`    | timestamptz? | Single use                                                                     |
 
-Issuing a new token (resend) invalidates earlier unused tokens for that tenant.
+Issuing a new token (resend) invalidates earlier unused tokens for that tenant. A token never outlives its registration: `expires_at` is capped at the tenant's purge time (`created_at` + `PENDING_TENANT_TTL_HOURS`), so the expiry stated in the email is always true.
 
 ## 5. Data isolation
 
@@ -134,149 +134,11 @@ Isolation is enforced in three layers, so a failure in one is caught by the next
      - `classloom_app` is used by the API at runtime. It has no `BYPASSRLS` and cannot alter tables, so even a raw `SELECT * FROM campuses` from the app sees only the current tenant's rows.
    - Platform-level tables (`tenants`, `users`, `registration_tokens`) are not row-level secured; only the tenancy and registration services touch them.
    - Local docker and CI create both roles. `DATABASE_URL` uses the app role; a new `DATABASE_MIGRATION_URL` uses the owner role.
+   - **The API process never holds the owner credential.** Work that must see across tenants (the expiry purge and registration cancel) runs through owner-defined `SECURITY DEFINER` SQL functions with a pinned `search_path`, executable only by `classloom_app`. `DATABASE_MIGRATION_URL` is optional for the API and required only by migrations and the platform CLI.
 
 ## 6. School code rules
 
-- Pattern: `^[A-Z][A-Z0-9-]{1,10}[A-Z0-9]# Phase 1, Part 1: Tenancy
-
-Status: draft for review · Date: 2026-10-26 · Builds on: [master design](2026-10-25-classloom-master-design.md) (section 3, "Multi-tenancy"), [Phase 0](../plans/2026-10-25-phase-0-foundation.md) · Research: [tenancy notes](../../research/tenancy.md)
-
-## 1. Purpose
-
-Classloom hosts many schools on one deployment. This part creates the foundation every later module builds on:
-
-1. A school can **register itself**, verify its email, and receive a **school code** and a **main campus**.
-2. **No school can ever see or change another school's data**: not through the API, not through a coding mistake, and not through a raw database query.
-
-### Success criteria
-
-- A visitor registers a school on a phone or desktop, receives a verification email, clicks it, and sees the school's code.
-- An unverified registration disappears after 48 hours and its code becomes free again.
-- Automated tests prove cross-school isolation at three levels: API, data-access layer, and raw SQL (row-level security).
-- The platform owner can list, suspend and reactivate schools from the command line.
-
-### Decisions already made (with the user, 2026-10-26)
-
-| Topic               | Decision                                                                                      |
-| ------------------- | --------------------------------------------------------------------------------------------- |
-| Who creates schools | Schools register themselves                                                                   |
-| Multi-campus groups | One school account (tenant) with many campuses inside                                         |
-| School code         | Short code chosen at registration, suggested from the name                                    |
-| Paid services       | None (see the master design's "Free-tier scope"): email only, no domain, so no subdomains yet |
-
-## 2. Scope
-
-**In scope**
-
-- Tenant, Campus, User and Membership data model.
-- Data isolation: tenant context, automatic query scoping, Postgres row-level security (RLS) and a restricted database role.
-- School code rules, suggestion and availability check.
-- Public self-registration (3 steps), email verification, resend, expiry and clean-up.
-- Minimal email service (SMTP) with plain templates.
-- Rate limiting on public registration endpoints.
-- Command-line tools for the platform owner.
-
-**Out of scope** (later parts)
-
-- Signing in, passwords, OTP, sessions: **Part 2 (Auth)**. Until then a verified school exists but its admin cannot sign in yet.
-- Platform admin web screen, roles and permissions: **Part 3 (IAM)**.
-- Full school profile, branding, more campuses, academic year: **Part 4 (onboarding wizard)**.
-- Billing, plans and usage limits; subdomains; CAPTCHA (added only if abuse appears).
-
-## 3. Concepts
-
-| Term            | Meaning                                                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Tenant**      | One school account: a single school or a trust running several branches. The unit of data isolation.                         |
-| **Campus**      | A physical school/branch inside a tenant. Every tenant has exactly one primary campus from registration.                     |
-| **User**        | A person, identified globally by email. One user can belong to several tenants (e.g. a parent with children in two schools). |
-| **Membership**  | Links a user to a tenant with a role. Part 1 only creates the `OWNER` membership; Part 3 adds the full role set.             |
-| **School code** | The tenant's short public identifier, typed at sign-in and printed on letters (e.g. `GISD`).                                 |
-
-## 4. Data model
-
-All tables use UUIDv7 primary keys and `created_at`/`updated_at` timestamps (`timestamptz`). Prisma schema file: `apps/api/prisma/schema/tenancy.prisma`.
-
-### Tenant (`tenants`), platform-level, not row-level secured
-
-| Column              | Type                | Rules                                                     |
-| ------------------- | ------------------- | --------------------------------------------------------- |
-| `id`                | uuid                | PK                                                        |
-| `code`              | citext              | Unique, case-insensitive; stored uppercase; see section 6 |
-| `name`              | text                | 3–120 chars (e.g. "Global International School")          |
-| `board`             | enum `Board`        | `CBSE`, `ICSE`, `STATE`, `IB`, `CAMBRIDGE`, `OTHER`       |
-| `city`              | text                | 2–60 chars                                                |
-| `state`             | enum `IndianState`  | 28 states + 8 union territories                           |
-| `contact_email`     | citext              | The registering admin's email                             |
-| `status`            | enum `TenantStatus` | `PENDING_VERIFICATION`, `ACTIVE`, `SUSPENDED`, `CLOSED`   |
-| `verified_at`       | timestamptz?        | Set on verification                                       |
-| `suspended_at`      | timestamptz?        | Set when suspended                                        |
-| `terms_accepted_at` | timestamptz         | When the registrant accepted terms and data consent       |
-
-### Campus (`campuses`), tenant-owned, row-level secured
-
-| Column          | Type                | Rules                                                |
-| --------------- | ------------------- | ---------------------------------------------------- |
-| `id`            | uuid                | PK                                                   |
-| `tenant_id`     | uuid                | FK → tenants, `ON DELETE CASCADE`                    |
-| `name`          | text                | Defaults to the school name at registration          |
-| `is_primary`    | boolean             | Exactly one `true` per tenant (partial unique index) |
-| `city`, `state` | as tenant           | Copied from registration                             |
-| `status`        | enum `CampusStatus` | `ACTIVE`, `INACTIVE`                                 |
-
-### User (`users`), global identity, not row-level secured
-
-| Column              | Type         | Rules                                                             |
-| ------------------- | ------------ | ----------------------------------------------------------------- |
-| `id`                | uuid         | PK                                                                |
-| `email`             | citext       | Unique; normalised with `parseIdentifier` from `@classloom/utils` |
-| `name`              | text         | 2–80 chars                                                        |
-| `mobile`            | text?        | Optional; E.164 via `normalizeIndianMobile`                       |
-| `email_verified_at` | timestamptz? | Set on verification                                               |
-
-Part 2 adds password and session columns; nothing in Part 1 depends on them.
-
-### Membership (`memberships`), tenant-owned, row-level secured
-
-| Column      | Type                  | Rules                                   |
-| ----------- | --------------------- | --------------------------------------- |
-| `id`        | uuid                  | PK                                      |
-| `tenant_id` | uuid                  | FK → tenants, cascade                   |
-| `user_id`   | uuid                  | FK → users, cascade                     |
-| `role`      | enum `MembershipRole` | Part 1: `OWNER` only; Part 3 extends it |
-| `status`    | enum                  | `ACTIVE`, `REVOKED`                     |
-|             |                       | Unique `(tenant_id, user_id)`           |
-
-### Registration token (`registration_tokens`), platform-level
-
-| Column       | Type         | Rules                                                                          |
-| ------------ | ------------ | ------------------------------------------------------------------------------ |
-| `id`         | uuid         | PK                                                                             |
-| `tenant_id`  | uuid         | FK → tenants, cascade                                                          |
-| `token_hash` | bytea        | SHA-256 of a 32-byte random token; the raw token exists only in the email link |
-| `expires_at` | timestamptz  | Issued + 24 hours                                                              |
-| `used_at`    | timestamptz? | Single use                                                                     |
-
-Issuing a new token (resend) invalidates earlier unused tokens for that tenant.
-
-## 5. Data isolation
-
-Isolation is enforced in three layers, so a failure in one is caught by the next.
-
-1. **Tenant context.** A request-scoped `TenantContext` (Node `AsyncLocalStorage`) holds the current tenant ID. Public registration endpoints run without a tenant. From Part 2 on, the tenant comes from the signed-in membership. Code that reads tenant-owned data without a context throws `TenantContextMissingError` (a 500, logged); it never falls back to "all tenants".
-2. **Automatic query scoping.** A Prisma client extension adds `tenant_id = <current>` to every read, update and delete on tenant-owned models, and sets `tenant_id` on every create. Tenant-owned models are listed in one registry (`TENANT_SCOPED_MODELS`); a unit test fails if a Prisma model has a `tenantId` field but is missing from the registry.
-3. **Row-level security in Postgres.**
-   - Every tenant-owned table has RLS enabled and **forced** with the policy `tenant_id = current_setting('app.tenant_id')::uuid`, for `USING` and `WITH CHECK`.
-   - Each scoped transaction runs `set_config('app.tenant_id', <id>, true)` (transaction-local), so a pooled connection can never leak a tenant to the next request.
-   - **Two database roles:**
-     - `classloom_owner` owns the schema and runs migrations.
-     - `classloom_app` is used by the API at runtime. It has no `BYPASSRLS` and cannot alter tables, so even a raw `SELECT * FROM campuses` from the app sees only the current tenant's rows.
-   - Platform-level tables (`tenants`, `users`, `registration_tokens`) are not row-level secured; only the tenancy and registration services touch them.
-   - Local docker and CI create both roles. `DATABASE_URL` uses the app role; a new `DATABASE_MIGRATION_URL` uses the owner role.
-
-## 6. School code rules
-
-**and** no `--`: 3–12 characters of letters, digits and hyphens, starting with a letter, not ending with a hyphen. Input is trimmed and uppercased before validation.
+- Pattern: `^[A-Z][A-Z0-9-]{1,10}[A-Z0-9]$` **and** no `--`: 3–12 characters of letters, digits and hyphens, starting with a letter, not ending with a hyphen. Input is trimmed and uppercased before validation.
 
 - Unique across all tenants, case-insensitive. Codes held by `PENDING_VERIFICATION` tenants count as taken until they expire.
 - **Reserved codes** (rejected so codes stay safe as future subdomains): `ADMIN`, `API`, `APP`, `WWW`, `MAIL`, `CLASSLOOM`, `SUPPORT`, `HELP`, `STATUS`, `DOCS`, `BLOG`, `STATIC`, `ASSETS`, `CDN`, `TEST`, `DEMO`, `ROOT`, `SYSTEM`.
@@ -308,8 +170,9 @@ A three-step form on one page, following the Figma sign-up screens' layout: bran
 | Method & path                                            | Body / params                                                                          | Success                                                                                    | Errors                                                                                                   |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | `GET /schools/code-availability?code=GISD&name=…&city=…` | `code` optional; `name`/`city` for a suggestion                                        | `200 { code, available, reason?, suggestion? }`; `reason` ∈ `taken`, `reserved`, `invalid` | `400` bad params                                                                                         |
-| `POST /school-registrations`                             | school name, board, city, state, code, admin name, email, mobile?, `acceptTerms: true` | `202 { maskedEmail }`                                                                      | `400` validation (field `errors[]`), `409` code taken (`errors: [{ path: 'code' }]`), `429` rate limited |
+| `POST /school-registrations`                             | school name, board, city, state, code, admin name, email, mobile?, `acceptTerms: true` | `202 { maskedEmail, cancelToken }`                                                         | `400` validation (field `errors[]`), `409` code taken (`errors: [{ path: 'code' }]`), `429` rate limited |
 | `POST /school-registrations/resend`                      | `{ email, code }`                                                                      | `202` always (no information leak)                                                         | `429`                                                                                                    |
+| `POST /school-registrations/cancel`                      | `{ cancelToken }`                                                                      | `204` always (no information leak)                                                         | `429`                                                                                                    |
 | `POST /school-registrations/verify`                      | `{ token }`                                                                            | `200 { code, name }`                                                                       | `410 Gone` when expired, used or unknown (one response for all three)                                    |
 | `GET /schools/:code/public`                              | none                                                                                   | `200 { code, name, city, state }` for `ACTIVE` schools                                     | `404` for unknown, pending, suspended or closed                                                          |
 
@@ -330,10 +193,12 @@ A three-step form on one page, following the Figma sign-up screens' layout: bran
   - The token is marked used.
   - A second click on a used link returns `410`. The web page then shows "This link was already used. If you registered this school, it's ready; sign-in arrives soon."
 - **Expiry clean-up:** a repeatable BullMQ job runs every hour and deletes tenants still `PENDING_VERIFICATION` 48 hours after creation. Campuses, memberships and tokens cascade. Users with no remaining memberships and no verified email are deleted. The job is idempotent and logs counts.
-- **Rate limits** (`@nestjs/throttler` with Redis storage, per client IP):
-  - `POST /school-registrations`: 5 per hour.
-  - `/resend`: 3 per hour per email+code.
-  - `/code-availability`: 60 per minute.
+- **Cancel ("Use a different email"):** the `202` carries an opaque `cancelToken` (32 random bytes; only its SHA-256 is stored). The registering browser keeps it in memory only. Cancel deletes the school only while it is still `PENDING_VERIFICATION`, freeing its code, so a mistyped address can be corrected without the wrong recipient becoming the owner. Verification clears the cancel hash.
+- **Queue outages:** job producers fail fast when Redis is unreachable (no offline queue, ~2 s backstop), so registration returns an error and rolls back instead of hanging.
+- **Rate limits** (`@nestjs/throttler` with Redis storage, per client IP unless noted):
+  - `POST /school-registrations`: 5 per hour (`REGISTRATION_RATE_LIMIT_PER_HOUR`).
+  - `/resend` and `/cancel`: 10 per hour per IP (`RESEND_RATE_LIMIT_PER_HOUR`); resend is also limited to 3 per hour per email+code.
+  - `/code-availability`: 60 per minute (`CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE`).
 
   Limits come from env vars so tests can lower them.
 

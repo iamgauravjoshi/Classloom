@@ -84,5 +84,145 @@
     "title": "Page not found",
     "body": "The page you are looking for does not exist or has moved.",
     "back": "Go to dashboard"
+  },
+  "registration": {
+    "brand": {
+      "tagline": "One portal to run your school",
+      "points": {
+        "one": "Admissions, students, staff and fees in one place",
+        "two": "Set up in minutes, with no installation",
+        "three": "Built for Indian schools and boards"
+      }
+    },
+    "header": {
+      "title": "Register your school",
+      "subtitle": "Create your school on Classloom. It takes about two minutes."
+    },
+    "progress": {
+      "label": "Registration progress",
+      "step": "Step {current} of {total}: {name}",
+      "school": "School",
+      "code": "School code",
+      "admin": "Your details"
+    },
+    "steps": {
+      "school": {
+        "title": "Tell us about your school",
+        "description": "These details appear on your school profile."
+      },
+      "code": {
+        "title": "Choose your school code",
+        "description": "Staff, parents and students type this code to sign in. You can't change it yourself later."
+      },
+      "admin": {
+        "title": "Your details",
+        "description": "You become the school's first administrator. We email you a link to confirm."
+      }
+    },
+    "fields": {
+      "schoolName": "School name",
+      "schoolNamePlaceholder": "Global International School",
+      "board": "Board",
+      "boardPlaceholder": "Select a board",
+      "city": "City",
+      "cityPlaceholder": "Dehradun",
+      "state": "State or union territory",
+      "statePlaceholder": "Select a state",
+      "code": "School code",
+      "codeHint": "3 to 12 letters or digits. Hyphens are allowed between parts.",
+      "adminName": "Your full name",
+      "email": "Email address",
+      "emailHint": "We send the verification link here.",
+      "mobile": "Mobile number (optional)",
+      "mobileHint": "10-digit Indian mobile number."
+    },
+    "boards": {
+      "CBSE": "CBSE",
+      "ICSE": "ICSE / ISC",
+      "STATE": "State board",
+      "IB": "International Baccalaureate (IB)",
+      "CAMBRIDGE": "Cambridge (IGCSE / A Level)",
+      "OTHER": "Other"
+    },
+    "availability": {
+      "checking": "Checking",
+      "available": "Available",
+      "taken": "Taken: try {suggestion}",
+      "takenNoSuggestion": "Taken",
+      "reserved": "Reserved",
+      "invalid": "Not valid",
+      "unknown": "Couldn't check right now",
+      "useSuggestion": "Use {suggestion}",
+      "reservedMessage": "This code is reserved. Choose another one.",
+      "invalidMessage": "Use 3 to 12 letters or digits, starting with a letter, with single hyphens between parts."
+    },
+    "terms": {
+      "label": "I accept the <terms>Terms</terms> and allow Classloom to process school data as described in the <privacy>Privacy Notice</privacy>."
+    },
+    "actions": {
+      "next": "Next",
+      "back": "Back",
+      "submit": "Register school",
+      "submitting": "Registering",
+      "haveAccount": "Already registered? Sign-in arrives in the next release."
+    },
+    "errors": {
+      "schoolName": "Enter the school name (3 to 120 characters).",
+      "board": "Select your board.",
+      "city": "Enter the city (2 to 60 characters).",
+      "state": "Select a state or union territory.",
+      "code": "Enter a valid school code.",
+      "codeTaken": "This school code is already taken.",
+      "adminName": "Enter your full name (2 to 80 characters).",
+      "email": "Enter a valid email address.",
+      "mobile": "Enter a valid 10-digit Indian mobile number.",
+      "acceptTerms": "Accept the Terms and Privacy Notice to continue.",
+      "rateLimited": "Too many attempts. Please wait a while and try again.",
+      "network": "We couldn't reach Classloom. Check your connection and try again.",
+      "generic": "Something went wrong. Please try again.",
+      "summary": "Please fix the highlighted fields."
+    },
+    "checkInbox": {
+      "title": "Check your inbox",
+      "body": "We sent a verification link to {email}. It expires in 24 hours.",
+      "spam": "Can't see it? Check your spam folder.",
+      "resend": "Resend link",
+      "resendIn": "You can ask for another link in {seconds}s.",
+      "resendReady": "Didn't get it? You can ask for another link.",
+      "resent": "If that registration is still pending, a new link is on its way.",
+      "resendError": "We couldn't resend the link. Please try again shortly.",
+      "differentEmail": "Use a different email",
+      "differentEmailError": "We couldn't release this registration to change the email. Check your connection and try again."
+    },
+    "verify": {
+      "title": "Verify your school",
+      "loading": "Verifying your link",
+      "ready": "{name} is ready",
+      "codeLabel": "School code",
+      "copy": "Copy code",
+      "copied": "Copied",
+      "copyFailed": "Couldn't copy. Select the code and copy it manually.",
+      "next": "Keep this code. Staff, parents and students use it to sign in. Sign-in arrives in the next release.",
+      "invalidTitle": "This link is no longer valid",
+      "invalidBody": "If you already opened this link, your school is ready and sign-in arrives soon. If it expired, request a new link below.",
+      "requestTitle": "Request a new link",
+      "email": "Email address",
+      "code": "School code",
+      "send": "Request a new link",
+      "sending": "Sending",
+      "sent": "If those details match a pending registration, a new link is on its way.",
+      "errorTitle": "We couldn't verify your link",
+      "errorBody": "This looks like a connection problem, not a problem with your link. Try again.",
+      "retry": "Try again",
+      "register": "Register another school"
+    },
+    "legal": {
+      "draftBadge": "Draft",
+      "back": "Back to registration",
+      "termsTitle": "Terms of Service",
+      "termsBody": "These terms are a draft placeholder. The final Terms of Service will be published before Classloom opens to schools.",
+      "privacyTitle": "Privacy Notice",
+      "privacyBody": "This notice is a draft placeholder. The final Privacy Notice will explain what school data Classloom processes and why, before Classloom opens to schools."
+    }
   }
 }

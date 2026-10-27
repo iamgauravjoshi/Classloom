@@ -1,0 +1,95 @@
+import type { SchoolRegistrationAccepted, VerifyRegistrationResponse } from '@classloom/contracts';
+import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import {
+  ApiAcceptedResponse,
+  ApiConflictResponse,
+  ApiGoneResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiTooManyRequestsResponse,
+} from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
+
+import { PublicThrottlerGuard } from '../../core/http/public-throttler.guard';
+import {
+  REGISTRATION_THROTTLER,
+  RESEND_THROTTLER,
+  skipAllBut,
+} from '../../core/http/throttler-names';
+import {
+  CancelRegistrationRequestDto,
+  ResendRegistrationRequestDto,
+  SchoolRegistrationAcceptedDto,
+  SchoolRegistrationRequestDto,
+  VerifyRegistrationRequestDto,
+  VerifyRegistrationResponseDto,
+} from './dto';
+import { SchoolRegistrationService } from './school-registration.service';
+
+@ApiTags('school-registrations')
+@Controller('school-registrations')
+export class SchoolRegistrationsController {
+  constructor(private readonly registrations: SchoolRegistrationService) {}
+
+  @Post()
+  @UseGuards(PublicThrottlerGuard)
+  @SkipThrottle(skipAllBut(REGISTRATION_THROTTLER))
+  @HttpCode(202)
+  @ApiOperation({
+    operationId: 'createSchoolRegistration',
+    summary: 'Register a school and email a verification link',
+  })
+  @ApiAcceptedResponse({ type: SchoolRegistrationAcceptedDto })
+  @ApiConflictResponse({ description: 'The school code is already taken' })
+  @ApiTooManyRequestsResponse({ description: 'Too many registrations from this address' })
+  create(@Body() body: SchoolRegistrationRequestDto): Promise<SchoolRegistrationAccepted> {
+    return this.registrations.register(body);
+  }
+
+  @Post('resend')
+  @UseGuards(PublicThrottlerGuard)
+  @SkipThrottle(skipAllBut(RESEND_THROTTLER))
+  @HttpCode(202)
+  @ApiOperation({
+    operationId: 'resendSchoolRegistration',
+    summary: 'Email a new verification link; always 202',
+  })
+  @ApiAcceptedResponse({ description: 'Accepted whether or not a matching registration exists' })
+  @ApiTooManyRequestsResponse({
+    description:
+      'More than 3 resends in an hour for one email and code, or too many from this address',
+  })
+  async resend(@Body() body: ResendRegistrationRequestDto): Promise<void> {
+    await this.registrations.resend(body);
+  }
+
+  @Post('cancel')
+  @UseGuards(PublicThrottlerGuard)
+  @SkipThrottle(skipAllBut(RESEND_THROTTLER))
+  @HttpCode(204)
+  @ApiOperation({
+    operationId: 'cancelSchoolRegistration',
+    summary: 'Withdraw a pending registration ("Use a different email"); always 204',
+  })
+  @ApiNoContentResponse({
+    description: 'Withdrawn if the token matches a pending registration; otherwise nothing changes',
+  })
+  @ApiTooManyRequestsResponse({ description: 'Too many requests from this address' })
+  async cancel(@Body() body: CancelRegistrationRequestDto): Promise<void> {
+    await this.registrations.cancel(body.cancelToken);
+  }
+
+  @Post('verify')
+  @HttpCode(200)
+  @ApiOperation({
+    operationId: 'verifySchoolRegistration',
+    summary: 'Verify a school registration',
+  })
+  @ApiOkResponse({ type: VerifyRegistrationResponseDto })
+  @ApiGoneResponse({ description: 'The link is unknown, used or expired' })
+  verify(@Body() body: VerifyRegistrationRequestDto): Promise<VerifyRegistrationResponse> {
+    return this.registrations.verify(body.token);
+  }
+}

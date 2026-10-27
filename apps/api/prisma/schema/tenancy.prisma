@@ -1,0 +1,176 @@
+// Tenancy: schools (tenants), their campuses, global user identities and memberships.
+// Spec: docs/superpowers/specs/2026-10-26-tenancy-design.md, sections 4 and 5.
+//
+// Tenant-owned models (those with a `tenantId` field) must be listed in TENANT_SCOPED_MODELS
+// (src/core/tenancy/tenant-scoped-models.ts) and have a row-level security policy in their
+// migration. A unit test fails if a model with `tenantId` is missing from the registry.
+
+/// Values match BOARDS in @classloom/contracts.
+enum Board {
+  CBSE
+  ICSE
+  STATE
+  IB
+  CAMBRIDGE
+  OTHER
+}
+
+/// ISO 3166-2:IN codes; values match INDIAN_STATES in @classloom/contracts.
+enum IndianState {
+  AN
+  AP
+  AR
+  AS
+  BR
+  CG
+  CH
+  DH
+  DL
+  GA
+  GJ
+  HP
+  HR
+  JH
+  JK
+  KA
+  KL
+  LA
+  LD
+  MH
+  ML
+  MN
+  MP
+  MZ
+  NL
+  OD
+  PB
+  PY
+  RJ
+  SK
+  TN
+  TR
+  TG
+  UK
+  UP
+  WB
+}
+
+enum TenantStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum CampusStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MembershipRole {
+  OWNER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  REVOKED
+}
+
+/// A school. Platform-level: not row-level secured.
+model Tenant {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  /// Case-insensitive; stored uppercase.
+  code            String       @unique @db.Citext
+  name            String
+  board           Board
+  city            String
+  state           IndianState
+  contactEmail    String       @map("contact_email") @db.Citext
+  status          TenantStatus @default(PENDING_VERIFICATION)
+  verifiedAt      DateTime?    @map("verified_at") @db.Timestamptz(6)
+  suspendedAt     DateTime?    @map("suspended_at") @db.Timestamptz(6)
+  termsAcceptedAt DateTime     @map("terms_accepted_at") @db.Timestamptz(6)
+  /// SHA-256 of the token that lets the registering browser withdraw the school while it is
+  /// still pending ("Use a different email"); cleared on verification.
+  cancelTokenHash Bytes?       @unique @map("cancel_token_hash")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  campuses           Campus[]
+  memberships        Membership[]
+  registrationTokens RegistrationToken[]
+
+  @@map("tenants")
+}
+
+/// Tenant-owned, row-level secured. Exactly one primary campus per tenant (partial unique
+/// index `campuses_one_primary`, added in the migration SQL).
+model Campus {
+  id        String       @id @default(uuid(7)) @db.Uuid
+  tenantId  String       @map("tenant_id") @db.Uuid
+  name      String
+  isPrimary Boolean      @default(false) @map("is_primary")
+  city      String
+  state     IndianState
+  status    CampusStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("campuses")
+}
+
+/// A global identity. Platform-level: not row-level secured.
+model User {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  email           String    @unique @db.Citext
+  name            String
+  /// E.164.
+  mobile          String?
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  memberships Membership[]
+
+  @@map("users")
+}
+
+/// Tenant-owned, row-level secured.
+model Membership {
+  id        String           @id @default(uuid(7)) @db.Uuid
+  tenantId  String           @map("tenant_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  role      MembershipRole
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+/// Email verification token for a pending registration. Platform-level: not row-level
+/// secured (it is read before any tenant context exists), so it is exempt from
+/// TENANT_SCOPED_MODELS via PLATFORM_MODELS_WITH_TENANT_FK.
+model RegistrationToken {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  /// SHA-256 of the raw token; the raw token exists only in the email link.
+  tokenHash Bytes     @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("registration_tokens")
+}
