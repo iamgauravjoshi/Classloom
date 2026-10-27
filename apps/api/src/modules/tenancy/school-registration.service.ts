@@ -15,13 +15,13 @@ import { RedisService } from '../../core/redis/redis.service';
 import { withNewTenant, withTenant } from '../../core/tenancy/with-tenant';
 import { maskEmail } from './mask-email';
 import { SchoolCodeService } from './school-code.service';
+import { registrationTokenExpiry } from './token-expiry';
 
 export const REGISTRATION_QUEUE = 'registration';
 export const RESEND_JOB = 'resend-verification';
 const MAX_PENDING_PER_EMAIL = 3;
 const RESEND_LIMIT = 3;
 const RESEND_WINDOW_SECONDS = 3600;
-const HOUR_MS = 3_600_000;
 const LINK_GONE = 'This verification link is no longer valid.';
 const CODE_TAKEN = 'This school code is already taken.';
 
@@ -55,7 +55,6 @@ export class SchoolRegistrationService {
     }
 
     const { raw, hash } = this.newToken();
-    const expiresAt = this.expiry();
     try {
       await withNewTenant(
         this.prisma,
@@ -72,6 +71,7 @@ export class SchoolRegistrationService {
             },
           }),
         async (tx, tenant) => {
+          const expiresAt = this.expiry(tenant.createdAt);
           await tx.campus.create({
             data: {
               tenantId: tenant.id,
@@ -139,8 +139,11 @@ export class SchoolRegistrationService {
     );
     if (!isOwner) return;
 
+    const expiresAt = this.expiry(tenant.createdAt);
+    // Past its purge time the registration is about to be deleted: a link would be dead on
+    // arrival. Registering again (once the code is freed) is the way back.
+    if (expiresAt.getTime() <= Date.now()) return;
     const { raw, hash } = this.newToken();
-    const expiresAt = this.expiry();
     await this.prisma.$transaction(async (tx) => {
       await tx.registrationToken.updateMany({
         where: { tenantId: tenant.id, usedAt: null },
@@ -185,8 +188,13 @@ export class SchoolRegistrationService {
     return { raw, hash: hashToken(raw) };
   }
 
-  private expiry(): Date {
-    return new Date(Date.now() + this.env.REGISTRATION_TOKEN_TTL_HOURS * HOUR_MS);
+  private expiry(tenantCreatedAt: Date): Date {
+    return registrationTokenExpiry({
+      now: new Date(),
+      tenantCreatedAt,
+      tokenTtlHours: this.env.REGISTRATION_TOKEN_TTL_HOURS,
+      pendingTtlHours: this.env.PENDING_TENANT_TTL_HOURS,
+    });
   }
 
   private sendVerification(

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { formatDateIN } from '@classloom/utils';
 import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import type { Queue } from 'bullmq';
@@ -16,6 +17,19 @@ interface MailpitSummary {
   ID: string;
   To: { Address: string }[];
 }
+
+const HOUR = 3_600_000;
+
+const hashOf = (token: string) =>
+  createHash('sha256').update(Buffer.from(token, 'base64url')).digest();
+
+const timeIST = (date: Date) =>
+  new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
 
 const payload = (over: Record<string, unknown> = {}) => ({
   schoolName: 'Global International School',
@@ -52,6 +66,19 @@ describe('school registration', () => {
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
     return messages;
+  }
+
+  /** Waits until a queue has no active or waiting jobs, then a little longer for side effects. */
+  async function drain(name: string) {
+    const queue = app.get<Queue>(getQueueToken(name));
+    const deadline = Date.now() + 5000;
+    while (
+      Date.now() < deadline &&
+      (await queue.getActiveCount()) + (await queue.getWaitingCount()) > 0
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   /** Token from the newest email's link (Mailpit lists newest first). */
@@ -161,6 +188,45 @@ describe('school registration', () => {
     expect(
       (await request(server).post('/school-registrations/verify').send({ token: newToken })).status,
     ).toBe(200);
+  });
+
+  it('a link resent at hour 40 expires at hour 48, when the registration is purged', async () => {
+    await request(server).post('/school-registrations').send(payload());
+    await mails(1);
+    const createdAt = new Date(Date.now() - 40 * HOUR);
+    await prisma.tenant.update({ where: { code: 'GISD' }, data: { createdAt } });
+
+    await request(server)
+      .post('/school-registrations/resend')
+      .send({ email: 'asha@school.in', code: 'GISD' });
+    const token = await latestToken(2);
+    const record = await prisma.registrationToken.findUniqueOrThrow({
+      where: { tokenHash: hashOf(token) },
+    });
+    const purgeAt = new Date(createdAt.getTime() + 48 * HOUR);
+    expect(record.expiresAt).toEqual(purgeAt);
+
+    // The email states the capped time, so its promise holds.
+    const first = (await mails(2))[0];
+    const res = await fetch(`${infra.mailpitApiUrl}/api/v1/message/${first?.ID}`);
+    const { Text } = (await res.json()) as { Text: string };
+    expect(Text).toContain(`${formatDateIN(purgeAt)} at ${timeIST(purgeAt)} IST`);
+  });
+
+  it('sends no new link once the registration is past its purge time', async () => {
+    await request(server).post('/school-registrations').send(payload());
+    await mails(1);
+    await prisma.tenant.update({
+      where: { code: 'GISD' },
+      data: { createdAt: new Date(Date.now() - 49 * HOUR) },
+    });
+    const res = await request(server)
+      .post('/school-registrations/resend')
+      .send({ email: 'asha@school.in', code: 'GISD' });
+    expect(res.status).toBe(202);
+    await drain(REGISTRATION_QUEUE);
+    expect(await mails(1)).toHaveLength(1);
+    expect(await prisma.registrationToken.count({ where: { usedAt: null } })).toBe(1);
   });
 
   it('resend for an unknown school or wrong email is a silent 202 with no email', async () => {
