@@ -204,7 +204,7 @@
       "copyFailed": "Couldn't copy. Select the code and copy it manually.",
       "next": "Keep this code. Staff, parents and students use it to sign in. Sign-in arrives in the next release.",
       "invalidTitle": "This link is no longer valid",
-      "invalidBody": "It may have expired or already been used. If you registered this school, it's ready; sign-in arrives soon. Otherwise, request a new link below.",
+      "invalidBody": "If you already opened this link, your school is ready and sign-in arrives soon. If it expired, request a new link below.",
       "requestTitle": "Request a new link",
       "email": "Email address",
       "code": "School code",
