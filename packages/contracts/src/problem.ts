@@ -7,7 +7,16 @@ export const problemDetailsSchema = z.object({
   status: z.number().int(),
   detail: z.string().optional(),
   instance: z.string().optional(),
-  errors: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
+  errors: z
+    .array(
+      z.object({
+        path: z.string(),
+        message: z.string(),
+        /** Set on password policy errors: which rule failed (e.g. `common`). */
+        code: z.string().optional(),
+      }),
+    )
+    .optional(),
   /** Set on a 409 for a taken school code: the next free code. */
   suggestion: z.string().optional(),
   /** Set on a 429 `sign-in-paused`: seconds until the pause ends (also sent as `Retry-After`). */

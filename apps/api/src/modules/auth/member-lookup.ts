@@ -1,3 +1,5 @@
+import { parseIdentifier } from '@classloom/utils';
+
 import type { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
 
@@ -27,4 +29,26 @@ export function findActiveTenant(prisma: PrismaService, code: string) {
     where: { code, status: 'ACTIVE' },
     select: { id: true, code: true, name: true, status: true },
   });
+}
+
+/**
+ * Every school a user belongs to, whatever the membership or school status: its code, and
+ * whether the membership is ACTIVE in an ACTIVE school. Reads across schools through the
+ * `user_schools` function, because memberships are under row-level security.
+ */
+export function findUserSchools(prisma: PrismaService, userId: string) {
+  return prisma.$queryRaw<{ code: string; eligible: boolean }[]>`
+    SELECT code, eligible FROM user_schools(${userId}::uuid)`;
+}
+
+/** The user an email or mobile identifier belongs to; nothing for anything else. */
+export function findUserByIdentifier(prisma: PrismaService, identifier: string) {
+  const parsed = parseIdentifier(identifier);
+  if (parsed.kind === 'email') {
+    return prisma.user.findUnique({ where: { email: parsed.value } });
+  }
+  if (parsed.kind === 'mobile') {
+    return prisma.user.findFirst({ where: { mobile: parsed.value } });
+  }
+  return Promise.resolve(null);
 }

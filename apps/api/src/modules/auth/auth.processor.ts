@@ -9,12 +9,18 @@ import {
   SEND_CODE_JOB,
   type SendCodeJobData,
 } from './email-code.service';
+import {
+  PasswordResetService,
+  SEND_RESET_JOB,
+  type SendResetJobData,
+} from './password-reset.service';
 
 /** The one processor of the `auth` queue; it hands each job to its service by name. */
 @Processor(AUTH_QUEUE)
 export class AuthProcessor extends WorkerHost implements BeforeApplicationShutdown {
   constructor(
     private readonly codes: EmailCodeService,
+    private readonly resets: PasswordResetService,
     private readonly connection: QueueConnection,
   ) {
     super();
@@ -24,6 +30,9 @@ export class AuthProcessor extends WorkerHost implements BeforeApplicationShutdo
     switch (job.name) {
       case SEND_CODE_JOB:
         await this.codes.processSend(job.data as SendCodeJobData);
+        return;
+      case SEND_RESET_JOB:
+        await this.resets.processSend(job.data as SendResetJobData);
         return;
       default:
         throw new Error(`Unknown auth job: ${job.name}`);

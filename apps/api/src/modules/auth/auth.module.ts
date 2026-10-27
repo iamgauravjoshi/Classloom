@@ -9,7 +9,9 @@ import { AUTH_MAINTENANCE_QUEUE, AuthCleanupProcessor } from './auth-cleanup.pro
 import { AuthEventsService } from './auth-events.service';
 import { AUTH_QUEUE, EmailCodeService } from './email-code.service';
 import { OriginCheckMiddleware } from './origin-check.middleware';
+import { PasswordController } from './password.controller';
 import { PasswordService } from './password.service';
+import { PasswordResetService } from './password-reset.service';
 import { PasswordSignInService } from './password-sign-in.service';
 import { SessionController } from './session.controller';
 import { SessionMiddleware } from './session.middleware';
@@ -22,7 +24,7 @@ import { SignInPauseService } from './sign-in-pause.service';
     EmailModule,
     BullModule.registerQueue({ name: AUTH_MAINTENANCE_QUEUE }, { name: AUTH_QUEUE }),
   ],
-  controllers: [SessionController, SignInController],
+  controllers: [SessionController, SignInController, PasswordController],
   providers: [
     SessionService,
     AuthEventsService,
@@ -30,6 +32,7 @@ import { SignInPauseService } from './sign-in-pause.service';
     SignInPauseService,
     PasswordSignInService,
     EmailCodeService,
+    PasswordResetService,
     AuthProcessor,
     AuthCleanupProcessor,
     { provide: APP_GUARD, useClass: AuthGuard },

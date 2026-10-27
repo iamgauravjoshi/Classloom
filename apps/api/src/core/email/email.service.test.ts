@@ -18,6 +18,21 @@ describe('EmailService.enqueue', () => {
     );
   });
 
+  it('keeps failed jobs only as long as the caller says its link lives', async () => {
+    const add = vi.fn().mockResolvedValue(undefined);
+    const service = new EmailService({ add } as unknown as QueueProducer);
+    await service.enqueue(
+      { to: 'a@b.in', subject: 's', html: 'h', text: 't' },
+      { keepFailedSeconds: 1800 },
+    );
+    expect(add).toHaveBeenCalledWith(
+      EMAIL_QUEUE,
+      'send',
+      expect.anything(),
+      expect.objectContaining({ removeOnFail: { age: 1800 } }),
+    );
+  });
+
   it('passes on a failure to queue, so the caller can roll back', async () => {
     const add = vi.fn().mockRejectedValue(new Error('Could not add a job'));
     const service = new EmailService({ add } as unknown as QueueProducer);
