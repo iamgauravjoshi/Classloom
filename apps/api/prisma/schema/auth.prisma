@@ -1,0 +1,91 @@
+// Authentication: server-side sessions and the sign-in audit log.
+// Spec: docs/superpowers/specs/2026-10-27-auth-sign-in-design.md, section 4.
+//
+// Both models reference a tenant but are platform-level (read before any tenant context exists,
+// like RegistrationToken), so they are listed in PLATFORM_MODELS_WITH_TENANT_FK
+// (src/core/tenancy/tenant-scoped-models.ts) and have no row-level security policy.
+
+enum SessionRevokedReason {
+  SIGNED_OUT
+  PASSWORD_CHANGED
+  PASSWORD_RESET
+  REPLACED
+}
+
+enum AuthEventType {
+  SIGN_IN_SUCCEEDED
+  SIGN_IN_FAILED
+  SIGN_IN_PAUSED
+  CODE_REQUESTED
+  PASSWORD_SET
+  PASSWORD_CHANGED
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET
+  SIGNED_OUT
+}
+
+enum AuthMethod {
+  PASSWORD
+  EMAIL_CODE
+  RESET_LINK
+}
+
+/// A signed-in browser. The raw token exists only in the cookie; only its SHA-256 is stored.
+model Session {
+  id              String                @id @default(uuid(7)) @db.Uuid
+  /// SHA-256 of a 32-byte random token.
+  tokenHash       Bytes                 @unique @map("token_hash")
+  userId          String                @map("user_id") @db.Uuid
+  tenantId        String                @map("tenant_id") @db.Uuid
+  membershipId    String                @map("membership_id") @db.Uuid
+  /// "Keep me signed in".
+  remember        Boolean
+  /// When the person proved who they are (sign-in time); used for "recent sign-in".
+  authenticatedAt DateTime              @map("authenticated_at") @db.Timestamptz(6)
+  /// Updated at most once every 5 minutes.
+  lastSeenAt      DateTime              @map("last_seen_at") @db.Timestamptz(6)
+  /// Not remembered only: last_seen_at + 2 hours.
+  idleExpiresAt   DateTime?             @map("idle_expires_at") @db.Timestamptz(6)
+  expiresAt       DateTime              @map("expires_at") @db.Timestamptz(6)
+  /// Client address at sign-in.
+  ip              String?               @db.Inet
+  /// Truncated to 512 characters.
+  userAgent       String?               @map("user_agent")
+  revokedAt       DateTime?             @map("revoked_at") @db.Timestamptz(6)
+  revokedReason   SessionRevokedReason? @map("revoked_reason")
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership Membership  @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  authEvents AuthEvent[]
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// Append-only sign-in audit log. The typed identifier is never stored, so the log holds no
+/// email or mobile of people who are not users.
+model AuthEvent {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  type      AuthEventType
+  method    AuthMethod?
+  /// Null when the identifier matched nobody.
+  userId    String?       @map("user_id") @db.Uuid
+  tenantId  String?       @map("tenant_id") @db.Uuid
+  sessionId String?       @map("session_id") @db.Uuid
+  ip        String?       @db.Inet
+  /// Truncated to 512 characters.
+  userAgent String?       @map("user_agent")
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant  Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  session Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("auth_events")
+}

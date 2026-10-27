@@ -153,6 +153,34 @@ describe('school registration', () => {
     expect(again.headers['content-type']).toContain('application/problem+json');
   });
 
+  it('registers without the mobile when another user already holds it', async () => {
+    await prisma.user.create({
+      data: { email: 'other@school.in', name: 'Other', mobile: '+919876543210' },
+    });
+    const res = await request(server)
+      .post('/school-registrations')
+      .send(payload({ mobile: '+919876543210' }));
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual({ maskedEmail: 'a***@school.in', cancelToken: TOKEN });
+    expect(await prisma.tenant.count({ where: { code: 'GISD' } })).toBe(1);
+    const owner = await prisma.user.findUniqueOrThrow({ where: { email: 'asha@school.in' } });
+    expect(owner.mobile).toBeNull();
+    const holder = await prisma.user.findUniqueOrThrow({ where: { email: 'other@school.in' } });
+    expect(holder.mobile).toBe('+919876543210');
+    // Let the verification email job finish before the next test flushes Redis.
+    await mails(1);
+  });
+
+  it('keeps the mobile when it is free', async () => {
+    const res = await request(server)
+      .post('/school-registrations')
+      .send(payload({ mobile: '+919876543210' }));
+    expect(res.status).toBe(202);
+    const owner = await prisma.user.findUniqueOrThrow({ where: { email: 'asha@school.in' } });
+    expect(owner.mobile).toBe('+919876543210');
+    await mails(1);
+  });
+
   it('returns 410 for an expired token and for an unknown token', async () => {
     await request(server).post('/school-registrations').send(payload());
     const token = await latestToken(1);

@@ -99,6 +99,8 @@ model Tenant {
   campuses           Campus[]
   memberships        Membership[]
   registrationTokens RegistrationToken[]
+  sessions           Session[]
+  authEvents         AuthEvent[]
 
   @@map("tenants")
 }
@@ -124,16 +126,22 @@ model Campus {
 
 /// A global identity. Platform-level: not row-level secured.
 model User {
-  id              String    @id @default(uuid(7)) @db.Uuid
-  email           String    @unique @db.Citext
-  name            String
-  /// E.164.
-  mobile          String?
-  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(6)
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String    @id @default(uuid(7)) @db.Uuid
+  email             String    @unique @db.Citext
+  name              String
+  /// E.164. Unique where not null (partial index `users_mobile_key`, added in the migration SQL).
+  mobile            String?
+  emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz(6)
+  /// argon2id encoded string; null until the user sets a password.
+  passwordHash      String?   @map("password_hash")
+  /// Set whenever the password is set, changed or reset.
+  passwordChangedAt DateTime? @map("password_changed_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   memberships Membership[]
+  sessions    Session[]
+  authEvents  AuthEvent[]
 
   @@map("users")
 }
@@ -148,8 +156,9 @@ model Membership {
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions Session[]
 
   @@unique([tenantId, userId])
   @@index([userId])

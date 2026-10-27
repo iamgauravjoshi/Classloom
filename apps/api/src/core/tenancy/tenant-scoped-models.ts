@@ -16,9 +16,9 @@ export type TenantScopedModel =
  * section 5): they are read before any tenant context exists. Adding a model here needs the
  * same review as removing a row-level security policy.
  */
-export const PLATFORM_MODELS_WITH_TENANT_FK: ReadonlySet<'RegistrationToken'> = new Set([
-  'RegistrationToken',
-] as const);
+export const PLATFORM_MODELS_WITH_TENANT_FK: ReadonlySet<
+  'RegistrationToken' | 'Session' | 'AuthEvent'
+> = new Set(['RegistrationToken', 'Session', 'AuthEvent'] as const);
 
 export function isTenantScopedModel(model: string | undefined): model is TenantScopedModel {
   return model !== undefined && (TENANT_SCOPED_MODELS as ReadonlySet<string>).has(model);

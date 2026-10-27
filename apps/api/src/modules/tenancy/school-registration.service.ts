@@ -56,6 +56,7 @@ export class SchoolRegistrationService {
       return { maskedEmail, cancelToken: cancel.raw };
     }
 
+    const mobile = await this.freeMobile(input.mobile, input.email);
     const { raw, hash } = this.newToken();
     try {
       await withNewTenant(
@@ -86,7 +87,7 @@ export class SchoolRegistrationService {
           });
           const user = await tx.user.upsert({
             where: { email: input.email },
-            create: { email: input.email, name: input.adminName, mobile: input.mobile },
+            create: { email: input.email, name: input.adminName, mobile },
             update: {},
           });
           await tx.membership.create({
@@ -194,6 +195,22 @@ export class SchoolRegistrationService {
       });
       return { code: record.tenant.code.toUpperCase(), name: record.tenant.name };
     });
+  }
+
+  /**
+   * A mobile number is unique across users, and a public `409` would reveal whether a number is
+   * registered, so a number held by someone else is silently dropped: the school is still
+   * created and the owner can add a mobile later on the account page. Two concurrent
+   * registrations with the same new number can still race on `users_mobile_key`; that surfaces as
+   * a 500 and is accepted as rare.
+   */
+  private async freeMobile(mobile: string | undefined, email: string): Promise<string | null> {
+    if (!mobile) return null;
+    const holder = await this.prisma.user.findFirst({
+      where: { mobile, NOT: { email } },
+      select: { id: true },
+    });
+    return holder ? null : mobile;
   }
 
   private newToken(): { raw: string; hash: Uint8Array<ArrayBuffer> } {
