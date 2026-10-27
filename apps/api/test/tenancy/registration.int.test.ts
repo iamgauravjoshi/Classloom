@@ -19,6 +19,7 @@ interface MailpitSummary {
 }
 
 const HOUR = 3_600_000;
+const TOKEN = expect.stringMatching(/^[A-Za-z0-9_-]{43}$/) as unknown as string;
 
 const hashOf = (token: string) =>
   createHash('sha256').update(Buffer.from(token, 'base64url')).digest();
@@ -113,7 +114,7 @@ describe('school registration', () => {
   it('registers, emails a link, and verifies once', async () => {
     const res = await request(server).post('/school-registrations').send(payload());
     expect(res.status).toBe(202);
-    expect(res.body).toEqual({ maskedEmail: 'a***@school.in' });
+    expect(res.body).toEqual({ maskedEmail: 'a***@school.in', cancelToken: TOKEN });
 
     const tenant = await prisma.tenant.findUniqueOrThrow({ where: { code: 'GISD' } });
     expect(tenant.status).toBe('PENDING_VERIFICATION');
@@ -293,7 +294,8 @@ describe('school registration', () => {
       .post('/school-registrations')
       .send(payload({ code: 'SCHD', email: ' Asha@School.IN ' }));
     expect(fourth.status).toBe(202);
-    expect(fourth.body).toEqual({ maskedEmail: 'a***@school.in' });
+    // Same shape as a real registration, so the response reveals nothing.
+    expect(fourth.body).toEqual({ maskedEmail: 'a***@school.in', cancelToken: TOKEN });
     expect(await prisma.tenant.count()).toBe(3);
     expect(await prisma.tenant.count({ where: { code: 'SCHD' } })).toBe(0);
     expect(await prisma.user.count({ where: { email: 'asha@school.in' } })).toBe(1);
@@ -313,6 +315,70 @@ describe('school registration', () => {
     }
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(await queue.getCompletedCount()).toBe(0);
+  });
+
+  describe('cancel ("Use a different email")', () => {
+    const cancel = (cancelToken: string) =>
+      request(server).post('/school-registrations/cancel').send({ cancelToken });
+
+    it('deletes the pending school and its new user, freeing the code', async () => {
+      const first = await request(server).post('/school-registrations').send(payload());
+      const { cancelToken } = first.body as { cancelToken: string };
+      const token = await latestToken(1);
+
+      expect((await cancel(cancelToken)).status).toBe(204);
+      expect(await prisma.tenant.count()).toBe(0);
+      expect(await prisma.user.count()).toBe(0);
+      expect(await prisma.registrationToken.count()).toBe(0);
+      // The link already emailed to the mistyped address no longer works.
+      expect(
+        (await request(server).post('/school-registrations/verify').send({ token })).status,
+      ).toBe(410);
+
+      const again = await request(server)
+        .post('/school-registrations')
+        .send(payload({ email: 'asha.rawat@school.in' }));
+      expect(again.status).toBe(202);
+      expect(await prisma.tenant.count({ where: { code: 'GISD' } })).toBe(1);
+      // Let the queued emails land so they cannot leak into the next test.
+      expect(await mails(2)).toHaveLength(2);
+    });
+
+    it('keeps a user who still has another school', async () => {
+      const first = await request(server).post('/school-registrations').send(payload());
+      await request(server)
+        .post('/school-registrations')
+        .send(payload({ code: 'OTHR' }));
+      expect((await cancel((first.body as { cancelToken: string }).cancelToken)).status).toBe(204);
+      expect(await prisma.tenant.count({ where: { code: 'GISD' } })).toBe(0);
+      expect(await prisma.tenant.count({ where: { code: 'OTHR' } })).toBe(1);
+      expect(await prisma.user.count({ where: { email: 'asha@school.in' } })).toBe(1);
+      expect(await mails(2)).toHaveLength(2);
+    });
+
+    it('does nothing once the school is verified', async () => {
+      const first = await request(server).post('/school-registrations').send(payload());
+      const token = await latestToken(1);
+      await request(server).post('/school-registrations/verify').send({ token });
+
+      expect((await cancel((first.body as { cancelToken: string }).cancelToken)).status).toBe(204);
+      const tenant = await prisma.tenant.findUniqueOrThrow({ where: { code: 'GISD' } });
+      expect(tenant.status).toBe('ACTIVE');
+      expect(await prisma.user.count({ where: { email: 'asha@school.in' } })).toBe(1);
+    });
+
+    it('answers 204 for an unknown token, revealing nothing', async () => {
+      await request(server).post('/school-registrations').send(payload());
+      expect((await cancel('A'.repeat(43))).status).toBe(204);
+      expect(await prisma.tenant.count()).toBe(1);
+      expect(await mails(1)).toHaveLength(1);
+    });
+
+    it('rejects a malformed token as a validation error', async () => {
+      const res = await cancel('short');
+      expect(res.status).toBe(400);
+      expect(res.headers['content-type']).toContain('application/problem+json');
+    });
   });
 
   it('rolls everything back when the email cannot be queued', async () => {

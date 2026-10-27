@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-import type { SchoolRegistrationRequest } from '@classloom/contracts';
+import type { SchoolRegistrationAccepted, SchoolRegistrationRequest } from '@classloom/contracts';
 import { suggestSchoolCode } from '@classloom/utils';
 import { ConflictException, GoneException, Inject, Injectable, Logger } from '@nestjs/common';
 
@@ -41,8 +41,10 @@ export class SchoolRegistrationService {
     private readonly producer: QueueProducer,
   ) {}
 
-  async register(input: SchoolRegistrationRequest): Promise<{ maskedEmail: string }> {
+  async register(input: SchoolRegistrationRequest): Promise<SchoolRegistrationAccepted> {
     const maskedEmail = maskEmail(input.email);
+    // Returned even when nothing is created, so the response never reveals the pending cap.
+    const cancel = this.newToken();
 
     // `tenants` is a platform table, so this count works without a tenant context. It is a soft
     // limit: concurrent requests could overshoot it by a few, which is harmless.
@@ -51,7 +53,7 @@ export class SchoolRegistrationService {
     });
     if (pending >= MAX_PENDING_PER_EMAIL) {
       this.logger.warn(`Registration ignored: ${maskedEmail} has ${pending} pending schools`);
-      return { maskedEmail };
+      return { maskedEmail, cancelToken: cancel.raw };
     }
 
     const { raw, hash } = this.newToken();
@@ -68,6 +70,7 @@ export class SchoolRegistrationService {
               state: input.state,
               contactEmail: input.email,
               termsAcceptedAt: new Date(),
+              cancelTokenHash: cancel.hash,
             },
           }),
         async (tx, tenant) => {
@@ -101,7 +104,17 @@ export class SchoolRegistrationService {
       }
       throw error;
     }
-    return { maskedEmail };
+    return { maskedEmail, cancelToken: cancel.raw };
+  }
+
+  /**
+   * "Use a different email": withdraws the registration while it is still pending, freeing its
+   * code. Unknown, used or verified tokens do nothing, and the caller always answers the same.
+   * The work runs in a SECURITY DEFINER function (see its migration) because deciding whether
+   * the user is left with no school needs memberships that row-level security hides.
+   */
+  async cancel(cancelToken: string): Promise<void> {
+    await this.prisma.$queryRaw`SELECT cancel_pending_registration(${hashToken(cancelToken)})`;
   }
 
   async resend(input: { email: string; code: string }): Promise<void> {
@@ -172,7 +185,7 @@ export class SchoolRegistrationService {
       });
       const activated = await tx.tenant.updateMany({
         where: { id: record.tenantId, status: 'PENDING_VERIFICATION' },
-        data: { status: 'ACTIVE', verifiedAt: now },
+        data: { status: 'ACTIVE', verifiedAt: now, cancelTokenHash: null },
       });
       if (claimed.count === 0 || activated.count === 0) throw new GoneException(LINK_GONE);
       await tx.user.updateMany({

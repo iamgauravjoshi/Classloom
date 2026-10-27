@@ -14,6 +14,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CancelRegistrationRequestDto,
   ResendRegistrationRequestDto,
   SchoolRegistrationAcceptedDto,
   SchoolRegistrationRequestDto,
@@ -185,6 +186,87 @@ export const useResendSchoolRegistration = <TError = ErrorType<void>, TContext =
   TContext
 > => {
   return useMutation(getResendSchoolRegistrationMutationOptions(options), queryClient);
+};
+/**
+ * @summary Withdraw a pending registration ("Use a different email"); always 204
+ */
+export const cancelSchoolRegistration = (
+  cancelRegistrationRequestDto: CancelRegistrationRequestDto,
+  signal?: AbortSignal,
+) => {
+  return apiFetch<void>({
+    url: `/school-registrations/cancel`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: cancelRegistrationRequestDto,
+    signal,
+  });
+};
+
+export const getCancelSchoolRegistrationMutationKey = () => ['cancelSchoolRegistration'] as const;
+
+export const getCancelSchoolRegistrationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelSchoolRegistration>>,
+    TError,
+    CancelSchoolRegistrationMutationVariables,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelSchoolRegistration>>,
+  TError,
+  CancelSchoolRegistrationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCancelSchoolRegistrationMutationKey();
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelSchoolRegistration>>,
+    CancelSchoolRegistrationMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return cancelSchoolRegistration(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelSchoolRegistrationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelSchoolRegistration>>
+>;
+export type CancelSchoolRegistrationMutationBody = CancelRegistrationRequestDto;
+export type CancelSchoolRegistrationMutationError = ErrorType<void>;
+export type CancelSchoolRegistrationMutationVariables = { data: CancelRegistrationRequestDto };
+
+/**
+ * @summary Withdraw a pending registration ("Use a different email"); always 204
+ */
+export const useCancelSchoolRegistration = <TError = ErrorType<void>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof cancelSchoolRegistration>>,
+      TError,
+      CancelSchoolRegistrationMutationVariables,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof cancelSchoolRegistration>>,
+  TError,
+  CancelSchoolRegistrationMutationVariables,
+  TContext
+> => {
+  return useMutation(getCancelSchoolRegistrationMutationOptions(options), queryClient);
 };
 /**
  * @summary Verify a school registration

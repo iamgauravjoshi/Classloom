@@ -4,6 +4,7 @@ import {
   ApiAcceptedResponse,
   ApiConflictResponse,
   ApiGoneResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -18,6 +19,7 @@ import {
   skipAllBut,
 } from '../../core/http/throttler-names';
 import {
+  CancelRegistrationRequestDto,
   ResendRegistrationRequestDto,
   SchoolRegistrationAcceptedDto,
   SchoolRegistrationRequestDto,
@@ -61,6 +63,22 @@ export class SchoolRegistrationsController {
   })
   async resend(@Body() body: ResendRegistrationRequestDto): Promise<void> {
     await this.registrations.resend(body);
+  }
+
+  @Post('cancel')
+  @UseGuards(PublicThrottlerGuard)
+  @SkipThrottle(skipAllBut(RESEND_THROTTLER))
+  @HttpCode(204)
+  @ApiOperation({
+    operationId: 'cancelSchoolRegistration',
+    summary: 'Withdraw a pending registration ("Use a different email"); always 204',
+  })
+  @ApiNoContentResponse({
+    description: 'Withdrawn if the token matches a pending registration; otherwise nothing changes',
+  })
+  @ApiTooManyRequestsResponse({ description: 'Too many requests from this address' })
+  async cancel(@Body() body: CancelRegistrationRequestDto): Promise<void> {
+    await this.registrations.cancel(body.cancelToken);
   }
 
   @Post('verify')

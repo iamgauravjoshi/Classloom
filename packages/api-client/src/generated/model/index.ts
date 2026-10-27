@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.0.0
  */
 
+export * from './cancelRegistrationRequestDto';
 export * from './codeAvailabilityResponseDto';
 export * from './codeAvailabilityResponseDtoReason';
 export * from './getCodeAvailabilityParams';

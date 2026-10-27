@@ -73,6 +73,17 @@ describe('rate limits on public endpoints', () => {
     expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
   });
 
+  it('limits cancel to 10 per hour per client', async () => {
+    const cancel = () =>
+      request(server)
+        .post('/school-registrations/cancel')
+        .send({ cancelToken: 'A'.repeat(43) });
+    for (let n = 1; n <= 10; n++) expect((await cancel()).status).toBe(204);
+    const res = await cancel();
+    expect(res.status).toBe(429);
+    expect(res.headers['content-type']).toContain('application/problem+json');
+  });
+
   it('limits code availability to 60 per minute', async () => {
     for (let i = 0; i < 60; i++) {
       const res = await request(server).get('/schools/code-availability').query({ code: 'gisd' });

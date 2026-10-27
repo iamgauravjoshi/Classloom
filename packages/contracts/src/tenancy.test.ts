@@ -2,9 +2,11 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import {
   BOARDS,
+  cancelRegistrationRequestSchema,
   INDIAN_STATES,
   type IndianStateCode,
   type PublicSchool,
+  schoolRegistrationAcceptedSchema,
   type SchoolRegistrationRequest,
   schoolRegistrationRequestSchema,
 } from './index';
@@ -142,5 +144,26 @@ describe('state type', () => {
   it('keeps the literal union of state codes', () => {
     expectTypeOf<SchoolRegistrationRequest['state']>().toEqualTypeOf<IndianStateCode>();
     expectTypeOf<PublicSchool['state']>().toEqualTypeOf<IndianStateCode>();
+  });
+});
+
+describe('registration cancel token', () => {
+  const token = 'A'.repeat(42) + '_';
+
+  it('is part of the accepted response', () => {
+    expect(schoolRegistrationAcceptedSchema.safeParse({ maskedEmail: 'a***@x.in' }).success).toBe(
+      false,
+    );
+    expect(
+      schoolRegistrationAcceptedSchema.parse({ maskedEmail: 'a***@x.in', cancelToken: token }),
+    ).toEqual({ maskedEmail: 'a***@x.in', cancelToken: token });
+  });
+
+  it('must be 43 base64url characters in a cancel request', () => {
+    expect(cancelRegistrationRequestSchema.safeParse({ cancelToken: token }).success).toBe(true);
+    expect(cancelRegistrationRequestSchema.safeParse({ cancelToken: 'short' }).success).toBe(false);
+    expect(cancelRegistrationRequestSchema.safeParse({ cancelToken: token + '=' }).success).toBe(
+      false,
+    );
   });
 });

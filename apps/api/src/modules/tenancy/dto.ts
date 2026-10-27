@@ -1,4 +1,5 @@
 import {
+  cancelRegistrationRequestSchema,
   codeAvailabilityQuerySchema,
   codeAvailabilityResponseSchema,
   publicSchoolSchema,
@@ -16,5 +17,6 @@ export class PublicSchoolDto extends createZodDto(publicSchoolSchema) {}
 export class SchoolRegistrationRequestDto extends createZodDto(schoolRegistrationRequestSchema) {}
 export class SchoolRegistrationAcceptedDto extends createZodDto(schoolRegistrationAcceptedSchema) {}
 export class ResendRegistrationRequestDto extends createZodDto(resendRegistrationRequestSchema) {}
+export class CancelRegistrationRequestDto extends createZodDto(cancelRegistrationRequestSchema) {}
 export class VerifyRegistrationRequestDto extends createZodDto(verifyRegistrationRequestSchema) {}
 export class VerifyRegistrationResponseDto extends createZodDto(verifyRegistrationResponseSchema) {}

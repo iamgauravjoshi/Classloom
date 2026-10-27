@@ -119,8 +119,16 @@ export const codeAvailabilityResponseSchema = z.object({
 });
 export type CodeAvailabilityResponse = z.infer<typeof codeAvailabilityResponseSchema>;
 
+/** 32 random bytes encoded as unpadded base64url (43 characters). */
+const randomTokenField = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
+
 export const schoolRegistrationAcceptedSchema = z.object({
   maskedEmail: z.string(),
+  /**
+   * Lets this browser withdraw the registration ("Use a different email") while it is still
+   * pending. Keep it in memory only; never store it.
+   */
+  cancelToken: randomTokenField,
 });
 export type SchoolRegistrationAccepted = z.infer<typeof schoolRegistrationAcceptedSchema>;
 
@@ -130,9 +138,15 @@ export const resendRegistrationRequestSchema = z.object({
 });
 export type ResendRegistrationRequest = z.infer<typeof resendRegistrationRequestSchema>;
 
-/** Verification token: 32 random bytes encoded as unpadded base64url (43 characters). */
+/** Withdraws a pending registration; always 204, so it reveals nothing about the token. */
+export const cancelRegistrationRequestSchema = z.object({
+  cancelToken: randomTokenField,
+});
+export type CancelRegistrationRequest = z.infer<typeof cancelRegistrationRequestSchema>;
+
+/** Verification token from the emailed link. */
 export const verifyRegistrationRequestSchema = z.object({
-  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  token: randomTokenField,
 });
 export type VerifyRegistrationRequest = z.infer<typeof verifyRegistrationRequestSchema>;
 

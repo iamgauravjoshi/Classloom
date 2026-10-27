@@ -90,6 +90,9 @@ model Tenant {
   verifiedAt      DateTime?    @map("verified_at") @db.Timestamptz(6)
   suspendedAt     DateTime?    @map("suspended_at") @db.Timestamptz(6)
   termsAcceptedAt DateTime     @map("terms_accepted_at") @db.Timestamptz(6)
+  /// SHA-256 of the token that lets the registering browser withdraw the school while it is
+  /// still pending ("Use a different email"); cleared on verification.
+  cancelTokenHash Bytes?       @unique @map("cancel_token_hash")
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 

@@ -8,4 +8,6 @@
 
 export interface SchoolRegistrationAcceptedDto {
   maskedEmail: string;
+  /** @pattern ^[A-Za-z0-9_-]{43}$ */
+  cancelToken: string;
 }

@@ -183,6 +183,34 @@
         ]
       }
     },
+    "/school-registrations/cancel": {
+      "post": {
+        "operationId": "cancelSchoolRegistration",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRegistrationRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Withdrawn if the token matches a pending registration; otherwise nothing changes"
+          },
+          "429": {
+            "description": "Too many requests from this address"
+          }
+        },
+        "summary": "Withdraw a pending registration (\"Use a different email\"); always 204",
+        "tags": [
+          "school-registrations"
+        ]
+      }
+    },
     "/school-registrations/verify": {
       "post": {
         "operationId": "verifySchoolRegistration",
@@ -457,10 +485,15 @@
         "properties": {
           "maskedEmail": {
             "type": "string"
+          },
+          "cancelToken": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
           }
         },
         "required": [
-          "maskedEmail"
+          "maskedEmail",
+          "cancelToken"
         ]
       },
       "ResendRegistrationRequestDto": {
@@ -476,6 +509,18 @@
         "required": [
           "email",
           "code"
+        ]
+      },
+      "CancelRegistrationRequestDto": {
+        "type": "object",
+        "properties": {
+          "cancelToken": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        },
+        "required": [
+          "cancelToken"
         ]
       },
       "VerifyRegistrationRequestDto": {
