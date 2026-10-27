@@ -1,5 +1,4 @@
-import type { Queue } from 'bullmq';
-
+import type { QueueProducer } from '../../core/queue/queue.module';
 import { SchoolRegistrationService } from './school-registration.service';
 
 function build(incr: number) {
@@ -12,7 +11,7 @@ function build(incr: number) {
     redis as never,
     {} as never,
     {} as never,
-    queue as unknown as Queue,
+    queue as unknown as QueueProducer,
   );
   return { service, queue };
 }
@@ -22,6 +21,7 @@ describe('SchoolRegistrationService.resend', () => {
     const { service, queue } = build(1);
     await service.resend({ email: 'a@b.in', code: 'GISD' });
     expect(queue.add).toHaveBeenCalledWith(
+      'registration',
       'resend-verification',
       { email: 'a@b.in', code: 'GISD' },
       expect.objectContaining({ removeOnComplete: true }),

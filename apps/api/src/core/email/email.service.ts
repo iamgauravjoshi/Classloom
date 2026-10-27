@@ -1,17 +1,17 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
-import type { Queue } from 'bullmq';
 
+import { QueueProducer } from '../queue/queue.module';
 import type { EmailMessage } from './email-sender';
 
 export const EMAIL_QUEUE = 'email';
 
 @Injectable()
 export class EmailService {
-  constructor(@InjectQueue(EMAIL_QUEUE) private readonly queue: Queue<EmailMessage>) {}
+  constructor(private readonly producer: QueueProducer) {}
 
+  /** Rejects within ENQUEUE_TIMEOUT_MS when Redis is unreachable, so callers can roll back. */
   async enqueue(message: EmailMessage): Promise<void> {
-    await this.queue.add('send', message, {
+    await this.producer.add(EMAIL_QUEUE, 'send', message, {
       attempts: 5,
       backoff: { type: 'exponential', delay: 2000 },
       removeOnComplete: true,

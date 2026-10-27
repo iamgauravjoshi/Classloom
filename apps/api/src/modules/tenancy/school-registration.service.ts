@@ -2,9 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import type { SchoolRegistrationRequest } from '@classloom/contracts';
 import { suggestSchoolCode } from '@classloom/utils';
-import { InjectQueue } from '@nestjs/bullmq';
 import { ConflictException, GoneException, Inject, Injectable, Logger } from '@nestjs/common';
-import type { Queue } from 'bullmq';
 
 import { ENV } from '../../core/config/config.module';
 import type { Env } from '../../core/config/env.schema';
@@ -12,6 +10,7 @@ import { EmailService } from '../../core/email/email.service';
 import { verifyRegistrationEmail } from '../../core/email/templates/verify-registration';
 import { TooManyRequestsException } from '../../core/http/too-many-requests.exception';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { QueueProducer } from '../../core/queue/queue.module';
 import { RedisService } from '../../core/redis/redis.service';
 import { withNewTenant, withTenant } from '../../core/tenancy/with-tenant';
 import { maskEmail } from './mask-email';
@@ -39,7 +38,7 @@ export class SchoolRegistrationService {
     private readonly redis: RedisService,
     private readonly codes: SchoolCodeService,
     @Inject(ENV) private readonly env: Env,
-    @InjectQueue(REGISTRATION_QUEUE) private readonly queue: Queue,
+    private readonly producer: QueueProducer,
   ) {}
 
   async register(input: SchoolRegistrationRequest): Promise<{ maskedEmail: string }> {
@@ -113,7 +112,7 @@ export class SchoolRegistrationService {
     if (attempts > RESEND_LIMIT) {
       throw new TooManyRequestsException('Too many requests. Try again later.');
     }
-    await this.queue.add(RESEND_JOB, input, {
+    await this.producer.add(REGISTRATION_QUEUE, RESEND_JOB, input, {
       removeOnComplete: true,
       removeOnFail: { age: 24 * 3600 },
       attempts: 3,
