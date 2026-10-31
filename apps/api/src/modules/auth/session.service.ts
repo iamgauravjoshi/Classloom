@@ -27,6 +27,18 @@ export interface CreateSessionInput {
   userAgent?: string;
   /** The raw token of the session this sign-in replaces; it is revoked with `REPLACED`. */
   replacesToken?: string;
+  /**
+   * The user's `password_changed_at` as read when the credentials were checked. The session is
+   * refused if it has changed since, so a sign-in in flight cannot outlive a reset or change.
+   */
+  passwordChangedAt?: Date | null;
+}
+
+/** The password was set, changed or reset while this sign-in was in flight. */
+export class CredentialsChangedError extends Error {
+  constructor() {
+    super('Password changed during sign-in');
+  }
 }
 
 export interface ResolvedSession {
@@ -43,6 +55,15 @@ export class SessionService {
     const token = randomToken();
     const now = new Date();
     const session = await this.prisma.$transaction(async (tx) => {
+      // FOR SHARE blocks `changePassword` until this commits, so its revoke then sees the new
+      // session; a change that committed first shows here as a different timestamp.
+      if (input.passwordChangedAt !== undefined) {
+        const [current] = await tx.$queryRaw<{ password_changed_at: Date | null }[]>`
+          SELECT password_changed_at FROM users WHERE id = ${input.userId}::uuid FOR SHARE`;
+        if (current?.password_changed_at?.getTime() !== input.passwordChangedAt?.getTime()) {
+          throw new CredentialsChangedError();
+        }
+      }
       const created = await tx.session.create({
         data: {
           tokenHash: tokenHash(token),

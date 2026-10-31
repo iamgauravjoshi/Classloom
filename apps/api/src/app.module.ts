@@ -8,6 +8,7 @@ import { ConfigModule } from './core/config/config.module';
 import type { Env } from './core/config/env.schema';
 import { EmailModule } from './core/email/email.module';
 import { HealthModule } from './core/health/health.module';
+import { LOG_REDACT_PATHS } from './core/http/log-redact';
 import { ProblemFilter } from './core/http/problem.filter';
 import { RedisThrottlerStorage } from './core/http/redis-throttler.storage';
 import {
@@ -42,7 +43,7 @@ export class AppModule {
         LoggerModule.forRoot({
           pinoHttp: {
             level: LOG_LEVEL[env.NODE_ENV],
-            redact: ['req.headers.authorization', 'req.headers.cookie'],
+            redact: LOG_REDACT_PATHS,
           },
         }),
         TenancyCoreModule,
@@ -74,6 +75,9 @@ export class AppModule {
                 name: SIGN_IN_THROTTLER,
                 limit: env.SIGN_IN_RATE_LIMIT_PER_15_MIN,
                 ttl: 900_000,
+                // One budget shared by password sign-in and code verification (spec §11); the
+                // default key adds the controller and handler, giving each route its own.
+                generateKey: (_context, tracker, name) => `${name}-${tracker}`,
               },
               {
                 name: CODE_REQUEST_THROTTLER,

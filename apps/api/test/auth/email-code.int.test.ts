@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 
+import { EmailService } from '../../src/core/email/email.service';
 import { QueueProducer } from '../../src/core/queue/queue.module';
 import { RedisService } from '../../src/core/redis/redis.service';
 import type { PrismaClient } from '../../src/generated/prisma/client';
@@ -272,12 +273,19 @@ describe('sign-in with an emailed code', () => {
   it('never puts the code in the send-code job', async () => {
     const s = await school();
     const added = vi.spyOn(app.get(QueueProducer), 'add');
+    const enqueued = vi.spyOn(app.get(EmailService), 'enqueue');
     const code = await sendCode(s);
     const authJobs = added.mock.calls.filter(([queue]) => queue === 'auth');
+    const emailOpts = enqueued.mock.calls.map(([, opts]) => opts);
     added.mockRestore();
+    enqueued.mockRestore();
     expect(authJobs).toHaveLength(1);
     expect(authJobs[0]?.[1]).toBe('send-code');
     expect(authJobs[0]?.[2]).toEqual({ schoolCode: s.code, email: s.email });
+    // The job holds the typed email: removed once done, kept an hour at most when it fails.
+    expect(authJobs[0]?.[3]).toMatchObject({ removeOnComplete: true, removeOnFail: { age: 3600 } });
+    // The code email is not kept past the code's 10 minutes.
+    expect(emailOpts).toEqual([{ keepFailedSeconds: 600 }]);
 
     // Nothing the auth queue keeps in Redis (waiting, completed or failed) holds the code.
     for (const key of await redis.client.keys('bull:auth:*')) {
@@ -331,5 +339,12 @@ describe('sign-in with an emailed code', () => {
     expect(res.status).toBe(503);
     expect(res.headers['content-type']).toContain('application/problem+json');
     expect(Date.now() - started).toBeLessThan(3000);
+
+    // Verifying answers 503 for a known member and an unknown email alike, so an outage does not
+    // reveal which accounts exist.
+    for (const email of [s.email, 'nobody@otp.test']) {
+      const verified = await verify({ schoolCode: s.code, email, code: '123456' }).timeout(10_000);
+      expect(verified.status).toBe(503);
+    }
   });
 });

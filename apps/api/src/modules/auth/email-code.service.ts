@@ -26,7 +26,7 @@ import { AuthEventsService } from './auth-events.service';
 import { hmac } from './crypto';
 import { findActiveMembership, findActiveTenant } from './member-lookup';
 import type { SignInMeta } from './password-sign-in.service';
-import { SessionService } from './session.service';
+import { CredentialsChangedError, SessionService } from './session.service';
 
 export const AUTH_QUEUE = 'auth';
 export const SEND_CODE_JOB = 'send-code';
@@ -90,6 +90,8 @@ return {o.hash, o.attemptsLeft}
 const CONSUME_SCRIPT = `return redis.call('DEL', KEYS[1])`;
 
 const DUMMY_HASH = hmac('dummy', 'dummy');
+/** Never a real tenant or user id, so `auth:otp:NO_ID:NO_ID` never holds a code. */
+const NO_ID = '00000000-0000-0000-0000-000000000000';
 
 @Injectable()
 export class EmailCodeService {
@@ -120,8 +122,8 @@ export class EmailCodeService {
       await this.producer.add(AUTH_QUEUE, SEND_CODE_JOB, data, {
         attempts: 3,
         backoff: { type: 'exponential', delay: 2000 },
-        // Kept briefly (the data holds no code) so a stuck send can be inspected.
-        removeOnComplete: { age: 300 },
+        // The data holds the typed email: gone once sent, kept an hour if it fails.
+        removeOnComplete: true,
         removeOnFail: { age: 3600 },
       });
     } catch (error) {
@@ -167,10 +169,14 @@ export class EmailCodeService {
         'EX',
         CODE_TTL_SECONDS,
       );
-      await this.email.enqueue({
-        to: user.email,
-        ...signInCodeEmail({ schoolName: tenant.name, code, minutes: CODE_MINUTES }),
-      });
+      // The code is dead after 10 minutes, so a failed email job is not kept longer.
+      await this.email.enqueue(
+        {
+          to: user.email,
+          ...signInCodeEmail({ schoolName: tenant.name, code, minutes: CODE_MINUTES }),
+        },
+        { keepFailedSeconds: CODE_TTL_SECONDS },
+      );
     } catch (error) {
       // Give the send back so the job's retry is not mistaken for a repeat request.
       await this.redis.client.hincrby(sentKey, 'count', -1).catch(() => undefined);
@@ -197,12 +203,11 @@ export class EmailCodeService {
       : null;
     const membership = tenant ? await findActiveMembership(this.prisma, tenant.id, user?.id) : null;
 
-    let matched = false;
-    if (tenant && user && membership) {
-      matched = await this.checkCode(tenant.id, user.id, input.code);
-    } else {
-      this.equal(DUMMY_HASH, this.codeHash('', '', input.code));
-    }
+    // An unknown account checks a key that never exists: the same one Redis call (and the same
+    // 503 while Redis is down), so neither timing nor an outage reveals whether it exists.
+    const known = tenant && user && membership;
+    const checked = await this.checkCode(tenant?.id ?? NO_ID, known ? user.id : NO_ID, input.code);
+    const matched = known ? checked : false;
 
     if (!tenant || !user || !membership || !matched) {
       await this.events.record({
@@ -221,15 +226,23 @@ export class EmailCodeService {
         data: { emailVerifiedAt: new Date() },
       });
     }
-    const { token, session } = await this.sessions.create({
-      userId: user.id,
-      tenantId: tenant.id,
-      membershipId: membership.id,
-      remember: input.remember,
-      ip: meta.ip,
-      userAgent: meta.userAgent,
-      replacesToken: meta.currentToken,
-    });
+    let created: Awaited<ReturnType<SessionService['create']>>;
+    try {
+      created = await this.sessions.create({
+        userId: user.id,
+        tenantId: tenant.id,
+        membershipId: membership.id,
+        remember: input.remember,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        replacesToken: meta.currentToken,
+        passwordChangedAt: user.passwordChangedAt,
+      });
+    } catch (error) {
+      if (error instanceof CredentialsChangedError) throw new InvalidCodeException();
+      throw error;
+    }
+    const { token, session } = created;
     await this.events.record({
       type: 'SIGN_IN_SUCCEEDED',
       userId: user.id,

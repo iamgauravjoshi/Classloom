@@ -5,6 +5,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 
+import { QueueProducer } from '../../src/core/queue/queue.module';
 import { RedisService } from '../../src/core/redis/redis.service';
 import type { PrismaClient } from '../../src/generated/prisma/client';
 import { createApp } from '../../src/main';
@@ -129,6 +130,19 @@ describe('forgot and reset password', () => {
         where: { userId: s.userId, type: 'PASSWORD_RESET_REQUESTED' },
       }),
     ).toBe(2);
+  });
+
+  it('does not keep the typed identifier in a finished send-reset job', async () => {
+    const s = await school();
+    const added = vi.spyOn(app.get(QueueProducer), 'add');
+    await requestLink(s.email, s.email);
+    const resetJobs = added.mock.calls.filter(([, name]) => name === 'send-reset');
+    added.mockRestore();
+    expect(resetJobs).toHaveLength(1);
+    expect(resetJobs[0]?.[3]).toMatchObject({
+      removeOnComplete: true,
+      removeOnFail: { age: 3600 },
+    });
   });
 
   it('keeps only the hash of the token in Redis, in the key', async () => {

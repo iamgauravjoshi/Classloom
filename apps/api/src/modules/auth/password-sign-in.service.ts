@@ -6,7 +6,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { AuthEventsService } from './auth-events.service';
 import { findActiveMembership, findActiveTenant } from './member-lookup';
 import { PasswordService } from './password.service';
-import { SessionService } from './session.service';
+import { CredentialsChangedError, SessionService } from './session.service';
 import { PAUSE_SECONDS, SignInPauseService } from './sign-in-pause.service';
 
 export const INVALID_CREDENTIALS_TITLE = 'Email/mobile or password is incorrect.';
@@ -110,18 +110,30 @@ export class PasswordSignInService {
     let passwordHash = user.passwordHash;
     if (hash && this.passwords.needsRehash(hash)) {
       passwordHash = await this.passwords.hash(input.password);
-      await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+      // Only over the hash just verified, so a reset that landed meanwhile is never overwritten.
+      await this.prisma.user.updateMany({
+        where: { id: user.id, passwordHash: hash },
+        data: { passwordHash },
+      });
     }
 
-    const { token, session } = await this.sessions.create({
-      userId: user.id,
-      tenantId: tenant.id,
-      membershipId: membership.id,
-      remember: input.remember,
-      ip: meta.ip,
-      userAgent: meta.userAgent,
-      replacesToken: meta.currentToken,
-    });
+    let created: Awaited<ReturnType<SessionService['create']>>;
+    try {
+      created = await this.sessions.create({
+        userId: user.id,
+        tenantId: tenant.id,
+        membershipId: membership.id,
+        remember: input.remember,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        replacesToken: meta.currentToken,
+        passwordChangedAt: user.passwordChangedAt,
+      });
+    } catch (error) {
+      if (error instanceof CredentialsChangedError) throw new InvalidCredentialsException();
+      throw error;
+    }
+    const { token, session } = created;
     await this.events.record({
       type: 'SIGN_IN_SUCCEEDED',
       userId: user.id,

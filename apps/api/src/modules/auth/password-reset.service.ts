@@ -93,8 +93,8 @@ export class PasswordResetService {
       await this.producer.add(AUTH_QUEUE, SEND_RESET_JOB, data, {
         attempts: 3,
         backoff: { type: 'exponential', delay: 2000 },
-        // The data holds no token (only what the person typed), so it can be kept briefly.
-        removeOnComplete: { age: 300 },
+        // The data holds what the person typed: gone once sent, kept an hour if it fails.
+        removeOnComplete: true,
         removeOnFail: { age: 3600 },
       });
     } catch (error) {

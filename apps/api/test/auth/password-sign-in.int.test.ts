@@ -7,7 +7,9 @@ import type { App } from 'supertest/types';
 import { RedisService } from '../../src/core/redis/redis.service';
 import type { PrismaClient } from '../../src/generated/prisma/client';
 import { createApp } from '../../src/main';
+import { identifierKey } from '../../src/modules/auth/crypto';
 import { PasswordService } from '../../src/modules/auth/password.service';
+import { SessionService } from '../../src/modules/auth/session.service';
 import { ownerPrisma, startTestInfra, type TestInfra } from '../setup-containers';
 import { seedSchool } from './helpers';
 
@@ -236,23 +238,82 @@ describe('POST /auth/sign-in/password', () => {
     expect(stale.status).toBe(401);
   });
 
-  it('does not let parallel guesses past the limit', async () => {
+  it('does not let parallel wrong guesses past the limit', async () => {
     const s = await school();
-    const results = await Promise.all([
-      ...Array.from({ length: 7 }, () =>
+    const results = await Promise.all(
+      Array.from({ length: 7 }, () =>
         post({ schoolCode: s.code, identifier: s.email, password: 'wrong password!' }),
       ),
-      post({ schoolCode: s.code, identifier: s.email, password: PASSWORD }),
-    ]);
-    expect(results.map((r) => r.status)).not.toContain(200);
-    expect(results.every((r) => [401, 429].includes(r.status))).toBe(true);
-    expect(await owner.session.count({ where: { userId: s.userId } })).toBe(0);
-    const paused = await owner.authEvent.count({
-      where: { tenantId: s.tenantId, type: 'SIGN_IN_PAUSED' },
-    });
-    expect(paused).toBe(1);
+    );
+    // 5 attempts are counted: 4 fail, the 5th sets the pause; the 2 over the limit are refused.
+    const statuses = results.map((r) => r.status).sort();
+    expect(statuses).toEqual([401, 401, 401, 401, 429, 429, 429]);
+    const count = (type: 'SIGN_IN_FAILED' | 'SIGN_IN_PAUSED') =>
+      owner.authEvent.count({ where: { userId: s.userId, type } });
+    expect(await count('SIGN_IN_FAILED')).toBe(4);
+    expect(await count('SIGN_IN_PAUSED')).toBe(1);
+
     const after = await post({ schoolCode: s.code, identifier: s.email, password: PASSWORD });
     expect(after.status).toBe(429);
+    expect(await owner.session.count({ where: { userId: s.userId } })).toBe(0);
+  });
+
+  it('refuses the right password once the window attempts are used up', async () => {
+    const s = await school();
+    const key = `auth:fail:${s.tenantId}:${identifierKey(infra.env.AUTH_SECRET, s.tenantId, s.email)}`;
+    await app.get(RedisService).client.set(key, '6', 'EX', 900);
+    const res = await post({ schoolCode: s.code, identifier: s.email, password: PASSWORD });
+    expect(res.status).toBe(429);
+    expect(await owner.session.count({ where: { userId: s.userId } })).toBe(0);
+  });
+
+  it('does not let a sign-in in flight outlive a password reset', async () => {
+    const s = await school();
+    // Old parameters, so the sign-in also tries to re-hash over the reset.
+    const old = await argon2.hash(PASSWORD, {
+      type: argon2.argon2id,
+      memoryCost: 4096,
+      timeCost: 2,
+      parallelism: 1,
+    });
+    await owner.user.update({ where: { id: s.userId }, data: { passwordHash: old } });
+    const resetHash = await passwords.hash('purple elephant dances');
+    const service = app.get(PasswordService);
+    const verify = service.verify.bind(service);
+    const spy = vi.spyOn(service, 'verify').mockImplementationOnce(async (hash, password) => {
+      const ok = await verify(hash, password);
+      // The reset commits after the hash was read and checked, before the session is created.
+      await app.get(SessionService).changePassword(s.userId, {
+        passwordHash: resetHash,
+        reason: 'PASSWORD_RESET',
+      });
+      return ok;
+    });
+    const res = await post({ schoolCode: s.code, identifier: s.email, password: PASSWORD });
+    spy.mockRestore();
+    expect(res.status).toBe(401);
+    expect(stripInstance(res.body as Record<string, unknown>)).toMatchObject({ title: TITLE });
+    expect(await owner.session.count({ where: { userId: s.userId, revokedAt: null } })).toBe(0);
+    const user = await owner.user.findUniqueOrThrow({ where: { id: s.userId } });
+    expect(user.passwordHash).toBe(resetHash);
+  });
+
+  it('shares one address limit between password sign-in and code verification', async () => {
+    const ip = '203.0.113.77';
+    const s = await school();
+    const verifyCode = () =>
+      request(server)
+        .post('/auth/otp/verify')
+        .set('X-Forwarded-For', ip)
+        .send({ schoolCode: s.code, email: 'ghost@sign.in', code: '123456', remember: true });
+    const password = () =>
+      post({ schoolCode: s.code, identifier: 'ghost@sign.in', password: 'wrong password!' }, { ip });
+    // The limit is 3 in this suite: 2 + 1 use it up, though neither route reached 3 alone.
+    expect((await password()).status).toBe(401);
+    expect((await password()).status).toBe(401);
+    expect((await verifyCode()).status).toBe(401);
+    expect((await verifyCode()).status).toBe(429);
+    expect((await password()).status).toBe(429);
   });
 
   it('re-hashes a password stored with old parameters', async () => {
