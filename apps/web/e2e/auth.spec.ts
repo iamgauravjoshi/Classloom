@@ -194,7 +194,9 @@ test.describe('double submit', () => {
     const code = await emailedCode(page, school.email);
 
     await page.getByLabel('Sign-in code').fill(code);
-    // The 6th digit has submitted; submit the form again straight away (as Enter or a tap would).
+    // The 6th digit submits by itself; check it did before pressing submit again.
+    await expect.poll(() => verifies).toBeGreaterThanOrEqual(1);
+    // Submit the form again while that request is in flight (as Enter or a tap would).
     await page
       .getByLabel('Sign-in code')
       .evaluate((input) => input.closest('form')!.requestSubmit());
@@ -203,30 +205,64 @@ test.describe('double submit', () => {
   });
 });
 
-test('signing out in one tab sends the other to sign-in on its next request', async ({
-  browser,
+test('signing out in one tab sends the other to sign-in, coming back to its page', async ({
+  page: first,
   playwright,
 }) => {
   const school = await newSchool(playwright);
-  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL });
-  try {
-    await signInWithCode(context.request, school);
-    const first = await context.newPage();
-    const second = await context.newPage();
-    await first.goto('/en/dashboard');
-    await second.goto('/en/dashboard');
-    await expect(second.getByText('API online')).toBeVisible();
+  await signInWithCode(first.request, school);
+  const second = await first.context().newPage();
+  await first.goto('/en/dashboard');
+  await second.goto('/en/account');
+  await expect(second.getByLabel('Name')).toHaveValue(school.name);
 
-    await signOut(first);
+  await signOut(first);
 
-    // A client-side navigation in the other tab asks the API, which no longer knows the session.
-    await second.getByRole('button', { name: 'Search pages…' }).click();
-    await second.getByRole('combobox').fill('Students');
-    await second.keyboard.press('Enter');
-    await expect(second).toHaveURL(/\/en\/sign-in/);
-  } finally {
-    await context.close();
+  // A real client request in the other tab: saving the profile. The API answers 401, and the
+  // client's auth-error handler (not the server redirect) sends the tab to sign-in with `next`.
+  await second.getByLabel('Name').fill('Asha R Rawat');
+  await second.getByRole('button', { name: 'Save changes' }).click();
+  await expect(second).toHaveURL(/\/en\/sign-in\?next=%2Fen%2Faccount$/);
+});
+
+test('signing in at another school replaces the live session', async ({ page, playwright }) => {
+  const request = await playwright.request.newContext();
+  const a = await createVerifiedSchool(request, { schoolName: 'Alpha Public School' });
+  const b = await createVerifiedSchool(request, {
+    schoolName: 'Beta Public School',
+    email: a.email,
+  });
+  await request.dispose();
+
+  // The sign-in page for B is left open at its code step (a signed-in visitor would be sent away
+  // from it), then this browser signs in at A, and only then is B's code entered.
+  await page.goto(`/en/sign-in?school=${b.code}`);
+  await expect(page.getByText(/Signing in to/)).toContainText(b.schoolName);
+  await page.getByLabel('Email or mobile number').fill(b.email);
+  await page.getByRole('button', { name: 'Email me a sign-in code' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Check your email' })).toBeVisible();
+  const bCode = await emailedCode(page, b.email);
+
+  await signInWithCode(page.request, a);
+  const old = (await page.context().cookies()).find((c) => /cl_session$/.test(c.name));
+  expect(old, 'a session cookie').toBeDefined();
+
+  await page.getByLabel('Sign-in code').fill(bCode);
+  await expectDashboard(page, b);
+  if ((page.viewportSize()?.width ?? 0) < 1024) {
+    await page.getByRole('button', { name: 'Toggle sidebar', exact: true }).click();
   }
+  await expect(page.getByText(b.schoolName).first()).toBeVisible();
+  await expect(page.getByText(a.schoolName)).toHaveCount(0);
+
+  // School A's session is gone on the server, not just replaced in this browser.
+  const replay = await playwright.request.newContext();
+  const origin = new URL(page.url()).origin;
+  const res = await replay.get(`${origin}/api/auth/session`, {
+    headers: { cookie: `${old!.name}=${old!.value}` },
+  });
+  expect(res.status()).toBe(401);
+  await replay.dispose();
 });
 
 test.describe('keyboard only', () => {

@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto';
 
 import { type APIRequestContext, expect } from '@playwright/test';
 
-import { latestEmailTo, verificationLink } from './mailpit';
+import { latestEmailTo, mailIds, verificationLink } from './mailpit';
 
 /** Same value as `playwright.config.ts`: the API refuses cookie-carrying writes from elsewhere. */
 export const WEB_ORIGIN = `http://localhost:${process.env.E2E_WEB_PORT || 3000}`;
@@ -31,13 +31,14 @@ export interface VerifiedSchool {
  */
 export async function registerPendingSchool(
   request: APIRequestContext,
-  opts: Partial<Pick<VerifiedSchool, 'name' | 'schoolName'>> = {},
+  opts: Partial<Pick<VerifiedSchool, 'name' | 'schoolName' | 'email'>> = {},
 ): Promise<{ school: VerifiedSchool; verifyUrl: string }> {
   const suffix = randomChars(8);
   const school: VerifiedSchool = {
     // `S` + 8 characters fits ^[A-Z][A-Z0-9-]{1,10}[A-Z0-9]$.
     code: `S${suffix}`,
-    email: `e2e-owner-${suffix.toLowerCase()}@example.com`,
+    // Reusing an email gives one person (users are global) an account at several schools.
+    email: opts.email ?? `e2e-owner-${suffix.toLowerCase()}@example.com`,
     mobile: `9${String(randomInt(1e9)).padStart(9, '0')}`,
     name: opts.name ?? 'Asha Rawat',
     schoolName: opts.schoolName ?? 'Global International School',
@@ -56,14 +57,16 @@ export async function registerPendingSchool(
   });
   expect(registered.status(), await registered.text()).toBe(202);
 
-  const verifyUrl = verificationLink((await latestEmailTo(request, school.email)).text);
+  const verifyUrl = verificationLink(
+    (await latestEmailTo(request, school.email, undefined, new RegExp(school.code))).text,
+  );
   return { school, verifyUrl };
 }
 
 /** Registers a school and verifies it with the token from the emailed link. */
 export async function createVerifiedSchool(
   request: APIRequestContext,
-  opts: Partial<Pick<VerifiedSchool, 'name' | 'schoolName'>> = {},
+  opts: Partial<Pick<VerifiedSchool, 'name' | 'schoolName' | 'email'>> = {},
 ): Promise<VerifiedSchool> {
   const { school, verifyUrl } = await registerPendingSchool(request, opts);
   const token = new URL(verifyUrl).searchParams.get('token');
@@ -81,13 +84,21 @@ export async function signInWithCode(
   school: Pick<VerifiedSchool, 'code' | 'email'>,
   remember = true,
 ): Promise<void> {
+  // An address can hold codes from other schools or earlier sign-ins: only a new one is ours.
+  const before = await mailIds(request, school.email);
   const requested = await post(request, '/auth/otp/request', {
     schoolCode: school.code,
     email: school.email,
   });
   expect(requested.status(), await requested.text()).toBe(202);
 
-  const { subject } = await latestEmailTo(request, school.email, /is your Classloom sign-in code/);
+  const { subject } = await latestEmailTo(
+    request,
+    school.email,
+    /is your Classloom sign-in code/,
+    undefined,
+    before,
+  );
   const code = /^(\d{6}) is your Classloom sign-in code/.exec(subject)?.[1];
   expect(code, subject).toBeDefined();
 
