@@ -48,6 +48,7 @@
     "accountMenu": "Account menu",
     "myAccount": "My account",
     "signOut": "Sign out",
+    "signOutFailed": "Couldn't sign you out. Check your connection and try again.",
     "more": "More"
   },
   "roles": {

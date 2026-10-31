@@ -1,7 +1,7 @@
 import { ApiError } from '@classloom/api-client';
 import { describe, expect, it, vi } from 'vitest';
 
-import { onQueryError } from './query-auth-error';
+import { onQueryError, retryQuery } from './query-auth-error';
 
 const problem = (status: number) => ({ type: 'about:blank', title: 'x', status });
 
@@ -27,5 +27,16 @@ describe('onQueryError', () => {
     onQueryError(new ApiError(401, problem(401)), r, '/en/sign-in?school=GISD');
     onQueryError(new ApiError(401, problem(401)), r, '/en/register-school');
     expect(r.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe('retryQuery', () => {
+  it('retries other failures once', () => {
+    expect(retryQuery(0, new ApiError(500, problem(500)))).toBe(true);
+    expect(retryQuery(1, new ApiError(500, problem(500)))).toBe(false);
+  });
+
+  it('never retries a 401: the session has ended', () => {
+    expect(retryQuery(0, new ApiError(401, problem(401)))).toBe(false);
   });
 });

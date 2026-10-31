@@ -7,6 +7,13 @@ import { routing } from '@/i18n/routing';
 
 import { PATHNAME_HEADER, signInRedirectFor } from './auth-redirect';
 
+/**
+ * Asks the API to validate without sliding the session. A `Set-Cookie` from this server-to-server
+ * call would never reach the browser, so the browser's own `GET /api/auth/session` (the app shell)
+ * does the sliding. Paired with `SESSION_TOUCH_HEADER` in the API's `session.middleware.ts`.
+ */
+const NO_TOUCH = { 'x-session-touch': 'skip' };
+
 const apiInternalUrl = () => process.env.API_INTERNAL_URL ?? 'http://localhost:4000';
 
 /**
@@ -18,7 +25,7 @@ export const getServerSession = cache(async (): Promise<AuthSession | null> => {
   const cookie = (await headers()).get('cookie');
   if (!cookie) return null;
   const res = await fetch(`${apiInternalUrl()}/auth/session`, {
-    headers: { cookie, accept: 'application/json' },
+    headers: { cookie, accept: 'application/json', ...NO_TOUCH },
     cache: 'no-store',
   });
   if (res.status === 401) return null;

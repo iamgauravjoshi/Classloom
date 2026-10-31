@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { ThemeProvider } from 'next-themes';
 import { type ReactNode, useState } from 'react';
 
-import { onQueryError } from '@/lib/query-auth-error';
+import { onQueryError, retryQuery } from '@/lib/query-auth-error';
 
 export function Providers({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -19,7 +19,9 @@ export function Providers({ children }: { children: ReactNode }) {
     return new QueryClient({
       queryCache: new QueryCache({ onError }),
       mutationCache: new MutationCache({ onError }),
-      defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } },
+      defaultOptions: {
+        queries: { staleTime: 30_000, retry: retryQuery, refetchOnWindowFocus: false },
+      },
     });
   });
 

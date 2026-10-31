@@ -85,6 +85,31 @@ describe('request pipeline', () => {
       expect(body.user.id).toBe(s.userId);
     });
 
+    it('X-Session-Touch: skip validates without sliding; without it the session slides', async () => {
+      const s = await signedIn(true);
+      // Last seen (and signed in) 26 hours ago: the next touch slides and re-sends the cookie.
+      const past = new Date(Date.now() - 26 * 60 * 60_000);
+      await owner.session.update({
+        where: { id: s.session.id },
+        data: { authenticatedAt: past, lastSeenAt: past },
+      });
+
+      const skipped = await request(server)
+        .get('/auth/session')
+        .set('Cookie', s.cookie)
+        .set('X-Session-Touch', 'skip');
+      expect(skipped.status).toBe(200);
+      expect(skipped.headers['set-cookie']).toBeUndefined();
+      const untouched = await owner.session.findUniqueOrThrow({ where: { id: s.session.id } });
+      expect(untouched.lastSeenAt).toEqual(past);
+
+      const slid = await request(server).get('/auth/session').set('Cookie', s.cookie);
+      expect(slid.status).toBe(200);
+      expect(slid.headers['set-cookie']?.[0]).toMatch(new RegExp(`^${COOKIE}=${s.token};`));
+      const touched = await owner.session.findUniqueOrThrow({ where: { id: s.session.id } });
+      expect(touched.lastSeenAt.getTime()).toBeGreaterThan(past.getTime());
+    });
+
     it('clears the cookie for an unknown token', async () => {
       const res = await request(server).get('/auth/session').set('Cookie', `${COOKIE}=nope`);
       expect(res.status).toBe(401);

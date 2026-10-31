@@ -9,6 +9,14 @@ import { SessionService } from './session.service';
 import { clearSessionCookie, readSessionToken, setSessionCookie } from './session-cookie';
 
 /**
+ * `X-Session-Touch: skip` validates the session without sliding it (no `last_seen_at` update, no
+ * cookie refresh). The web server sends it on its own `GET /auth/session`, whose `Set-Cookie` would
+ * never reach the browser; the browser's own call through `/api` does the sliding. A client sending
+ * it gains nothing: its session only stops sliding.
+ */
+export const SESSION_TOUCH_HEADER = 'x-session-touch';
+
+/**
  * Runs before guards. A valid cookie attaches `request.auth` and runs the rest of the request
  * inside the session school's tenant context. Anything invalid is anonymous and clears the cookie.
  */
@@ -45,8 +53,10 @@ export class SessionMiddleware implements NestMiddleware {
       }
 
       const { session } = resolved;
-      const { cookieRefresh } = await this.sessions.touch(session);
-      if (cookieRefresh) setSessionCookie(res, this.env, token, session.remember);
+      if (req.headers[SESSION_TOUCH_HEADER] !== 'skip') {
+        const { cookieRefresh } = await this.sessions.touch(session);
+        if (cookieRefresh) setSessionCookie(res, this.env, token, session.remember);
+      }
 
       req.auth = {
         sessionId: session.id,

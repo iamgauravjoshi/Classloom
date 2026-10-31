@@ -12,12 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@classloom/ui/components/ui/dropdown-menu';
+import { toast } from '@classloom/ui/components/ui/toast';
 import { IconLogout, IconUser } from '@tabler/icons-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { Link, useRouter } from '@/i18n/navigation';
 import type { Role } from '@/lib/session';
+import { leavesAfterSignOut } from '@/lib/sign-out';
 
 const initials = (name: string) =>
   name
@@ -39,10 +41,15 @@ export function UserMenu({
   const queryClient = useQueryClient();
   const signOut = useSignOut({
     mutation: {
-      // Leave even if the call failed: a 401 means the session had already ended.
-      onSettled: () => {
-        queryClient.clear();
-        router.replace('/sign-in');
+      // Leave on success or a 401 (already ended). A server or network error may leave the
+      // session live, so stay and say so.
+      onSettled: (_data, error) => {
+        if (leavesAfterSignOut(error)) {
+          queryClient.clear();
+          router.replace('/sign-in');
+        } else {
+          toast.add({ title: t('shell.signOutFailed'), type: 'error' });
+        }
       },
     },
   });

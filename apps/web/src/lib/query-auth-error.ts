@@ -16,3 +16,9 @@ export function onQueryError(
   if (isPublicPath(splitLocation(location).pathname)) return;
   router.replace(signInRedirectFor(location));
 }
+
+/** QueryClient `retry`: one retry, but never for a `401` (the session has ended; redirect now). */
+export function retryQuery(failureCount: number, error: unknown): boolean {
+  if (error instanceof ApiError && error.status === 401) return false;
+  return failureCount < 1;
+}
