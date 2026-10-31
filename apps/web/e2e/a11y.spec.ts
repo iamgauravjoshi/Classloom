@@ -3,7 +3,13 @@ import { expect, type Page, test } from '@playwright/test';
 
 import { createVerifiedSchool, type VerifiedSchool } from './support/school';
 
-const PAGES = ['/en/dashboard', '/en/students', '/en/register-school', '/en/definitely-missing'];
+const PAGES = [
+  '/en/dashboard',
+  '/en/account',
+  '/en/students',
+  '/en/register-school',
+  '/en/definitely-missing',
+];
 
 async function expectNoViolations(page: Page) {
   const results = await new AxeBuilder({ page })
@@ -29,6 +35,13 @@ for (const theme of ['light', 'dark'] as const) {
         await page.goto(path);
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
         if (path === '/en/dashboard') await expect(page.getByText('API online')).toBeVisible();
+        // The sections draw once `GET /me` has answered.
+        if (path === '/en/account') {
+          await expect(page.getByRole('heading', { level: 2, name: 'Profile' })).toBeVisible();
+          await expect(
+            page.getByRole('heading', { level: 2, name: 'Set a password' }),
+          ).toBeVisible();
+        }
         await expectNoViolations(page);
       });
     }

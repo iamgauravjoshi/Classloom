@@ -1,6 +1,6 @@
 'use client';
 
-import { getPublicSchool, type PublicSchoolDto } from '@classloom/api-client';
+import { getPublicSchool, type PublicSchoolDto, requestSignInCode } from '@classloom/api-client';
 import { AuthCard } from '@classloom/ui/components/auth-card';
 import { Spinner } from '@classloom/ui/components/ui/spinner';
 import { validateSchoolCode } from '@classloom/utils';
@@ -12,7 +12,7 @@ import { AuthLogo } from './auth-ui';
 import { CodeStep } from './code-step';
 import { CredentialsStep } from './credentials-step';
 import { SchoolStep, type SchoolStepError } from './school-step';
-import type { SentCode } from './sent-code';
+import { loadSentCode, reusableCode, saveSentCode, type SentCode, sentCode } from './sent-code';
 import { useRememberedSchool } from './use-remembered-school';
 
 const noSubscription = () => () => {};
@@ -36,15 +36,51 @@ async function findSchool(
   }
 }
 
+/**
+ * Re-confirming who you are: the school from the session, then one emailed code, then step 3. If
+ * the code can't go out, step 2 opens (email filled in) where it can be asked for again.
+ */
+async function reauthPhase({
+  schoolCode,
+  email,
+}: {
+  schoolCode: string;
+  email: string;
+}): Promise<Phase> {
+  const found = await findSchool(schoolCode);
+  if (!('school' in found)) return { step: 'school', error: found.error };
+  const { school } = found;
+  // A reload within 60 seconds shows the code already sent: the API would drop a second one.
+  const earlier = reusableCode(loadSentCode(), school.code, email);
+  try {
+    const code =
+      earlier ??
+      sentCode(
+        school.code,
+        email,
+        (await requestSignInCode({ schoolCode: school.code, email })).maskedEmail,
+      );
+    saveSentCode(code);
+    return { step: 'code', school, code };
+  } catch {
+    return { step: 'credentials', school };
+  }
+}
+
 interface SignInFlowProps {
   /** `?school=` from the address, if any; else the code remembered on this device is used. */
   initialSchool: string | null;
   /** Where to go after signing in, already checked by `safeNextPath`. */
   nextPath: string;
+  /**
+   * Set (from the signed-in session, by the page) for `?reauth=1`: open on the code step for this
+   * school and email, with the code sent once, so a sensitive change can be confirmed.
+   */
+  reauth?: { schoolCode: string; email: string } | null;
 }
 
 /** Sign-in in three steps: school code, then email or mobile and password, then (optionally) a code. */
-export function SignInFlow({ initialSchool, nextPath }: SignInFlowProps) {
+export function SignInFlow({ initialSchool, nextPath, reauth = null }: SignInFlowProps) {
   const t = useTranslations('auth');
   const { code: rememberedCode, remember } = useRememberedSchool();
   const hydrated = useSyncExternalStore(
@@ -54,8 +90,8 @@ export function SignInFlow({ initialSchool, nextPath }: SignInFlowProps) {
   );
   // null until the first step is known (a code to look up, or none).
   const [phase, setPhase] = useState<Phase | null>(null);
-  const [schoolCode, setSchoolCode] = useState(initialSchool ?? '');
-  const [identifier, setIdentifier] = useState('');
+  const [schoolCode, setSchoolCode] = useState(reauth?.schoolCode ?? initialSchool ?? '');
+  const [identifier, setIdentifier] = useState(reauth?.email ?? '');
   const [password, setPassword] = useState('');
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [pending, setPending] = useState(false);
@@ -66,7 +102,11 @@ export function SignInFlow({ initialSchool, nextPath }: SignInFlowProps) {
   const started = useRef(false);
 
   // ?school= wins over the code remembered on this device (readable only once hydrated).
-  const startCode = hydrated ? (initialSchool ?? rememberedCode) : null;
+  const startCode = reauth
+    ? reauth.schoolCode
+    : hydrated
+      ? (initialSchool ?? rememberedCode)
+      : null;
 
   const lookUp = useCallback(async (raw: string) => {
     setSchoolCode(raw);
@@ -81,12 +121,27 @@ export function SignInFlow({ initialSchool, nextPath }: SignInFlowProps) {
     }
   }, []);
 
+  // Opens the first step: the reauth code step, or the credentials step for a known school.
+  const begin = useCallback(
+    (code: string) => {
+      if (!reauth) return lookUp(code);
+      return reauthPhase(reauth).then((next) => {
+        if (next.step === 'code') {
+          setLastCode(next.code);
+          setSchoolCode(next.school.code);
+        }
+        setPhase(next);
+      });
+    },
+    [reauth, lookUp],
+  );
+
   useEffect(() => {
     // With a known code, open straight on step 2 (or on step 1 saying it wasn't found).
     if (!startCode || started.current) return;
     started.current = true;
-    void lookUp(startCode);
-  }, [startCode, lookUp]);
+    void begin(startCode);
+  }, [startCode, begin]);
 
   let shown: Phase;
   if (phase) shown = phase;

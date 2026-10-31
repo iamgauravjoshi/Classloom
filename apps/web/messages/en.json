@@ -225,6 +225,52 @@
       "privacyBody": "This notice is a draft placeholder. The final Privacy Notice will explain what school data Classloom processes and why, before Classloom opens to schools."
     }
   },
+  "account": {
+    "metaTitle": "My account",
+    "title": "My account",
+    "loading": "Loading your account",
+    "loadFailed": "We couldn't load your account. Check your connection and try again.",
+    "retry": "Try again",
+    "profile": {
+      "title": "Profile",
+      "description": "Your name and contact details.",
+      "name": "Name",
+      "nameError": "Enter your name, 2 to 80 characters.",
+      "email": "Email",
+      "emailHint": "Your email address can't be changed here.",
+      "verified": "Verified",
+      "mobile": "Mobile number",
+      "mobileHint": "Optional. A 10-digit Indian number lets you sign in with it and a password.",
+      "mobileInvalid": "Enter a valid 10-digit Indian mobile number.",
+      "mobileTaken": "This mobile number is already used by another account.",
+      "save": "Save changes",
+      "saving": "Saving",
+      "saved": "Your profile has been saved.",
+      "unchanged": "There are no changes to save.",
+      "rateLimited": "You've made too many changes. Try again in an hour."
+    },
+    "password": {
+      "setTitle": "Set a password",
+      "setDescription": "You sign in with email codes. Add a password to also sign in with your mobile number.",
+      "changeTitle": "Change password",
+      "changeDescription": "Changing your password signs you out of your other devices.",
+      "current": "Current password",
+      "currentRequired": "Enter your current password.",
+      "currentWrong": "Your current password is incorrect.",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "confirmRequired": "Confirm your new password.",
+      "mismatch": "The passwords don't match.",
+      "rulesLabel": "Your password needs",
+      "lengthError": "Use 10 to 128 characters.",
+      "set": "Set password",
+      "change": "Change password",
+      "saving": "Saving",
+      "setDone": "Your password has been set.",
+      "changeDone": "Your password has been changed. Your other devices were signed out.",
+      "redirecting": "For your security, confirm it's you with an email code first."
+    }
+  },
   "auth": {
     "copyright": "© Classloom",
     "showPassword": "Show password",

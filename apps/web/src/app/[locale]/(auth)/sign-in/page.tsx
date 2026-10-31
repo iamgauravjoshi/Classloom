@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { SignInFlow } from '@/features/auth/sign-in-flow';
 import { routing } from '@/i18n/routing';
+import { getServerSession } from '@/lib/server-session';
 
 export async function generateMetadata({
   params,
@@ -23,5 +24,23 @@ export default async function SignInPage({ params, searchParams }: PageProps<'/[
   // Anything but a same-site path in a supported locale (open redirects, loops) goes to the dashboard.
   const nextPath = safeNextPath(single(query.next), routing.locales, `/${locale}/dashboard`);
 
-  return <SignInFlow initialSchool={single(query.school)?.trim() || null} nextPath={nextPath} />;
+  // `?reauth=1` is honoured only for a signed-in visitor, whose own school and email it uses;
+  // for anyone else it is ignored and the normal flow runs.
+  let reauth: { schoolCode: string; email: string } | null = null;
+  if (single(query.reauth) === '1') {
+    try {
+      const session = await getServerSession();
+      if (session) reauth = { schoolCode: session.school.code, email: session.user.email };
+    } catch {
+      // The API is unreachable: the normal flow will report the problem.
+    }
+  }
+
+  return (
+    <SignInFlow
+      initialSchool={single(query.school)?.trim() || null}
+      nextPath={nextPath}
+      reauth={reauth}
+    />
+  );
 }

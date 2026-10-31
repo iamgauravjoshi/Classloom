@@ -84,3 +84,20 @@ describe('signedInAuthRedirect', () => {
     expect(signedInAuthRedirect('')).toBe('/en/dashboard');
   });
 });
+
+describe('signedInAuthRedirect with reauth', () => {
+  it('lets a signed-in visitor stay on sign-in when reauth=1', () => {
+    expect(
+      signedInAuthRedirect('/en/sign-in?next=%2Fen%2Faccount&reauth=1&school=GISD'),
+    ).toBeNull();
+    expect(signedInAuthRedirect('/en/sign-in?reauth=1')).toBeNull();
+  });
+
+  it('still redirects for any other reauth value and for other pages', () => {
+    expect(signedInAuthRedirect('/en/sign-in?next=%2Fen%2Faccount&reauth=0')).toBe('/en/account');
+    expect(signedInAuthRedirect('/en/sign-in?next=%2Fen%2Faccount&reauth=true')).toBe(
+      '/en/account',
+    );
+    expect(signedInAuthRedirect('/en/forgot-password?reauth=1')).toBe('/en/dashboard');
+  });
+});

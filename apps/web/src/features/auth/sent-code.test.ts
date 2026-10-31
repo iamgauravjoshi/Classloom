@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { reusableCode, sentCode } from './sent-code';
+import { loadSentCode, reusableCode, saveSentCode, sentCode } from './sent-code';
 
 const NOW = Date.UTC(2026, 9, 31, 10, 0, 0);
 
@@ -31,5 +31,44 @@ describe('reusableCode', () => {
     expect(reusableCode(last, 'GISD', 'b@example.com', NOW + 1_000)).toBeNull();
     expect(reusableCode(last, 'OTHER', 'a@example.com', NOW + 1_000)).toBeNull();
     expect(reusableCode(null, 'GISD', 'a@example.com', NOW + 1_000)).toBeNull();
+  });
+});
+
+describe('saved code', () => {
+  const store = (): Pick<Storage, 'getItem' | 'setItem'> => {
+    const items = new Map<string, string>();
+    return {
+      getItem: (key) => items.get(key) ?? null,
+      setItem: (key, value) => void items.set(key, value),
+    };
+  };
+  const sent = sentCode('GISD', 'a@example.com', 'a***@example.com', NOW);
+
+  it('gives back the code that was saved', () => {
+    const storage = store();
+    saveSentCode(sent, storage);
+    expect(loadSentCode(storage)).toEqual(sent);
+  });
+
+  it('gives nothing when none was saved, or the saved text is not a code', () => {
+    expect(loadSentCode(store())).toBeNull();
+    const storage = store();
+    storage.setItem('classloom.sentCode', '{"schoolCode":1}');
+    expect(loadSentCode(storage)).toBeNull();
+    storage.setItem('classloom.sentCode', 'not json');
+    expect(loadSentCode(storage)).toBeNull();
+  });
+
+  it('never throws when storage is blocked', () => {
+    const blocked = {
+      getItem: () => {
+        throw new Error('blocked');
+      },
+      setItem: () => {
+        throw new Error('blocked');
+      },
+    };
+    expect(() => saveSentCode(sent, blocked)).not.toThrow();
+    expect(loadSentCode(blocked)).toBeNull();
   });
 });

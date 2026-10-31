@@ -58,7 +58,10 @@ export function signedInAuthRedirect(location: string): string | null {
   const section = pathname.split('/')[2];
   if (section === 'reset-password') return null;
   if (section === 'sign-in') {
-    const next = new URLSearchParams(search).get('next');
+    const query = new URLSearchParams(search);
+    // Proving yourself again before a sensitive change is meant for a signed-in visitor.
+    if (query.get('reauth') === '1') return null;
+    const next = query.get('next');
     return safeNextPath(next, routing.locales, dashboard);
   }
   return dashboard;
