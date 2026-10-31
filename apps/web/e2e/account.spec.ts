@@ -9,8 +9,8 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 const CODE_SUBJECT = /is your Classloom sign-in code/;
 
-async function openAccount(page: Page, school: VerifiedSchool) {
-  await signInWithCode(page.request, school);
+async function openAccount(page: Page, school: VerifiedSchool, remember = true) {
+  await signInWithCode(page.request, school, remember);
   await page.goto('/en/account');
   await expect(page.getByRole('heading', { level: 1, name: 'My account' })).toBeVisible();
   await expect(page.getByLabel('Name')).toHaveValue(school.name);
@@ -134,13 +134,16 @@ test('password: sets a first password, then changes it', async ({ page, playwrig
 test('reauth: a signed-in visitor re-confirms with an emailed code and returns to the account page', async ({
   page,
   playwright,
-}) => {
+}, testInfo) => {
+  // One project is enough for the 61 s wait.
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'slow: runs on desktop-chrome only');
   // The API drops a second code within 60 seconds of the one that signed in.
   test.setTimeout(150_000);
   const request = await playwright.request.newContext();
   const school = await createVerifiedSchool(request);
   await request.dispose();
-  await openAccount(page, school);
+  // A session that was not asked to be remembered must stay that way after reauth.
+  await openAccount(page, school, false);
   const signInCode = (await latestEmailTo(page.request, school.email, CODE_SUBJECT)).subject;
   await page.waitForTimeout(61_000);
 
@@ -157,7 +160,9 @@ test('reauth: a signed-in visitor re-confirms with an emailed code and returns t
   }).toPass();
   const code = /^(\d{6}) is your Classloom sign-in code/.exec(subject)?.[1];
   expect(code, subject).toBeDefined();
+  const verify = page.waitForRequest((r) => r.url().endsWith('/api/auth/otp/verify'));
   await page.getByLabel('Sign-in code').fill(code!);
+  expect((await verify).postDataJSON() as { remember: boolean }).toMatchObject({ remember: false });
 
   await expect(page).toHaveURL(/\/en\/account$/);
   await expect(page.getByRole('heading', { level: 1, name: 'My account' })).toBeVisible();

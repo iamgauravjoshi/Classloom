@@ -207,6 +207,17 @@ describe('request pipeline', () => {
     });
   });
 
+  it('describes the nullable mobile as a string or null in the OpenAPI document', async () => {
+    const response = await request(server).get('/docs-json');
+    const schemas = (
+      response.body as {
+        components: { schemas: Record<string, { properties: Record<string, unknown> }> };
+      }
+    ).components.schemas;
+    expect(schemas.MeDto?.properties.mobile).toEqual({ type: ['string', 'null'] });
+    expect(schemas.UpdateMeRequestDto?.properties.mobile).toEqual({ type: ['string', 'null'] });
+  });
+
   it('keeps public routes open without a cookie', async () => {
     expect((await request(server).get('/health')).status).toBe(200);
     expect((await request(server).get('/schools/code-availability?code=zzzz')).status).toBe(200);

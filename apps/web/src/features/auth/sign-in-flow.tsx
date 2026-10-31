@@ -7,7 +7,7 @@ import { validateSchoolCode } from '@classloom/utils';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
-import { schoolLookupErrorKey } from './auth-errors';
+import { codeRequestErrorKey, type EmailErrorKey, schoolLookupErrorKey } from './auth-errors';
 import { AuthLogo } from './auth-ui';
 import { CodeStep } from './code-step';
 import { CredentialsStep } from './credentials-step';
@@ -20,7 +20,7 @@ const noSubscription = () => () => {};
 type Phase =
   | { step: 'loading' }
   | { step: 'school'; error?: SchoolStepError }
-  | { step: 'credentials'; school: PublicSchoolDto }
+  | { step: 'credentials'; school: PublicSchoolDto; error?: EmailErrorKey }
   | { step: 'code'; school: PublicSchoolDto; code: SentCode };
 
 /** Looks a code up; a code that can't exist is "not found" without asking the API. */
@@ -62,8 +62,8 @@ async function reauthPhase({
       );
     saveSentCode(code);
     return { step: 'code', school, code };
-  } catch {
-    return { step: 'credentials', school };
+  } catch (error) {
+    return { step: 'credentials', school, error: codeRequestErrorKey(error) };
   }
 }
 
@@ -76,7 +76,7 @@ interface SignInFlowProps {
    * Set (from the signed-in session, by the page) for `?reauth=1`: open on the code step for this
    * school and email, with the code sent once, so a sensitive change can be confirmed.
    */
-  reauth?: { schoolCode: string; email: string } | null;
+  reauth?: { schoolCode: string; email: string; remember: boolean } | null;
 }
 
 /** Sign-in in three steps: school code, then email or mobile and password, then (optionally) a code. */
@@ -93,7 +93,7 @@ export function SignInFlow({ initialSchool, nextPath, reauth = null }: SignInFlo
   const [schoolCode, setSchoolCode] = useState(reauth?.schoolCode ?? initialSchool ?? '');
   const [identifier, setIdentifier] = useState(reauth?.email ?? '');
   const [password, setPassword] = useState('');
-  const [keepSignedIn, setKeepSignedIn] = useState(true);
+  const [keepSignedIn, setKeepSignedIn] = useState(reauth?.remember ?? true);
   const [pending, setPending] = useState(false);
   // Focus moves to the new step only after the person acted, never on first load.
   const [moved, setMoved] = useState(false);
@@ -194,6 +194,7 @@ export function SignInFlow({ initialSchool, nextPath, reauth = null }: SignInFlo
       <CredentialsStep
         {...card}
         school={shown.school}
+        initialError={shown.error}
         identifier={identifier}
         onIdentifierChange={setIdentifier}
         password={password}

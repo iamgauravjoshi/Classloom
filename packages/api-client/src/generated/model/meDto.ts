@@ -11,6 +11,7 @@ export interface MeDto {
   name: string;
   email: string;
   emailVerified: boolean;
-  mobile: string[];
+  /** @nullable */
+  mobile: string | null;
   hasPassword: boolean;
 }

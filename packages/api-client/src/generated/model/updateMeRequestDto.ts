@@ -12,5 +12,6 @@ export interface UpdateMeRequestDto {
    * @maxLength 80
    */
   name?: string;
-  mobile?: string[];
+  /** @nullable */
+  mobile?: string | null;
 }

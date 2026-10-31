@@ -53,6 +53,8 @@ interface CredentialsStepProps {
   onChangeSchool: () => void;
   onCodeSent: (code: SentCode) => void;
   onSignedIn: () => void;
+  /** A problem from before this step opened (the code that should have been sent). */
+  initialError?: EmailErrorKey;
 }
 
 type FieldErrors = { identifier?: string; password?: string };
@@ -74,12 +76,13 @@ export function CredentialsStep({
   onChangeSchool,
   onCodeSent,
   onSignedIn,
+  initialError,
 }: CredentialsStepProps) {
   const t = useTranslations('auth');
   const signIn = useSignInWithPassword();
   const requestCode = useRequestSignInCode();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<FormError | null>(null);
+  const [formError, setFormError] = useState<FormError | null>(initialError ?? null);
 
   const parsedIdentifier = parseIdentifier(identifier);
   const canEmailCode = parsedIdentifier.kind === 'email';

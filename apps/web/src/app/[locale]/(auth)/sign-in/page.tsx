@@ -26,11 +26,17 @@ export default async function SignInPage({ params, searchParams }: PageProps<'/[
 
   // `?reauth=1` is honoured only for a signed-in visitor, whose own school and email it uses;
   // for anyone else it is ignored and the normal flow runs.
-  let reauth: { schoolCode: string; email: string } | null = null;
+  let reauth: { schoolCode: string; email: string; remember: boolean } | null = null;
   if (single(query.reauth) === '1') {
     try {
       const session = await getServerSession();
-      if (session) reauth = { schoolCode: session.school.code, email: session.user.email };
+      if (session) {
+        reauth = {
+          schoolCode: session.school.code,
+          email: session.user.email,
+          remember: session.remember,
+        };
+      }
     } catch {
       // The API is unreachable: the normal flow will report the problem.
     }

@@ -69,6 +69,7 @@ export async function createVerifiedSchool(
 export async function signInWithCode(
   request: APIRequestContext,
   school: Pick<VerifiedSchool, 'code' | 'email'>,
+  remember = true,
 ): Promise<void> {
   const requested = await post(request, '/auth/otp/request', {
     schoolCode: school.code,
@@ -84,7 +85,7 @@ export async function signInWithCode(
     schoolCode: school.code,
     email: school.email,
     code,
-    remember: true,
+    remember,
   });
   expect(verified.status(), await verified.text()).toBe(200);
 }

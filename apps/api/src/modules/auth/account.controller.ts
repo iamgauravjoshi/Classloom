@@ -20,12 +20,13 @@ import {
 import type { Request } from 'express';
 import { createZodDto } from 'nestjs-zod';
 
+import { withNullableProperties } from '../../core/http/nullable-openapi';
 import { AccountService } from './account.service';
 import { CurrentAuth } from './current-auth.decorator';
 import type { RequestAuth } from './request-auth';
 
-class MeDto extends createZodDto(meSchema) {}
-class UpdateMeRequestDto extends createZodDto(updateMeRequestSchema) {}
+class MeDto extends withNullableProperties(createZodDto(meSchema)) {}
+class UpdateMeRequestDto extends withNullableProperties(createZodDto(updateMeRequestSchema)) {}
 class SetPasswordRequestDto extends createZodDto(setPasswordRequestSchema) {}
 
 @ApiTags('me')

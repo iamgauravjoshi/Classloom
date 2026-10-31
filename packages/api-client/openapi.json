@@ -1106,10 +1106,10 @@
             "type": "boolean"
           },
           "mobile": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "hasPassword": {
             "type": "boolean"
@@ -1133,10 +1133,10 @@
             "maxLength": 80
           },
           "mobile": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

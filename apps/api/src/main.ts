@@ -10,6 +10,7 @@ import { cleanupOpenApiDoc } from 'nestjs-zod';
 
 import { AppModule } from './app.module';
 import { type Env, parseEnv } from './core/config/env.schema';
+import { restoreNullable } from './core/http/nullable-openapi';
 import { sessionCookieName } from './modules/auth/session-cookie';
 
 export function buildOpenApiDocument(app: INestApplication, env: Env): OpenAPIObject {
@@ -21,7 +22,7 @@ export function buildOpenApiDocument(app: INestApplication, env: Env): OpenAPIOb
     .setOpenAPIVersion('3.1.0')
     .addCookieAuth(sessionCookieName(env))
     .build();
-  return cleanupOpenApiDoc(SwaggerModule.createDocument(app, config));
+  return restoreNullable(cleanupOpenApiDoc(SwaggerModule.createDocument(app, config)));
 }
 
 /** Express wants a count or boolean as such, and anything else as an address list. */

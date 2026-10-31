@@ -69,7 +69,7 @@ export function ProfileForm({ me }: { me: Me }) {
     }
     setFieldErrors({});
 
-    // Only what changed; `null` clears the mobile (the generated type does not show that).
+    // Only what changed; `null` clears the mobile.
     const body: { name?: string; mobile?: string | null } = {};
     if (parsed.data.name !== undefined && parsed.data.name !== me.name)
       body.name = parsed.data.name;
@@ -82,7 +82,7 @@ export function ProfileForm({ me }: { me: Me }) {
     }
 
     try {
-      await update.mutateAsync({ data: body as never });
+      await update.mutateAsync({ data: body });
       setName(parsed.data.name ?? name);
       setMobile(mobileDigits(parsed.data.mobile ?? null));
       toast.add({ title: t('saved'), type: 'success' });
