@@ -19,7 +19,10 @@ function InputOTP({
       inputMode={inputMode}
       autoComplete={autoComplete}
       pattern={pattern}
-      containerClassName={cn('flex items-center gap-2 has-disabled:opacity-50', containerClassName)}
+      containerClassName={cn(
+        'flex items-center gap-2 has-disabled:opacity-50 has-[input[aria-invalid=true]]:[&_[data-slot=input-otp-slot]]:border-destructive',
+        containerClassName,
+      )}
       className={cn('disabled:cursor-not-allowed', className)}
       {...props}
     />

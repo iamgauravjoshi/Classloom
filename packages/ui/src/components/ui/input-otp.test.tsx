@@ -34,3 +34,31 @@ describe('InputOTP', () => {
     expect(onComplete).toHaveBeenCalledWith('123456');
   });
 });
+
+describe('InputOTP accessibility props', () => {
+  it('passes aria-invalid and aria-describedby to the real input', () => {
+    render(
+      <InputOTP maxLength={6} aria-label="Code" aria-invalid aria-describedby="err">
+        <InputOTPGroup>
+          <InputOTPSlot index={0} />
+        </InputOTPGroup>
+      </InputOTP>,
+    );
+    const input = screen.getByLabelText('Code');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAttribute('aria-describedby', 'err');
+  });
+});
+
+describe('caret blink animation', () => {
+  it('is defined in the ui CSS and respects reduced motion', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const css = readFileSync(resolve(process.cwd(), 'src/styles/globals.css'), 'utf8');
+    expect(css).toContain('@keyframes caret-blink');
+    expect(css).toContain('--animate-caret-blink');
+    expect(css).toMatch(
+      /prefers-reduced-motion: reduce\)[\s\S]*animate-caret-blink[\s\S]*animation: none/,
+    );
+  });
+});

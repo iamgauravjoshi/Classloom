@@ -15,10 +15,17 @@ export default meta;
 function Otp({ initial = '', invalid = false }: { initial?: string; invalid?: boolean }) {
   const [value, setValue] = useState(initial);
   return (
-    <InputOTP maxLength={6} value={value} onChange={setValue} aria-label="Sign-in code">
+    <InputOTP
+      maxLength={6}
+      value={value}
+      onChange={setValue}
+      aria-label="Sign-in code"
+      aria-invalid={invalid || undefined}
+      aria-describedby={invalid ? 'otp-error' : undefined}
+    >
       <InputOTPGroup>
         {[0, 1, 2, 3, 4, 5].map((index) => (
-          <InputOTPSlot key={index} index={index} aria-invalid={invalid || undefined} />
+          <InputOTPSlot key={index} index={index} />
         ))}
       </InputOTPGroup>
     </InputOTP>
@@ -31,7 +38,7 @@ export const OtpError: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-2">
       <Otp initial="482913" invalid />
-      <p className="text-danger-strong text-sm" role="alert">
+      <p id="otp-error" className="text-danger-strong text-sm" role="alert">
         That code is wrong or has expired.
       </p>
     </div>
@@ -101,7 +108,12 @@ function CardExample() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="card-pw">Password</Label>
-          <PasswordInput id="card-pw" showLabel="Show password" hideLabel="Hide password" />
+          <PasswordInput
+            id="card-pw"
+            autoComplete="current-password"
+            showLabel="Show password"
+            hideLabel="Hide password"
+          />
         </div>
         <Button className="w-full">Sign in</Button>
       </div>
@@ -110,10 +122,15 @@ function CardExample() {
 }
 
 export const CardLight: StoryObj = {
-  parameters: { layout: 'fullscreen', themes: { themeOverride: 'light' } },
+  parameters: { layout: 'fullscreen' },
   render: () => <CardExample />,
 };
 export const CardDark: StoryObj = {
-  parameters: { layout: 'fullscreen', themes: { themeOverride: 'dark' } },
-  render: () => <CardExample />,
+  parameters: { layout: 'fullscreen' },
+  // The tokens key on an ancestor `.dark` class, so wrap the story in one.
+  render: () => (
+    <div className="dark bg-background text-foreground" data-testid="dark-wrapper">
+      <CardExample />
+    </div>
+  ),
 };

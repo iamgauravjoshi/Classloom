@@ -18,7 +18,7 @@ export interface PasswordRulesProps {
 /** Live checklist of password rules; state is icon, colour and text, never colour alone. */
 export function PasswordRules({ rules, metLabel, unmetLabel, className }: PasswordRulesProps) {
   return (
-    <ul className={cn('flex flex-col gap-1.5 text-sm', className)}>
+    <ul role="list" className={cn('flex flex-col gap-1.5 text-sm', className)}>
       {rules.map((rule) => (
         <li
           key={rule.label}
