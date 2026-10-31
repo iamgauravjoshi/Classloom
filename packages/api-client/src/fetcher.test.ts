@@ -93,6 +93,14 @@ describe('apiFetch', () => {
     );
     await expect(apiFetch({ url: '/x', method: 'DELETE' })).resolves.toBeUndefined();
   });
+
+  it('returns undefined for a 2xx with an empty body (202 Accepted from forgot-password)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('', { status: 202 }))),
+    );
+    await expect(apiFetch({ url: '/x', method: 'POST', data: {} })).resolves.toBeUndefined();
+  });
 });
 
 describe('apiFetch error normalisation', () => {

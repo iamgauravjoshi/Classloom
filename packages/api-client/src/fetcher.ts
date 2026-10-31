@@ -96,7 +96,9 @@ export async function apiFetch<T>(config: ApiRequestConfig): Promise<T> {
   }
   if (!res.ok) throw new ApiError(res.status, await readProblem(res));
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  // A 2xx may carry no body at all (the forgot-password 202), which `res.json()` rejects.
+  const text = await res.text();
+  return (text === '' ? undefined : JSON.parse(text)) as T;
 }
 
 /** Tells Orval that generated hooks reject with `ApiError`, whatever the OpenAPI error schema says. */
