@@ -96,7 +96,7 @@ export function CodeStep({
       setError(null);
       setWrongTries(0);
       setResent(true);
-      onResent(sentCode(code.email, maskedEmail));
+      onResent(sentCode(schoolCode, code.email, maskedEmail));
     } catch (failure) {
       setResendError(t(`errors.${codeRequestErrorKey(failure)}`));
     }

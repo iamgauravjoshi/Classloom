@@ -17,7 +17,10 @@ export async function generateMetadata({
   };
 }
 
-/** The server render never reads the token; the form takes it from the address bar on load. */
+/**
+ * No render spends the token: the form keeps it in memory, strips it from the address bar on load
+ * and posts it only when the form is submitted (a mail scanner opening the link changes nothing).
+ */
 export default async function ResetPasswordPage({ params }: PageProps<'/[locale]/reset-password'>) {
   const { locale } = await params;
   setRequestLocale(locale);

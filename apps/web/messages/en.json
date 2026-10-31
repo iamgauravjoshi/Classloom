@@ -232,6 +232,7 @@
     "errors": {
       "rateLimited": "Too many attempts from this network. Try again later.",
       "unavailable": "We can't send emails right now. Try again in a few minutes.",
+      "temporarilyUnavailable": "We can't sign you in right now. Try again in a few minutes.",
       "network": "We couldn't reach Classloom. Check your connection and try again.",
       "generic": "Something went wrong. Please try again."
     },
@@ -318,6 +319,7 @@
       "lengthError": "Use 10 to 128 characters.",
       "confirmRequired": "Confirm your new password.",
       "mismatch": "The passwords don't match.",
+      "temporarilyUnavailable": "We can't change your password right now. Try again in a few minutes.",
       "policy": {
         "too_short": "Use at least 10 characters.",
         "too_long": "Use at most 128 characters.",

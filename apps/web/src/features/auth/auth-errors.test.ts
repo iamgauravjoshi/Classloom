@@ -7,6 +7,7 @@ import {
   codeVerifyErrorKey,
   forgotErrorKey,
   resetErrorOf,
+  schoolLookupErrorKey,
   signInErrorKey,
 } from './auth-errors';
 
@@ -36,6 +37,10 @@ describe('signInErrorKey', () => {
     expect(signInErrorKey(apiError(500))).toBe('generic');
     expect(signInErrorKey(new Error('boom'))).toBe('generic');
   });
+
+  it('maps a 503 to the general outage copy, not the email one', () => {
+    expect(signInErrorKey(apiError(503))).toBe('temporarilyUnavailable');
+  });
 });
 
 describe('codeRequestErrorKey', () => {
@@ -57,6 +62,10 @@ describe('codeVerifyErrorKey', () => {
     expect(codeVerifyErrorKey(apiError(429))).toBe('rateLimited');
     expect(codeVerifyErrorKey(apiError(0))).toBe('network');
     expect(codeVerifyErrorKey(apiError(500))).toBe('generic');
+  });
+
+  it('maps a 503 (Redis down) to the general outage copy, not the email one', () => {
+    expect(codeVerifyErrorKey(apiError(503))).toBe('temporarilyUnavailable');
   });
 });
 
@@ -108,5 +117,19 @@ describe('resetErrorOf', () => {
     expect(resetErrorOf(apiError(0))).toEqual({ kind: 'error', key: 'network' });
     expect(resetErrorOf(apiError(500))).toEqual({ kind: 'error', key: 'generic' });
     expect(resetErrorOf(apiError(400))).toEqual({ kind: 'error', key: 'generic' });
+  });
+
+  it('maps a 503 to the general outage key, not the email one', () => {
+    expect(resetErrorOf(apiError(503))).toEqual({ kind: 'error', key: 'temporarilyUnavailable' });
+  });
+});
+
+describe('schoolLookupErrorKey', () => {
+  it('maps 404 to not found, 429 to the network limit and 503 to the outage copy', () => {
+    expect(schoolLookupErrorKey(apiError(404))).toBe('notFound');
+    expect(schoolLookupErrorKey(apiError(429))).toBe('rateLimited');
+    expect(schoolLookupErrorKey(apiError(503))).toBe('temporarilyUnavailable');
+    expect(schoolLookupErrorKey(apiError(0))).toBe('network');
+    expect(schoolLookupErrorKey(apiError(500))).toBe('generic');
   });
 });

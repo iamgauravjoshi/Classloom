@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { isPublicPath, signInRedirect, signInRedirectFor } from './auth-redirect';
+import {
+  isPublicPath,
+  signedInAuthRedirect,
+  signInRedirect,
+  signInRedirectFor,
+} from './auth-redirect';
 
 describe('isPublicPath', () => {
   it('treats app pages as protected', () => {
@@ -49,5 +54,33 @@ describe('signInRedirectFor', () => {
 
   it('falls back to the default locale for an unknown first segment', () => {
     expect(signInRedirectFor('/xx/students')).toBe('/en/sign-in?next=%2Fxx%2Fstudents');
+  });
+});
+
+describe('signedInAuthRedirect', () => {
+  it('leaves the reset page alone: a reset link must work while signed in', () => {
+    expect(signedInAuthRedirect('/en/reset-password')).toBeNull();
+    expect(signedInAuthRedirect('/en/reset-password?token=abc')).toBeNull();
+  });
+
+  it('sends sign-in to a safe next, else the dashboard', () => {
+    expect(signedInAuthRedirect('/en/sign-in?next=%2Fen%2Fstudents%3Fq%3D1')).toBe(
+      '/en/students?q=1',
+    );
+    expect(signedInAuthRedirect('/en/sign-in')).toBe('/en/dashboard');
+    expect(signedInAuthRedirect('/en/sign-in?next=%2F%2Fevil.example')).toBe('/en/dashboard');
+    expect(signedInAuthRedirect('/en/sign-in?next=https%3A%2F%2Fevil.example')).toBe(
+      '/en/dashboard',
+    );
+    expect(signedInAuthRedirect('/en/sign-in?next=%2Fen%2Fsign-in')).toBe('/en/dashboard');
+  });
+
+  it('sends forgot-password to the dashboard, ignoring next', () => {
+    expect(signedInAuthRedirect('/en/forgot-password')).toBe('/en/dashboard');
+    expect(signedInAuthRedirect('/en/forgot-password?next=%2Fen%2Fstudents')).toBe('/en/dashboard');
+  });
+
+  it('falls back to the default locale dashboard for an unknown location', () => {
+    expect(signedInAuthRedirect('')).toBe('/en/dashboard');
   });
 });

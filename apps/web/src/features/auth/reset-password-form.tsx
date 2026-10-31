@@ -156,7 +156,11 @@ export function ResetPasswordForm() {
         </FieldGroup>
         {formError ? (
           <Alert variant="destructive">
-            <AlertDescription>{t(`errors.${formError}`)}</AlertDescription>
+            <AlertDescription>
+              {formError === 'temporarilyUnavailable'
+                ? t('reset.temporarilyUnavailable')
+                : t(`errors.${formError}`)}
+            </AlertDescription>
           </Alert>
         ) : null}
         <Button type="submit" className={cn(BUTTON_CLASS, 'w-full')} disabled={reset.isPending}>

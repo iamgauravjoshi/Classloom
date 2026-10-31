@@ -1,3 +1,5 @@
+import { safeNextPath } from '@classloom/utils';
+
 import { routing } from '@/i18n/routing';
 
 /** Sections (the first segment after the locale) that anyone may open without signing in. */
@@ -43,3 +45,21 @@ export function signInRedirectFor(location: string): string {
 
 /** Request header `proxy.ts` sets for server components: the path and query that was asked for. */
 export const PATHNAME_HEADER = 'x-pathname';
+
+/**
+ * Where a signed-in visitor of an `(auth)` page goes, from that page's location (path plus query),
+ * or `null` to stay. The reset page stays (an emailed link must work, and the reset revokes every
+ * session anyway); sign-in honours a safe `?next=`; the rest go to the dashboard.
+ */
+export function signedInAuthRedirect(location: string): string | null {
+  const { pathname, search } = splitLocation(location);
+  const locale = localeOf(pathname) ?? routing.defaultLocale;
+  const dashboard = `/${locale}/dashboard`;
+  const section = pathname.split('/')[2];
+  if (section === 'reset-password') return null;
+  if (section === 'sign-in') {
+    const next = new URLSearchParams(search).get('next');
+    return safeNextPath(next, routing.locales, dashboard);
+  }
+  return dashboard;
+}

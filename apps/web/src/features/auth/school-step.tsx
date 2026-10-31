@@ -17,10 +17,10 @@ import type { FormEvent, ReactNode } from 'react';
 
 import { Link } from '@/i18n/navigation';
 
-import type { CommonErrorKey } from './auth-errors';
+import type { SchoolLookupErrorKey } from './auth-errors';
 import { BUTTON_CLASS, CONTROL_CLASS, LINK_CLASS } from './auth-ui';
 
-export type SchoolStepError = 'required' | 'notFound' | CommonErrorKey;
+export type SchoolStepError = 'required' | SchoolLookupErrorKey;
 
 interface SchoolStepProps {
   logo: ReactNode;

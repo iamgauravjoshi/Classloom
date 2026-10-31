@@ -14,7 +14,7 @@ import { type FormEvent, useState } from 'react';
 
 import { Link } from '@/i18n/navigation';
 
-import { type CommonErrorKey, forgotErrorKey } from './auth-errors';
+import { type EmailErrorKey, forgotErrorKey } from './auth-errors';
 import { AuthLogo, BUTTON_CLASS, CONTROL_CLASS, LINK_CLASS } from './auth-ui';
 
 /** Forgot password: one field, and the same answer whether or not an account matches. */
@@ -23,7 +23,7 @@ export function ForgotPasswordForm() {
   const request = useRequestPasswordReset();
   const [identifier, setIdentifier] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<CommonErrorKey | null>(null);
+  const [formError, setFormError] = useState<EmailErrorKey | null>(null);
   const [sent, setSent] = useState(false);
 
   const card = { logo: <AuthLogo />, copyright: t('copyright') };

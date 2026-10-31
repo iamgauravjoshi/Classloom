@@ -28,9 +28,14 @@ import { type FormEvent, type ReactNode, useState } from 'react';
 
 import { Link } from '@/i18n/navigation';
 
-import { codeRequestErrorKey, type CommonErrorKey, signInErrorKey } from './auth-errors';
+import {
+  codeRequestErrorKey,
+  type EmailErrorKey,
+  type SignInErrorKey,
+  signInErrorKey,
+} from './auth-errors';
 import { BUTTON_CLASS, CONTROL_CLASS, LINK_CLASS } from './auth-ui';
-import { type SentCode, sentCode } from './sent-code';
+import { reusableCode, type SentCode, sentCode } from './sent-code';
 
 interface CredentialsStepProps {
   logo: ReactNode;
@@ -43,13 +48,15 @@ interface CredentialsStepProps {
   keepSignedIn: boolean;
   onKeepSignedInChange: (value: boolean) => void;
   autoFocus: boolean;
+  /** The code emailed last, reused when asking again within 60 seconds. */
+  lastCode: SentCode | null;
   onChangeSchool: () => void;
   onCodeSent: (code: SentCode) => void;
   onSignedIn: () => void;
 }
 
 type FieldErrors = { identifier?: string; password?: string };
-type FormError = 'incorrect' | 'paused' | CommonErrorKey;
+type FormError = SignInErrorKey | EmailErrorKey;
 
 /** Step 2: who you are. Password sign-in, or an emailed code for an email address. */
 export function CredentialsStep({
@@ -63,6 +70,7 @@ export function CredentialsStep({
   keepSignedIn,
   onKeepSignedInChange,
   autoFocus,
+  lastCode,
   onChangeSchool,
   onCodeSent,
   onSignedIn,
@@ -115,11 +123,17 @@ export function CredentialsStep({
     setFormError(null);
     setFieldErrors({});
     const email = parsedIdentifier.value;
+    // The API would drop a second send within 60 seconds; show the code already on its way.
+    const earlier = reusableCode(lastCode, school.code, email);
+    if (earlier) {
+      onCodeSent(earlier);
+      return;
+    }
     try {
       const { maskedEmail } = await requestCode.mutateAsync({
         data: { schoolCode: school.code, email },
       });
-      onCodeSent(sentCode(email, maskedEmail));
+      onCodeSent(sentCode(school.code, email, maskedEmail));
     } catch (error) {
       setFormError(codeRequestErrorKey(error));
     }

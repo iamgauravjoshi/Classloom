@@ -6,7 +6,8 @@ import { createVerifiedSchool, signInWithCode } from './support/school';
 const OWNER_STATE = 'e2e/.auth/owner.json';
 
 // Signs in once, through the real code flow, and saves the browser state the device projects
-// reuse. There is no test-only API endpoint; the sign-in pages arrive later, so this uses the API.
+// reuse. There is no test-only API endpoint. It signs in through the API (fast, and independent of
+// the sign-in pages, which their own specs cover).
 setup('sign in as a school owner', async ({ page }) => {
   const school = await createVerifiedSchool(page.request);
   await signInWithCode(page.request, school);

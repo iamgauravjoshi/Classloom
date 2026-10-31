@@ -1,13 +1,13 @@
 'use client';
 
-import { ApiError, getPublicSchool, type PublicSchoolDto } from '@classloom/api-client';
+import { getPublicSchool, type PublicSchoolDto } from '@classloom/api-client';
 import { AuthCard } from '@classloom/ui/components/auth-card';
 import { Spinner } from '@classloom/ui/components/ui/spinner';
 import { validateSchoolCode } from '@classloom/utils';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
-import { type CommonErrorKey } from './auth-errors';
+import { schoolLookupErrorKey } from './auth-errors';
 import { AuthLogo } from './auth-ui';
 import { CodeStep } from './code-step';
 import { CredentialsStep } from './credentials-step';
@@ -32,10 +32,7 @@ async function findSchool(
   try {
     return { school: await getPublicSchool(encodeURIComponent(check.code)) };
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) return { error: 'notFound' };
-    const key: CommonErrorKey =
-      error instanceof ApiError && error.status === 0 ? 'network' : 'generic';
-    return { error: key };
+    return { error: schoolLookupErrorKey(error) };
   }
 }
 
@@ -64,6 +61,8 @@ export function SignInFlow({ initialSchool, nextPath }: SignInFlowProps) {
   const [pending, setPending] = useState(false);
   // Focus moves to the new step only after the person acted, never on first load.
   const [moved, setMoved] = useState(false);
+  // The code emailed last: asking again within 60 seconds shows it rather than a fresh 10:00.
+  const [lastCode, setLastCode] = useState<SentCode | null>(null);
   const started = useRef(false);
 
   // ?school= wins over the code remembered on this device (readable only once hydrated).
@@ -151,8 +150,10 @@ export function SignInFlow({ initialSchool, nextPath }: SignInFlowProps) {
           setMoved(true);
           setPhase({ step: 'school' });
         }}
+        lastCode={lastCode}
         onCodeSent={(code) => {
           setMoved(true);
+          setLastCode(code);
           setPhase({ step: 'code', school: shown.school, code });
         }}
         onSignedIn={signedIn}
@@ -166,7 +167,10 @@ export function SignInFlow({ initialSchool, nextPath }: SignInFlowProps) {
       schoolCode={shown.school.code}
       code={shown.code}
       keepSignedIn={keepSignedIn}
-      onResent={(code) => setPhase({ step: 'code', school: shown.school, code })}
+      onResent={(code) => {
+        setLastCode(code);
+        setPhase({ step: 'code', school: shown.school, code });
+      }}
       onUsePassword={() => {
         setMoved(true);
         setPhase({ step: 'credentials', school: shown.school });

@@ -6,20 +6,30 @@ const NETWORK = 0;
 const statusOf = (error: unknown): number | undefined =>
   error instanceof ApiError ? error.status : undefined;
 
-/** Message keys (under `auth.errors`) shared by every auth form. */
-export type CommonErrorKey = 'rateLimited' | 'unavailable' | 'network' | 'generic';
+/**
+ * Message keys (under `auth.errors`) shared by every auth form. A 503 means the API's Redis or
+ * queue is down: `temporarilyUnavailable` in general, `unavailable` ("can't send emails") only
+ * where the action sends one.
+ */
+export type CommonErrorKey = 'rateLimited' | 'temporarilyUnavailable' | 'network' | 'generic';
+export type EmailErrorKey = 'rateLimited' | 'unavailable' | 'network' | 'generic';
 
 function commonErrorKey(error: unknown): CommonErrorKey {
   switch (statusOf(error)) {
     case 429:
       return 'rateLimited';
     case 503:
-      return 'unavailable';
+      return 'temporarilyUnavailable';
     case NETWORK:
       return 'network';
     default:
       return 'generic';
   }
+}
+
+function emailErrorKey(error: unknown): EmailErrorKey {
+  const key = commonErrorKey(error);
+  return key === 'temporarilyUnavailable' ? 'unavailable' : key;
 }
 
 export type SignInErrorKey = 'incorrect' | 'paused' | CommonErrorKey;
@@ -36,8 +46,8 @@ export function signInErrorKey(error: unknown): SignInErrorKey {
 }
 
 /** "Email me a sign-in code": 202 whether or not the account exists, so only limits and outages. */
-export function codeRequestErrorKey(error: unknown): CommonErrorKey {
-  return commonErrorKey(error);
+export function codeRequestErrorKey(error: unknown): EmailErrorKey {
+  return emailErrorKey(error);
 }
 
 export type CodeVerifyErrorKey = 'incorrect' | CommonErrorKey;
@@ -50,8 +60,15 @@ export function codeVerifyErrorKey(error: unknown): CodeVerifyErrorKey {
 }
 
 /** Forgot password: 202 whether or not the account exists, so only limits and outages. */
-export function forgotErrorKey(error: unknown): CommonErrorKey {
-  return commonErrorKey(error);
+export function forgotErrorKey(error: unknown): EmailErrorKey {
+  return emailErrorKey(error);
+}
+
+export type SchoolLookupErrorKey = 'notFound' | CommonErrorKey;
+
+/** `GET /schools/:code/public`: 404 for unknown, pending, suspended and closed alike. */
+export function schoolLookupErrorKey(error: unknown): SchoolLookupErrorKey {
+  return statusOf(error) === 404 ? 'notFound' : commonErrorKey(error);
 }
 
 /** Password policy rules the API reports on `newPassword`, plus `other` for any rule added later. */
