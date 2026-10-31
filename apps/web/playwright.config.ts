@@ -7,6 +7,11 @@ const CI = Boolean(process.env.CI);
 // Locally the web port can be moved aside (E2E_WEB_PORT) when something else holds 3000.
 const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3000);
 const WEB_ORIGIN = `http://localhost:${WEB_PORT}`;
+// The API port can be moved aside too (E2E_API_PORT) when a dev server holds 4000. The web server
+// reaches the API through the `/api` rewrite, whose target (`API_INTERNAL_URL`) is fixed at BUILD
+// time: when you change this port, build with `API_INTERNAL_URL=http://localhost:<E2E_API_PORT>`
+// (`pnpm --filter @classloom/web build`: Turborepo's strict env mode hides it from `pnpm build`).
+const API_PORT = Number(process.env.E2E_API_PORT ?? 4000);
 
 export default defineConfig({
   testDir: './e2e',
@@ -64,10 +69,11 @@ export default defineConfig({
       name: 'api',
       command: 'node --env-file-if-exists=../../.env dist/main.js',
       cwd: '../api',
-      url: 'http://localhost:4000/health',
+      url: `http://localhost:${API_PORT}/health`,
       // CORS and the emailed verification links must point at the E2E web server, and the public
       // throttles must not trip over the many registrations the suite makes.
       env: {
+        API_PORT: String(API_PORT),
         WEB_ORIGIN,
         REGISTRATION_RATE_LIMIT_PER_HOUR: '1000',
         CODE_AVAILABILITY_RATE_LIMIT_PER_MINUTE: '10000',
@@ -85,6 +91,8 @@ export default defineConfig({
       command: `node node_modules/next/dist/bin/next start -p ${WEB_PORT}`,
       // A public page: protected ones redirect to sign-in without a session.
       url: `${WEB_ORIGIN}/en/sign-in`,
+      // Server-side session reads go to the same API (the rewrite target was fixed at build time).
+      env: { API_INTERNAL_URL: `http://localhost:${API_PORT}` },
       reuseExistingServer: !CI,
       timeout: 120_000,
       gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },

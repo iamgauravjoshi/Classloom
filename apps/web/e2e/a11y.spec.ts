@@ -98,6 +98,25 @@ for (const theme of ['light', 'dark'] as const) {
         await expectNoViolations(page);
       });
 
+      test('reset-password after a spent link (410) has no WCAG 2.1 AA violations', async ({
+        page,
+      }) => {
+        await page.goto(`/en/reset-password?token=${UNUSED_TOKEN}`);
+        // Hydrated once the token has left the address bar; text typed earlier is lost in WebKit.
+        await expect(page).toHaveURL(/\/en\/reset-password$/);
+        const password = 'ember lantern 42 quartz';
+        await page.getByLabel('New password', { exact: true }).fill(password);
+        await page.getByLabel('Confirm password').fill(password);
+        await page.getByRole('button', { name: 'Change password' }).click();
+        await expect(
+          page.getByRole('heading', {
+            level: 1,
+            name: 'This link has expired or was already used',
+          }),
+        ).toBeVisible();
+        await expectNoViolations(page);
+      });
+
       test('reset-password without a link has no WCAG 2.1 AA violations', async ({ page }) => {
         await page.goto('/en/reset-password');
         await expect(

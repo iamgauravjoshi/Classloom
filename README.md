@@ -33,6 +33,12 @@ data).
   cookie stays first party. `API_INTERNAL_URL` (where the web server reaches the API) is read
   when the web app is **built** (Next.js fixes rewrites at build time) and again at runtime for
   server-side calls: set it in both the build and the runtime environment.
+- Playwright ports: `E2E_WEB_PORT` (default 3000) and `E2E_API_PORT` (default 4000) move the E2E
+  servers aside when dev servers hold those ports. The `/api` rewrite target is fixed at build
+  time, so build with the matching address, for example
+  `API_INTERNAL_URL=http://localhost:4100 pnpm --filter @classloom/web build` (Turborepo's strict env
+  mode hides the variable from a plain `pnpm build`), then
+  `E2E_API_PORT=4100 E2E_WEB_PORT=3200 pnpm e2e`.
 - Set `TRUST_PROXY` on the API for the chosen hosts so rate limits see the browser address (see
   `docs/superpowers/followups/2026-10-27-tenancy.md`).
 

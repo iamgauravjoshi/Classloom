@@ -25,13 +25,14 @@ export interface VerifiedSchool {
 }
 
 /**
- * Registers a school through the registration API (on the web origin, so through the proxy), then
- * verifies it with the token from the emailed link. Every value is unique per call.
+ * Registers a school through the registration API (on the web origin, so through the proxy) and
+ * leaves it pending: `verifyUrl` is the emailed link, for a test that opens it in the browser.
+ * Every value is unique per call.
  */
-export async function createVerifiedSchool(
+export async function registerPendingSchool(
   request: APIRequestContext,
   opts: Partial<Pick<VerifiedSchool, 'name' | 'schoolName'>> = {},
-): Promise<VerifiedSchool> {
+): Promise<{ school: VerifiedSchool; verifyUrl: string }> {
   const suffix = randomChars(8);
   const school: VerifiedSchool = {
     // `S` + 8 characters fits ^[A-Z][A-Z0-9-]{1,10}[A-Z0-9]$.
@@ -55,8 +56,17 @@ export async function createVerifiedSchool(
   });
   expect(registered.status(), await registered.text()).toBe(202);
 
-  const link = verificationLink((await latestEmailTo(request, school.email)).text);
-  const token = new URL(link).searchParams.get('token');
+  const verifyUrl = verificationLink((await latestEmailTo(request, school.email)).text);
+  return { school, verifyUrl };
+}
+
+/** Registers a school and verifies it with the token from the emailed link. */
+export async function createVerifiedSchool(
+  request: APIRequestContext,
+  opts: Partial<Pick<VerifiedSchool, 'name' | 'schoolName'>> = {},
+): Promise<VerifiedSchool> {
+  const { school, verifyUrl } = await registerPendingSchool(request, opts);
+  const token = new URL(verifyUrl).searchParams.get('token');
   const verified = await post(request, '/school-registrations/verify', { token });
   expect(verified.status(), await verified.text()).toBe(200);
   return school;
