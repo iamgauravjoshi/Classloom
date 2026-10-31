@@ -8,6 +8,7 @@
 
 export interface CodeVerifyRequestDto {
   schoolCode: string;
+  /** @maxLength 254 */
   email: string;
   code: string;
   remember: boolean;

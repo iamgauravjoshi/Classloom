@@ -8,5 +8,6 @@
 
 export interface CodeRequestDto {
   schoolCode: string;
+  /** @maxLength 254 */
   email: string;
 }

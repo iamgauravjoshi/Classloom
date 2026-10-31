@@ -31,6 +31,19 @@ describe('passwordSchema', () => {
   });
 });
 
+describe('email and identifier length cap', () => {
+  it('rejects an identifier or email over 254 characters before parsing it', () => {
+    const long = `a@${'a'.repeat(100_000)}.in`;
+    const started = performance.now();
+    expect(forgotPasswordRequestSchema.safeParse({ identifier: long }).success).toBe(false);
+    expect(codeRequestSchema.safeParse({ schoolCode: 'GISD', email: long }).success).toBe(false);
+    expect(performance.now() - started).toBeLessThan(50);
+    const max = `${'a'.repeat(244)}@school.in`;
+    expect(forgotPasswordRequestSchema.parse({ identifier: max }).identifier).toBe(max);
+    expect(forgotPasswordRequestSchema.safeParse({ identifier: `a${max}` }).success).toBe(false);
+  });
+});
+
 describe('passwordSignInRequestSchema', () => {
   it('normalises the school code and the identifier', () => {
     expect(

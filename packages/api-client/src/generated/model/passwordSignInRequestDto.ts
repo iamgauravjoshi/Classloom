@@ -8,6 +8,7 @@
 
 export interface PasswordSignInRequestDto {
   schoolCode: string;
+  /** @maxLength 254 */
   identifier: string;
   /**
    * @minLength 1

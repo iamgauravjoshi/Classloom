@@ -807,7 +807,8 @@
             "maxLength": 80
           },
           "email": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 254
           },
           "mobile": {
             "type": "string"
@@ -848,7 +849,8 @@
         "type": "object",
         "properties": {
           "email": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 254
           },
           "code": {
             "type": "string"
@@ -994,7 +996,8 @@
             "type": "string"
           },
           "identifier": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 254
           },
           "password": {
             "type": "string",
@@ -1019,7 +1022,8 @@
             "type": "string"
           },
           "email": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 254
           }
         },
         "required": [
@@ -1045,7 +1049,8 @@
             "type": "string"
           },
           "email": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 254
           },
           "code": {
             "type": "string"
@@ -1065,7 +1070,8 @@
         "type": "object",
         "properties": {
           "identifier": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 254
           }
         },
         "required": [

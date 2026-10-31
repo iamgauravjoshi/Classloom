@@ -7,6 +7,7 @@
  */
 
 export interface ResendRegistrationRequestDto {
+  /** @maxLength 254 */
   email: string;
   code: string;
 }

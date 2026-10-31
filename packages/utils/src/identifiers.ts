@@ -3,7 +3,9 @@ export type Identifier =
   | { kind: 'mobile'; value: string }
   | { kind: 'invalid'; value: string };
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Linear time: dots split the domain into unambiguous segments (the old pattern backtracked
+// quadratically on long input).
+const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 const INDIAN_MOBILE = /^[6-9]\d{9}$/;
 
 /** Normalises an Indian mobile number in any common written form to E.164 (`+91XXXXXXXXXX`). */

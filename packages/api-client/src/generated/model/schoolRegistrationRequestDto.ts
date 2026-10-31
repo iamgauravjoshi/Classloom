@@ -27,6 +27,7 @@ export interface SchoolRegistrationRequestDto {
    * @maxLength 80
    */
   adminName: string;
+  /** @maxLength 254 */
   email: string;
   mobile?: string;
   acceptTerms: true;

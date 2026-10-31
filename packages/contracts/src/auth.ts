@@ -13,18 +13,22 @@ const schoolCodeField = z
   .pipe(z.string().min(1, 'Enter your school code').max(12));
 
 /** "Email or mobile number": anything `parseIdentifier` accepts, normalised (email lower-cased, mobile as E.164). */
-const identifierField = z.string().transform((raw, ctx) => {
-  const id = parseIdentifier(raw);
-  if (id.kind === 'invalid') {
-    ctx.addIssue({
-      code: 'custom',
-      message: 'Enter a valid email address or 10-digit Indian mobile number',
-      input: raw,
-    });
-    return z.NEVER;
-  }
-  return id.value;
-});
+const identifierField = z
+  .string()
+  // Bounds the input before any parsing; an email is at most 254 characters (RFC 5321).
+  .max(254, 'Enter a valid email address or 10-digit Indian mobile number')
+  .transform((raw, ctx) => {
+    const id = parseIdentifier(raw);
+    if (id.kind === 'invalid') {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Enter a valid email address or 10-digit Indian mobile number',
+        input: raw,
+      });
+      return z.NEVER;
+    }
+    return id.value;
+  });
 
 /** A 6-digit sign-in code; spaces (as in `482 913`) are ignored. */
 const sixDigitCodeField = z

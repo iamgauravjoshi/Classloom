@@ -7,5 +7,6 @@
  */
 
 export interface ForgotPasswordRequestDto {
+  /** @maxLength 254 */
   identifier: string;
 }
