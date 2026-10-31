@@ -84,7 +84,7 @@ export default defineConfig({
       name: 'web',
       command: `node node_modules/next/dist/bin/next start -p ${WEB_PORT}`,
       // A public page: protected ones redirect to sign-in without a session.
-      url: `${WEB_ORIGIN}/en/register-school`,
+      url: `${WEB_ORIGIN}/en/sign-in`,
       reuseExistingServer: !CI,
       timeout: 120_000,
       gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },

@@ -68,8 +68,8 @@ export function VerifyResult() {
   return (
     <div aria-live="polite">
       {state.kind === 'loading' ? <Loading /> : null}
-      {state.kind === 'success' ? <Success code={state.code} name={state.name} /> : null}
-      {state.kind === 'invalid' ? <Invalid /> : null}
+      {state.kind === 'success' ? <VerifySuccess code={state.code} name={state.name} /> : null}
+      {state.kind === 'invalid' ? <VerifyInvalid /> : null}
       {state.kind === 'error' ? <NetworkError onRetry={retry} /> : null}
     </div>
   );
@@ -85,7 +85,7 @@ function Loading() {
   );
 }
 
-function Success({ code, name }: { code: string; name: string }) {
+export function VerifySuccess({ code, name }: { code: string; name: string }) {
   const t = useTranslations('registration.verify');
   const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
 
@@ -124,11 +124,17 @@ function Success({ code, name }: { code: string; name: string }) {
         {copy === 'failed' ? t('copyFailed') : null}
       </p>
       <p className="text-muted-foreground text-sm">{t('next')}</p>
+      <Link
+        href={{ pathname: '/sign-in', query: { school: code } }}
+        className={cn(buttonVariants(), BUTTON_CLASS)}
+      >
+        {t('signIn')}
+      </Link>
     </section>
   );
 }
 
-function Invalid() {
+export function VerifyInvalid() {
   const t = useTranslations('registration.verify');
   const tErrors = useTranslations('registration.errors');
   const resend = useResendSchoolRegistration();
@@ -168,6 +174,9 @@ function Invalid() {
         <h1 className="text-h3">{t('invalidTitle')}</h1>
         <p className="text-muted-foreground">{t('invalidBody')}</p>
       </div>
+      <Link href="/sign-in" className={cn(buttonVariants({ variant: 'outline' }), BUTTON_CLASS)}>
+        {t('signIn')}
+      </Link>
 
       <form
         onSubmit={(event) => void onSubmit(event)}
