@@ -333,6 +333,27 @@
         "required": "Enter the 6-digit code.",
         "incorrect": "That code is incorrect or has expired.",
         "requestNew": "Request a new code"
+      },
+      "twoFactor": {
+        "title": "Two-step sign-in",
+        "description": "Enter the 6-digit code from your authenticator app.",
+        "recoveryDescription": "Enter one of your recovery codes. Each works once.",
+        "label": "Authenticator code",
+        "recoveryLabel": "Recovery code",
+        "useRecovery": "Use a recovery code instead",
+        "useApp": "Use the authenticator app instead",
+        "trust": "Don't ask again on this device for 30 days",
+        "trustHint": "Only on a device you don't share",
+        "verify": "Verify",
+        "verifying": "Verifying",
+        "expiresIn": "Sign-in expires in {time}",
+        "startAgain": "Start again",
+        "required": "Enter the 6-digit code.",
+        "recoveryRequired": "Enter a recovery code.",
+        "invalid": "That code didn't work.",
+        "triesLeft": "{count, plural, one {# try left.} other {# tries left.}}",
+        "expired": "This sign-in has expired. Start again.",
+        "paused": "Too many wrong codes. Try again in 15 minutes."
       }
     },
     "forgot": {

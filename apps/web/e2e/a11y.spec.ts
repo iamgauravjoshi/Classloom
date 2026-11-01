@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 
 import { createVerifiedSchool, type VerifiedSchool } from './support/school';
+import { enableTwoFactorFor } from './support/totp';
 
 const PAGES = [
   '/en/dashboard',
@@ -81,6 +82,31 @@ for (const theme of ['light', 'dark'] as const) {
           page.getByRole('heading', { level: 1, name: 'Check your email' }),
         ).toBeVisible();
         await expect(page.getByText(/Code expires in/)).toBeVisible();
+        await expectNoViolations(page);
+      });
+
+      test('sign-in, two-step step, has no WCAG 2.1 AA violations', async ({
+        page,
+        playwright,
+      }) => {
+        // A school of its own with two-step on, set up from a browser-less context.
+        const password = 'ember lantern 42 quartz';
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await enableTwoFactorFor(request, own, password);
+        await request.dispose();
+
+        await page.goto(`/en/sign-in?school=${own.code}`);
+        await page.getByLabel('Email or mobile number').fill(own.email);
+        await page.getByLabel('Password', { exact: true }).fill(password);
+        await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+        await expect(
+          page.getByRole('heading', { level: 1, name: 'Two-step sign-in' }),
+        ).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Use a recovery code instead' }).click();
+        await expect(page.getByLabel('Recovery code')).toBeVisible();
         await expectNoViolations(page);
       });
 

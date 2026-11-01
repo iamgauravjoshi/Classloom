@@ -36,6 +36,7 @@ import {
 } from './auth-errors';
 import { BUTTON_CLASS, CONTROL_CLASS, LINK_CLASS } from './auth-ui';
 import { reusableCode, type SentCode, sentCode } from './sent-code';
+import type { TwoFactorChallenge } from './two-factor-step';
 
 interface CredentialsStepProps {
   logo: ReactNode;
@@ -52,6 +53,8 @@ interface CredentialsStepProps {
   lastCode: SentCode | null;
   onChangeSchool: () => void;
   onCodeSent: (code: SentCode) => void;
+  /** The password was right but a second step is due. */
+  onChallenge: (challenge: TwoFactorChallenge) => void;
   onSignedIn: () => void;
   /** A problem from before this step opened (the code that should have been sent). */
   initialError?: EmailErrorKey;
@@ -75,6 +78,7 @@ export function CredentialsStep({
   lastCode,
   onChangeSchool,
   onCodeSent,
+  onChallenge,
   onSignedIn,
   initialError,
 }: CredentialsStepProps) {
@@ -114,7 +118,11 @@ export function CredentialsStep({
     }
     setFieldErrors({});
     try {
-      await signIn.mutateAsync({ data: parsed.data });
+      const result = await signIn.mutateAsync({ data: parsed.data });
+      if ('twoFactorRequired' in result) {
+        onChallenge({ challenge: result.challenge, expiresAt: Date.parse(result.expiresAt) });
+        return;
+      }
       onSignedIn();
     } catch (error) {
       setFormError(signInErrorKey(error));

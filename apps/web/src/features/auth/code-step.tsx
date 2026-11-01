@@ -13,6 +13,7 @@ import { type FormEvent, type ReactNode, useRef, useState } from 'react';
 import { codeRequestErrorKey, type CodeVerifyErrorKey, codeVerifyErrorKey } from './auth-errors';
 import { BUTTON_CLASS, LINK_CLASS } from './auth-ui';
 import { type SentCode, sentCode } from './sent-code';
+import type { TwoFactorChallenge } from './two-factor-step';
 import { formatCountdown, useCountdown } from './use-countdown';
 
 const CODE_LENGTH = 6;
@@ -27,6 +28,8 @@ interface CodeStepProps {
   keepSignedIn: boolean;
   onResent: (code: SentCode) => void;
   onUsePassword: () => void;
+  /** The code was right but a second step is due. */
+  onChallenge: (challenge: TwoFactorChallenge) => void;
   onSignedIn: () => void;
 }
 
@@ -41,6 +44,7 @@ export function CodeStep({
   keepSignedIn,
   onResent,
   onUsePassword,
+  onChallenge,
   onSignedIn,
 }: CodeStepProps) {
   const t = useTranslations('auth');
@@ -66,9 +70,13 @@ export function CodeStep({
     submitting.current = true;
     setError(null);
     try {
-      await verify.mutateAsync({
+      const result = await verify.mutateAsync({
         data: { schoolCode, email: code.email, code: candidate, remember: keepSignedIn },
       });
+      if ('twoFactorRequired' in result) {
+        onChallenge({ challenge: result.challenge, expiresAt: Date.parse(result.expiresAt) });
+        return;
+      }
       onSignedIn();
     } catch (failure) {
       const key = codeVerifyErrorKey(failure);

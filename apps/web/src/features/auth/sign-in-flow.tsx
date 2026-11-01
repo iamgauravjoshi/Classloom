@@ -13,6 +13,7 @@ import { CodeStep } from './code-step';
 import { CredentialsStep } from './credentials-step';
 import { SchoolStep, type SchoolStepError } from './school-step';
 import { loadSentCode, reusableCode, saveSentCode, type SentCode, sentCode } from './sent-code';
+import { TwoFactorStep } from './two-factor-step';
 import { useRememberedSchool } from './use-remembered-school';
 
 const noSubscription = () => () => {};
@@ -21,7 +22,8 @@ type Phase =
   | { step: 'loading' }
   | { step: 'school'; error?: SchoolStepError }
   | { step: 'credentials'; school: PublicSchoolDto; error?: EmailErrorKey }
-  | { step: 'code'; school: PublicSchoolDto; code: SentCode };
+  | { step: 'code'; school: PublicSchoolDto; code: SentCode }
+  | { step: 'two-factor'; school: PublicSchoolDto; challenge: string; expiresAt: number };
 
 /** Looks a code up; a code that can't exist is "not found" without asking the API. */
 async function findSchool(
@@ -79,7 +81,10 @@ interface SignInFlowProps {
   reauth?: { schoolCode: string; email: string; remember: boolean } | null;
 }
 
-/** Sign-in in three steps: school code, then email or mobile and password, then (optionally) a code. */
+/**
+ * Sign-in in steps: school code, then email or mobile and password, then (optionally) an emailed
+ * code, then (when two-step is on and the device is not trusted) the authenticator app code.
+ */
 export function SignInFlow({ initialSchool, nextPath, reauth = null }: SignInFlowProps) {
   const t = useTranslations('auth');
   const { code: rememberedCode, remember } = useRememberedSchool();
@@ -212,6 +217,25 @@ export function SignInFlow({ initialSchool, nextPath, reauth = null }: SignInFlo
           setLastCode(code);
           setPhase({ step: 'code', school: shown.school, code });
         }}
+        onChallenge={(next) => {
+          setMoved(true);
+          setPhase({ step: 'two-factor', school: shown.school, ...next });
+        }}
+        onSignedIn={signedIn}
+      />
+    );
+  }
+
+  if (shown.step === 'two-factor') {
+    return (
+      <TwoFactorStep
+        {...card}
+        challenge={{ challenge: shown.challenge, expiresAt: shown.expiresAt }}
+        onStartAgain={() => {
+          setMoved(true);
+          setPassword('');
+          setPhase({ step: 'credentials', school: shown.school });
+        }}
         onSignedIn={signedIn}
       />
     );
@@ -230,6 +254,9 @@ export function SignInFlow({ initialSchool, nextPath, reauth = null }: SignInFlo
       onUsePassword={() => {
         setMoved(true);
         setPhase({ step: 'credentials', school: shown.school });
+      }}
+      onChallenge={(next) => {
+        setPhase({ step: 'two-factor', school: shown.school, ...next });
       }}
       onSignedIn={signedIn}
     />

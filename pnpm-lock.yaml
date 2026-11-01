@@ -420,6 +420,9 @@ importers:
       jsdom:
         specifier: 30.1.3
         version: 30.1.3(@noble/hashes@1.8.0)
+      otplib:
+        specifier: 13.5.0
+        version: 13.5.0
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
