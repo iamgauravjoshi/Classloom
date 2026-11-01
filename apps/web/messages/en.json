@@ -511,9 +511,12 @@
         "required": "Enter the 6-digit code.",
         "recoveryRequired": "Enter a recovery code.",
         "invalid": "That code didn't work.",
-        "triesLeft": "{count, plural, one {# try left.} other {# tries left.}}",
+        "invalidTriesLeft": "That code didn't work. {count, plural, one {# try left.} other {# tries left.}}",
+        "invalidEnded": "That code didn't work. This sign-in has expired. Start again.",
         "expired": "This sign-in has expired. Start again.",
-        "paused": "Too many wrong codes. Try again in 15 minutes."
+        "paused": "Too many wrong codes. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+        "pausedLater": "Too many wrong codes. Try again later.",
+        "recoveryPlaceholder": "XXXXX-XXXXX"
       }
     },
     "forgot": {

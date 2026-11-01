@@ -4,6 +4,7 @@ import { Field, FieldError, FieldLabel } from '@classloom/ui/components/ui/field
 import { Input } from '@classloom/ui/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@classloom/ui/components/ui/input-otp';
 import { cn } from '@classloom/ui/lib/utils';
+import { useTranslations } from 'next-intl';
 
 import { CONTROL_CLASS } from '../auth/auth-ui';
 
@@ -31,6 +32,7 @@ export function CodeField({
   onChange,
   onComplete,
 }: CodeFieldProps) {
+  const t = useTranslations('auth.signIn.twoFactor');
   const describedBy = error ? `${id}-error` : undefined;
   return (
     <Field data-invalid={Boolean(error)}>
@@ -44,7 +46,7 @@ export function CodeField({
           autoCapitalize="characters"
           spellCheck={false}
           autoFocus
-          placeholder="XXXXX-XXXXX"
+          placeholder={t('recoveryPlaceholder')}
           className={cn(CONTROL_CLASS, 'font-mono')}
           value={value}
           aria-invalid={Boolean(error)}

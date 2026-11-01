@@ -18,10 +18,10 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@classloom/ui/components/
 import { Spinner } from '@classloom/ui/components/ui/spinner';
 import { cn } from '@classloom/ui/lib/utils';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, type ReactNode, useRef, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { BUTTON_CLASS, CONTROL_CLASS, LINK_CLASS } from './auth-ui';
-import { type TwoFactorError, twoFactorErrorOf } from './two-factor-errors';
+import { retryMinutes, type TwoFactorError, twoFactorErrorOf } from './two-factor-errors';
 import { formatCountdown, useCountdown } from './use-countdown';
 
 const CODE_LENGTH = 6;
@@ -62,9 +62,15 @@ export function TwoFactorStep({
   const [gone, setGone] = useState(false);
   // Guards the 6th-digit auto-submit racing a click on Verify.
   const submitting = useRef(false);
+  const startAgainRef = useRef<HTMLButtonElement>(null);
 
   const expiry = useCountdown(challenge.expiresAt);
   const ended = expiry.expired || gone;
+
+  // The field and Verify disappear when the sign-in ends; keep focus off <body>.
+  useEffect(() => {
+    if (ended) startAgainRef.current?.focus();
+  }, [ended]);
 
   async function submit(candidate: string) {
     if (submitting.current || ended) return;
@@ -110,8 +116,13 @@ export function TwoFactorStep({
 
   // What the person is told: under the field, or, once the sign-in has ended, in an alert.
   let message: string | null = null;
-  if (ended) message = t('signIn.twoFactor.expired');
-  else if (error === 'required') {
+  if (ended) {
+    // The last wrong try both failed and ended the sign-in: say both.
+    message =
+      error !== 'required' && error?.key === 'invalid' && error.attemptsLeft === 0
+        ? t('signIn.twoFactor.invalidEnded')
+        : t('signIn.twoFactor.expired');
+  } else if (error === 'required') {
     message = recovery ? t('signIn.twoFactor.recoveryRequired') : t('signIn.twoFactor.required');
   } else if (error) {
     switch (error.key) {
@@ -119,11 +130,16 @@ export function TwoFactorStep({
         message =
           error.attemptsLeft === undefined
             ? t('signIn.twoFactor.invalid')
-            : `${t('signIn.twoFactor.invalid')} ${t('signIn.twoFactor.triesLeft', { count: error.attemptsLeft })}`;
+            : t('signIn.twoFactor.invalidTriesLeft', { count: error.attemptsLeft });
         break;
-      case 'paused':
-        message = t('signIn.twoFactor.paused');
+      case 'paused': {
+        const minutes = retryMinutes(error.retryAfter);
+        message =
+          minutes === undefined
+            ? t('signIn.twoFactor.pausedLater')
+            : t('signIn.twoFactor.paused', { minutes });
         break;
+      }
       case 'expired':
         message = t('signIn.twoFactor.expired');
         break;
@@ -164,7 +180,7 @@ export function TwoFactorStep({
                   autoCapitalize="characters"
                   spellCheck={false}
                   autoFocus
-                  placeholder="XXXXX-XXXXX"
+                  placeholder={t('signIn.twoFactor.recoveryPlaceholder')}
                   className={cn(CONTROL_CLASS, 'font-mono')}
                   value={recoveryValue}
                   aria-invalid={Boolean(fieldMessage)}
@@ -240,7 +256,12 @@ export function TwoFactorStep({
               {recovery ? t('signIn.twoFactor.useApp') : t('signIn.twoFactor.useRecovery')}
             </button>
           )}
-          <button type="button" className={cn(LINK_CLASS, 'cursor-pointer')} onClick={onStartAgain}>
+          <button
+            ref={startAgainRef}
+            type="button"
+            className={cn(LINK_CLASS, 'cursor-pointer')}
+            onClick={onStartAgain}
+          >
             {t('signIn.twoFactor.startAgain')}
           </button>
         </div>
