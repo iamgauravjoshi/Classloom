@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadSentCode, reusableCode, saveSentCode, sentCode } from './sent-code';
+import { clearSentCode, loadSentCode, reusableCode, saveSentCode, sentCode } from './sent-code';
 
 const NOW = Date.UTC(2026, 9, 31, 10, 0, 0);
 
@@ -57,6 +57,25 @@ describe('saved code', () => {
     expect(loadSentCode(storage)).toBeNull();
     storage.setItem('classloom.sentCode', 'not json');
     expect(loadSentCode(storage)).toBeNull();
+  });
+
+  it('forgets the saved code when cleared', () => {
+    const items = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => items.get(key) ?? null,
+      setItem: (key: string, value: string) => void items.set(key, value),
+      removeItem: (key: string) => void items.delete(key),
+    };
+    saveSentCode(sent, storage);
+    clearSentCode(storage);
+    expect(loadSentCode(storage)).toBeNull();
+    expect(() =>
+      clearSentCode({
+        removeItem: () => {
+          throw new Error('blocked');
+        },
+      }),
+    ).not.toThrow();
   });
 
   it('never throws when storage is blocked', () => {

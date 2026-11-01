@@ -52,6 +52,15 @@ export function saveSentCode(code: SentCode, storage?: Pick<Storage, 'setItem'>)
   }
 }
 
+/** Forgets the saved code (on sign-out, so the next person in this tab does not see it). */
+export function clearSentCode(storage?: Pick<Storage, 'removeItem'>): void {
+  try {
+    (storage ?? window.sessionStorage).removeItem(SAVED_KEY);
+  } catch {
+    // Storage blocked: nothing was saved either.
+  }
+}
+
 /** The code saved by `saveSentCode`, or null when none, unreadable or not shaped like one. */
 export function loadSentCode(storage?: Pick<Storage, 'getItem'>): SentCode | null {
   try {

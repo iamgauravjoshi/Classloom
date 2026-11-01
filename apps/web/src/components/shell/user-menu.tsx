@@ -17,6 +17,7 @@ import { IconLogout, IconUser } from '@tabler/icons-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { clearSentCode } from '@/features/auth/sent-code';
 import { Link, useRouter } from '@/i18n/navigation';
 import type { Role } from '@/lib/session';
 import { leavesAfterSignOut } from '@/lib/sign-out';
@@ -46,6 +47,7 @@ export function UserMenu({
       onSettled: (_data, error) => {
         if (leavesAfterSignOut(error)) {
           queryClient.clear();
+          clearSentCode();
           router.replace('/sign-in');
         } else {
           toast.add({ title: t('shell.signOutFailed'), type: 'error' });
