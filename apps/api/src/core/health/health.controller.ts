@@ -8,11 +8,13 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 
+import { Public } from '../../modules/auth/public.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { HealthResponseDto } from './health.dto';
 
 @ApiTags('health')
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(

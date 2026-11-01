@@ -1,13 +1,13 @@
 import { StatCard } from '@classloom/ui/components/stat-card';
 import { Card, CardDescription, CardHeader, CardTitle } from '@classloom/ui/components/ui/card';
-import { formatDateIN } from '@classloom/utils';
+import { academicYearOf, formatDateIN } from '@classloom/utils';
 import { IconBook, IconSchool, IconUsers, IconUserShield } from '@tabler/icons-react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { AppPageHeader } from '@/components/app-page-header';
 import { ApiStatus } from '@/components/shell/api-status';
-import { getMockSession } from '@/lib/mock-session';
+import { requireServerSession } from '@/lib/server-session';
 
 export async function generateMetadata({
   params,
@@ -21,7 +21,7 @@ export default async function DashboardPage({ params }: PageProps<'/[locale]/das
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('dashboard');
-  const session = getMockSession();
+  const session = await requireServerSession();
   const empty = t('notAvailable');
 
   return (
@@ -35,7 +35,7 @@ export default async function DashboardPage({ params }: PageProps<'/[locale]/das
         <CardHeader>
           <CardTitle className="text-h4">{t('welcome', { name: session.user.name })}</CardTitle>
           <CardDescription>
-            {t('today', { date: formatDateIN(new Date()), year: session.academicYear })}
+            {t('today', { date: formatDateIN(new Date()), year: academicYearOf(new Date()) })}
           </CardDescription>
         </CardHeader>
       </Card>

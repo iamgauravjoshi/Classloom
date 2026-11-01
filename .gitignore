@@ -15,6 +15,8 @@ storybook-static/
 playwright-report/
 test-results/
 blob-report/
+# Playwright signed-in browser state (session cookies)
+apps/web/e2e/.auth/
 
 # env
 .env

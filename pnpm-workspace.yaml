@@ -11,6 +11,7 @@ allowBuilds:
   '@prisma/engines': true
   '@scarf/scarf': false
   '@swc/core': true
+  argon2: true
   esbuild: true
   prisma: true
   # Optional native speed-up for msgpackr (bullmq); it falls back to pure JS.

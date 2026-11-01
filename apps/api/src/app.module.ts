@@ -8,18 +8,23 @@ import { ConfigModule } from './core/config/config.module';
 import type { Env } from './core/config/env.schema';
 import { EmailModule } from './core/email/email.module';
 import { HealthModule } from './core/health/health.module';
+import { LOG_REDACT_PATHS } from './core/http/log-redact';
 import { ProblemFilter } from './core/http/problem.filter';
 import { RedisThrottlerStorage } from './core/http/redis-throttler.storage';
 import {
   AVAILABILITY_THROTTLER,
+  CODE_REQUEST_THROTTLER,
+  PASSWORD_RESET_THROTTLER,
   REGISTRATION_THROTTLER,
   RESEND_THROTTLER,
+  SIGN_IN_THROTTLER,
 } from './core/http/throttler-names';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { QueueModule } from './core/queue/queue.module';
 import { RedisModule } from './core/redis/redis.module';
 import { RedisService } from './core/redis/redis.service';
 import { TenancyCoreModule } from './core/tenancy/tenancy-core.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { TenancyModule } from './modules/tenancy/tenancy.module';
 
 const LOG_LEVEL: Record<Env['NODE_ENV'], string> = {
@@ -38,7 +43,7 @@ export class AppModule {
         LoggerModule.forRoot({
           pinoHttp: {
             level: LOG_LEVEL[env.NODE_ENV],
-            redact: ['req.headers.authorization', 'req.headers.cookie'],
+            redact: LOG_REDACT_PATHS,
           },
         }),
         TenancyCoreModule,
@@ -66,6 +71,24 @@ export class AppModule {
                 limit: env.RESEND_RATE_LIMIT_PER_HOUR,
                 ttl: 3_600_000,
               },
+              {
+                name: SIGN_IN_THROTTLER,
+                limit: env.SIGN_IN_RATE_LIMIT_PER_15_MIN,
+                ttl: 900_000,
+                // One budget shared by password sign-in and code verification (spec §11); the
+                // default key adds the controller and handler, giving each route its own.
+                generateKey: (_context, tracker, name) => `${name}-${tracker}`,
+              },
+              {
+                name: CODE_REQUEST_THROTTLER,
+                limit: env.CODE_REQUEST_RATE_LIMIT_PER_HOUR,
+                ttl: 3_600_000,
+              },
+              {
+                name: PASSWORD_RESET_THROTTLER,
+                limit: env.PASSWORD_RESET_RATE_LIMIT_PER_HOUR,
+                ttl: 3_600_000,
+              },
             ],
           }),
         }),
@@ -73,6 +96,7 @@ export class AppModule {
         EmailModule,
         HealthModule,
         TenancyModule,
+        AuthModule,
       ],
       providers: [
         { provide: APP_PIPE, useClass: ZodValidationPipe },

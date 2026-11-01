@@ -34,6 +34,14 @@ describe('parseIdentifier', () => {
     expect(parseIdentifier('priya@@school.in').kind).toBe('invalid');
   });
 
+  it('rejects a long pathological email in linear time', () => {
+    const evil = `a@${'a'.repeat(100_000)}`;
+    const started = performance.now();
+    expect(parseIdentifier(evil).kind).toBe('invalid');
+    expect(parseIdentifier(`a@${'a.'.repeat(50_000)}`).kind).toBe('invalid');
+    expect(performance.now() - started).toBeLessThan(50);
+  });
+
   it('rejects empty input', () => {
     expect(parseIdentifier('   ')).toEqual({ kind: 'invalid', value: '' });
   });

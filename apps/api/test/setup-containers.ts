@@ -85,6 +85,12 @@ export async function startTestInfra(options: { mailpit?: boolean } = {}): Promi
     RESEND_RATE_LIMIT_PER_HOUR: 10,
     REGISTRATION_TOKEN_TTL_HOURS: 24,
     PENDING_TENANT_TTL_HOURS: 48,
+    AUTH_SECRET: 'integration-test-auth-secret-0123456789',
+    COOKIE_SECURE: false,
+    TRUST_PROXY: 'loopback',
+    SIGN_IN_RATE_LIMIT_PER_15_MIN: 30,
+    CODE_REQUEST_RATE_LIMIT_PER_HOUR: 10,
+    PASSWORD_RESET_RATE_LIMIT_PER_HOUR: 10,
   };
   return {
     env,

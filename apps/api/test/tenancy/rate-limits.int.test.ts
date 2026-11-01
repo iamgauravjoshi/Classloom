@@ -36,23 +36,23 @@ describe('rate limits on public endpoints', () => {
     await infra?.stop();
   });
 
-  it('limits registrations per client and ignores X-Forwarded-For', async () => {
-    const first = await request(server).post('/school-registrations').send(payload(1));
-    expect(first.status).toBe(202);
-    const second = await request(server)
-      .post('/school-registrations')
-      .set('X-Forwarded-For', '203.0.113.7')
-      .send(payload(2));
-    expect(second.status).toBe(202);
+  it('limits registrations per client address, as forwarded by a trusted proxy', async () => {
+    const post = (n: number, forwardedFor: string) =>
+      request(server)
+        .post('/school-registrations')
+        .set('X-Forwarded-For', forwardedFor)
+        .send(payload(n));
+    expect((await post(1, '203.0.113.7')).status).toBe(202);
+    expect((await post(2, '203.0.113.7')).status).toBe(202);
 
-    const third = await request(server)
-      .post('/school-registrations')
-      .set('X-Forwarded-For', '203.0.113.99')
-      .send(payload(3));
+    const third = await post(3, '203.0.113.7');
     expect(third.status).toBe(429);
     expect(third.headers['content-type']).toContain('application/problem+json');
     expect(third.body).toMatchObject({ status: 429, title: 'Too Many Requests' });
     expect(Number(third.headers['retry-after'])).toBeGreaterThan(0);
+
+    // Behind the web proxy each browser has its own address (spec section 5, TRUST_PROXY).
+    expect((await post(4, '203.0.113.99')).status).toBe(202);
   });
 
   it('does not throttle verify or resend with the registration limit', async () => {

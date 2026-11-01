@@ -1,5 +1,6 @@
 'use client';
 
+import { useSignOut } from '@classloom/api-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@classloom/ui/components/ui/avatar';
 import { Button } from '@classloom/ui/components/ui/button';
 import {
@@ -11,10 +12,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@classloom/ui/components/ui/dropdown-menu';
-import { IconLogout, IconSettings, IconUser } from '@tabler/icons-react';
+import { toast } from '@classloom/ui/components/ui/toast';
+import { IconLogout, IconUser } from '@tabler/icons-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import type { Role } from '@/lib/mock-session';
+import { clearSentCode } from '@/features/auth/sent-code';
+import { Link, useRouter } from '@/i18n/navigation';
+import type { Role } from '@/lib/session';
+import { leavesAfterSignOut } from '@/lib/sign-out';
 
 const initials = (name: string) =>
   name
@@ -32,6 +38,24 @@ export function UserMenu({
   role: Role;
 }) {
   const t = useTranslations();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const signOut = useSignOut({
+    mutation: {
+      // Leave on success or a 401 (already ended). A server or network error may leave the
+      // session live, so stay and say so.
+      onSettled: (_data, error) => {
+        if (leavesAfterSignOut(error)) {
+          queryClient.clear();
+          clearSentCode();
+          router.replace('/sign-in');
+        } else {
+          toast.add({ title: t('shell.signOutFailed'), type: 'error' });
+        }
+      },
+    },
+  });
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -53,18 +77,14 @@ export function UserMenu({
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem render={<Link href="/account" />}>
             <IconUser />
-            {t('shell.profile')}
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <IconSettings />
-            {t('shell.settings')}
+            {t('shell.myAccount')}
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem disabled={signOut.isPending} onClick={() => signOut.mutate()}>
             <IconLogout />
             {t('shell.signOut')}
           </DropdownMenuItem>

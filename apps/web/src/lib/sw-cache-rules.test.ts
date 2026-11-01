@@ -21,6 +21,11 @@ describe('isCacheableStaticAsset', () => {
     expect(isCacheableStaticAsset(req('/api/students'))).toBe(false);
   });
 
+  // The same-site API proxy: the session must never be served from a cache after sign-out.
+  it('never caches the session endpoint behind the /api proxy', () => {
+    expect(isCacheableStaticAsset(req('/api/auth/session'))).toBe(false);
+  });
+
   it('never caches HTML pages', () => {
     expect(isCacheableStaticAsset(req('/en/students', 'document'))).toBe(false);
   });

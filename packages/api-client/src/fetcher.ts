@@ -35,11 +35,18 @@ const STATUS_TITLES: Record<number, string> = {
   504: 'Gateway Timeout',
 };
 
-// Literal `process.env.NEXT_PUBLIC_*` so Next.js inlines it into browser bundles.
-const baseUrl = (): string => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+/**
+ * In the browser, the web app's own `/api` rewrite (same site, so the session cookie is first
+ * party); on the server, the API directly. Read per call: tests and the server set it at runtime.
+ */
+function baseUrl(): string {
+  if (typeof window !== 'undefined') return `${window.location.origin}/api`;
+  return process.env.API_INTERNAL_URL ?? 'http://localhost:4000';
+}
 
 function buildUrl(url: string, params?: object): string {
-  const target = new URL(url, baseUrl());
+  // Concatenated, not `new URL(url, base)`: a leading `/` in `url` would drop the `/api` prefix.
+  const target = new URL(baseUrl() + url);
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined && value !== null) target.searchParams.set(key, String(value));
   }
@@ -79,7 +86,7 @@ export async function apiFetch<T>(config: ApiRequestConfig): Promise<T> {
       method: config.method.toUpperCase(),
       headers,
       body: hasBody ? JSON.stringify(config.data) : undefined,
-      credentials: 'include',
+      credentials: 'same-origin',
       signal: config.signal,
     });
   } catch (error) {
@@ -89,7 +96,9 @@ export async function apiFetch<T>(config: ApiRequestConfig): Promise<T> {
   }
   if (!res.ok) throw new ApiError(res.status, await readProblem(res));
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  // A 2xx may carry no body at all (the forgot-password 202), which `res.json()` rejects.
+  const text = await res.text();
+  return (text === '' ? undefined : JSON.parse(text)) as T;
 }
 
 /** Tells Orval that generated hooks reject with `ApiError`, whatever the OpenAPI error schema says. */

@@ -31,10 +31,9 @@ export class ProblemFilter implements ExceptionFilter {
     const req = http.getRequest<Request>();
     const body = this.toProblem(exception);
     body.instance = req.url;
-    res
-      .status(body.status)
-      .setHeader('content-type', 'application/problem+json')
-      .send(JSON.stringify(body));
+    res.status(body.status).setHeader('content-type', 'application/problem+json');
+    if (body.retryAfter !== undefined) res.setHeader('Retry-After', String(body.retryAfter));
+    res.send(JSON.stringify(body));
   }
 
   private toProblem(exception: unknown): ProblemBody {
@@ -53,15 +52,16 @@ export class ProblemFilter implements ExceptionFilter {
     }
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      const title = titleFor(status);
       const response = exception.getResponse();
+      const extras = extrasOf(response);
+      const title = extras.title ?? titleFor(status);
       const detail = detailOf(response);
       return {
         type: 'about:blank',
-        title,
         status,
         ...(detail && detail !== title ? { detail } : {}),
-        ...extrasOf(response),
+        ...extras,
+        title,
       };
     }
     this.logger.error(exception);
@@ -74,13 +74,21 @@ export class ProblemFilter implements ExceptionFilter {
   }
 }
 
-/** Field `errors[]` and a `suggestion` that a service attached to an HttpException body. */
-function extrasOf(response: string | object): Pick<ProblemDetails, 'errors' | 'suggestion'> {
+/**
+ * Fields a service attached to an HttpException body: `errors[]`, a `suggestion`, and the
+ * problem `type`, `title` and `retryAfter` seconds for errors the client acts on.
+ */
+function extrasOf(
+  response: string | object,
+): Partial<Pick<ProblemDetails, 'errors' | 'suggestion' | 'type' | 'title' | 'retryAfter'>> {
   if (typeof response === 'string') return {};
-  const { errors, suggestion } = response as { errors?: unknown; suggestion?: unknown };
+  const { errors, suggestion, type, title, retryAfter } = response as Record<string, unknown>;
   return {
     ...(Array.isArray(errors) ? { errors: errors as ProblemDetails['errors'] } : {}),
     ...(typeof suggestion === 'string' ? { suggestion } : {}),
+    ...(typeof type === 'string' ? { type } : {}),
+    ...(typeof title === 'string' ? { title } : {}),
+    ...(typeof retryAfter === 'number' ? { retryAfter } : {}),
   };
 }
 

@@ -27,6 +27,21 @@ when the data volume is first initialised. If your local volume predates them, r
 `docker compose -f docker/compose.yml down -v` once and then `pnpm infra:up` again (this wipes local
 data).
 
+## Deployment notes
+
+- The browser reaches the API only through the web app's same-site `/api` rewrite, so the session
+  cookie stays first party. `API_INTERNAL_URL` (where the web server reaches the API) is read
+  when the web app is **built** (Next.js fixes rewrites at build time) and again at runtime for
+  server-side calls: set it in both the build and the runtime environment.
+- Playwright ports: `E2E_WEB_PORT` (default 3000) and `E2E_API_PORT` (default 4000) move the E2E
+  servers aside when dev servers hold those ports. The `/api` rewrite target is fixed at build
+  time, so build with the matching address, for example
+  `API_INTERNAL_URL=http://localhost:4100 pnpm build` (`apps/web/turbo.json` passes the variable
+  through and keys the build cache on it), then `E2E_API_PORT=4100 E2E_WEB_PORT=3200 pnpm e2e`.
+  A Vercel build fails if `API_INTERNAL_URL` is not set.
+- Set `TRUST_PROXY` on the API for the chosen hosts so rate limits see the browser address (see
+  `docs/superpowers/followups/2026-10-27-tenancy.md`).
+
 ## Commands
 
 | Command                             | What it does                                                                 |

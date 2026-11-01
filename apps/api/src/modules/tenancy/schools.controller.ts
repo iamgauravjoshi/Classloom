@@ -13,10 +13,12 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { PublicThrottlerGuard } from '../../core/http/public-throttler.guard';
 import { AVAILABILITY_THROTTLER, skipAllBut } from '../../core/http/throttler-names';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { Public } from '../auth/public.decorator';
 import { CodeAvailabilityQueryDto, CodeAvailabilityResponseDto, PublicSchoolDto } from './dto';
 import { SchoolCodeService } from './school-code.service';
 
 @ApiTags('schools')
+@Public()
 @Controller('schools')
 export class SchoolsController {
   constructor(

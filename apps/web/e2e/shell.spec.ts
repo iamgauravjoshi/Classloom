@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 
+import { createVerifiedSchool, signInWithCode } from './support/school';
+
 /** Viewports narrower than Tailwind's lg show the sidebar as an off-canvas sheet. */
 const isSheetLayout = (page: Page) => (page.viewportSize()?.width ?? 0) < 1024;
 
@@ -15,7 +17,9 @@ async function openDashboard(page: Page) {
 const sidebarTrigger = (page: Page) =>
   page.getByRole('button', { name: 'Toggle sidebar', exact: true });
 
-test('root redirects to the dashboard, which reports the API online', async ({ page }, testInfo) => {
+test('root redirects to the dashboard, which reports the API online', async ({
+  page,
+}, testInfo) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/en\/dashboard$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
@@ -24,7 +28,7 @@ test('root redirects to the dashboard, which reports the API online', async ({ p
 });
 
 test('pages never scroll horizontally', async ({ page }) => {
-  for (const path of ['/en/dashboard', '/en/school-profile']) {
+  for (const path of ['/en/dashboard', '/en/school-profile', '/en/account']) {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     expect(await noHorizontalOverflow(page), path).toBe(true);
@@ -119,6 +123,30 @@ test('touch targets are at least 44px on touch devices', async ({ page }, testIn
     expect(box!.width, String(control)).toBeGreaterThanOrEqual(44);
   }
   if (isSheetLayout(page)) await sidebarTrigger(page).click();
-  const link = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Students' });
+  const link = page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('link', { name: 'Students' });
   expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+});
+
+test.describe('signing out', () => {
+  // Ends the session, so it must not be the shared owner's (the device projects run in parallel).
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('the user menu signs out and the session is gone', async ({ page, playwright }) => {
+    const request = await playwright.request.newContext();
+    const school = await createVerifiedSchool(request);
+    await request.dispose();
+    await signInWithCode(page.request, school);
+
+    await openDashboard(page);
+    await page.getByRole('button', { name: /Account menu/ }).click();
+    await page.getByRole('menuitem', { name: 'Sign out' }).click();
+    await expect(page).toHaveURL(/\/en\/sign-in$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
+
+    // Back or a typed address finds no session.
+    await page.goto('/en/dashboard');
+    await expect(page).toHaveURL(/\/en\/sign-in\?next=%2Fen%2Fdashboard$/);
+  });
 });

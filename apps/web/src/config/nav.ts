@@ -79,3 +79,8 @@ export const comingSoonSections: string[] = navConfig
   .flatMap((group) => group.items)
   .map((item) => item.href.slice(1))
   .filter((section) => section !== 'dashboard');
+
+/** Every permission a nav item asks for. The school owner holds all of them until Part 3. */
+export const allNavPermissions: string[] = navConfig
+  .flatMap((group) => group.items)
+  .flatMap((item) => (item.permission ? [item.permission] : []));

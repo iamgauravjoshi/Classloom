@@ -6,21 +6,34 @@
  * OpenAPI spec version: 0.0.0
  */
 
+export * from './authSessionDto';
+export * from './authSessionDtoCampus';
+export * from './authSessionDtoSchool';
+export * from './authSessionDtoUser';
 export * from './cancelRegistrationRequestDto';
 export * from './codeAvailabilityResponseDto';
 export * from './codeAvailabilityResponseDtoReason';
+export * from './codeRequestAcceptedDto';
+export * from './codeRequestDto';
+export * from './codeVerifyRequestDto';
+export * from './forgotPasswordRequestDto';
 export * from './getCodeAvailabilityParams';
 export * from './healthResponseDto';
 export * from './healthResponseDtoChecks';
 export * from './healthResponseDtoChecksDatabase';
 export * from './healthResponseDtoChecksRedis';
 export * from './healthResponseDtoStatus';
+export * from './meDto';
+export * from './passwordSignInRequestDto';
 export * from './publicSchoolDto';
 export * from './publicSchoolDtoState';
 export * from './resendRegistrationRequestDto';
+export * from './resetPasswordRequestDto';
 export * from './schoolRegistrationAcceptedDto';
 export * from './schoolRegistrationRequestDto';
 export * from './schoolRegistrationRequestDtoBoard';
 export * from './schoolRegistrationRequestDtoState';
+export * from './setPasswordRequestDto';
+export * from './updateMeRequestDto';
 export * from './verifyRegistrationRequestDto';
 export * from './verifyRegistrationResponseDto';

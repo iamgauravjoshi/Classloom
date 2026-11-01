@@ -6,6 +6,7 @@ const env = parseEnv({
   DATABASE_URL: 'postgresql://classloom_app:classloom_app@localhost:5432/classloom',
   SMTP_URL: 'smtp://localhost:1025',
   REDIS_URL: 'redis://localhost:6379',
+  AUTH_SECRET: 'test-auth-secret-0123456789-abcdefghij',
 });
 
 describe('CliModule', () => {

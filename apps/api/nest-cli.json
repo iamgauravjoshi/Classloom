@@ -11,6 +11,7 @@
     },
     "typeCheck": false,
     "deleteOutDir": true,
+    "assets": [{ "include": "**/*.txt", "watchAssets": true }],
     "tsConfigPath": "tsconfig.build.json"
   }
 }
