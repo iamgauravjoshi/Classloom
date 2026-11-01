@@ -1,12 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 
-import { createVerifiedSchool, type VerifiedSchool } from './support/school';
+import { createVerifiedSchool, signInWithCode, type VerifiedSchool } from './support/school';
 import { enableTwoFactorFor } from './support/totp';
 
 const PAGES = [
   '/en/dashboard',
   '/en/account',
+  '/en/account/security',
   '/en/students',
   '/en/register-school',
   '/en/definitely-missing',
@@ -42,6 +43,13 @@ for (const theme of ['light', 'dark'] as const) {
           await expect(
             page.getByRole('heading', { level: 2, name: 'Set a password' }),
           ).toBeVisible();
+        }
+        // Every section has loaded its list.
+        if (path === '/en/account/security') {
+          await expect(page.getByRole('button', { name: /^(Turn on|Turn off)$/ })).toBeVisible();
+          await expect(page.getByText('This device').first()).toBeVisible();
+          await expect(page.getByText('No trusted devices')).toBeVisible();
+          await expect(page.getByText('Signed in with an email code').first()).toBeAttached();
         }
         await expectNoViolations(page);
       });
@@ -107,6 +115,34 @@ for (const theme of ['light', 'dark'] as const) {
 
         await page.getByRole('button', { name: 'Use a recovery code instead' }).click();
         await expect(page.getByLabel('Recovery code')).toBeVisible();
+        await expectNoViolations(page);
+      });
+
+      test('security, two-step setup dialog, has no WCAG 2.1 AA violations', async ({
+        page,
+        playwright,
+      }) => {
+        // A fresh sign-in: turning two-step on needs one from the last 10 minutes.
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+
+        await page.goto('/en/account/security');
+        await expect(page.getByRole('heading', { level: 1, name: 'My account' })).toBeVisible();
+        const tabs = page.getByRole('navigation', { name: 'Account settings' });
+        await expect(tabs.getByRole('link', { name: 'Security' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        );
+        await page.getByRole('button', { name: 'Turn on' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Turn on two-step sign-in' });
+        await expect(dialog.getByRole('img', { name: /QR code/ })).toBeVisible();
+        await expect(dialog.getByText(/^([A-Z2-7]{4} )+[A-Z2-7]{1,4}$/)).toBeVisible();
+        await expectNoViolations(page);
+
+        await dialog.getByRole('button', { name: 'Next' }).click();
+        await expect(dialog.getByLabel('Authenticator code')).toBeFocused();
         await expectNoViolations(page);
       });
 

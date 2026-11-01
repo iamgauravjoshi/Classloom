@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { AppPageHeader } from '@/components/app-page-header';
 import { AccountContent } from '@/features/account/account-content';
+import { AccountTabs } from '@/features/account/account-tabs';
 import { requireServerSession } from '@/lib/server-session';
 
 export async function generateMetadata({
@@ -22,6 +23,7 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
   return (
     <div className="flex flex-col gap-6">
       <AppPageHeader title={t('title')} breadcrumbs={[{ label: t('title') }]} />
+      <AccountTabs current="profile" />
       <AccountContent schoolCode={session.school.code} />
     </div>
   );

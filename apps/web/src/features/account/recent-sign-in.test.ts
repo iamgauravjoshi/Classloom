@@ -32,6 +32,12 @@ describe('reauthPath', () => {
     expect(reauthPath('en', 'GISD')).toBe('/en/sign-in?school=GISD&next=%2Fen%2Faccount&reauth=1');
   });
 
+  it('comes back to another account page when given one', () => {
+    expect(reauthPath('en', 'GISD', '/en/account/security')).toBe(
+      '/en/sign-in?school=GISD&next=%2Fen%2Faccount%2Fsecurity&reauth=1',
+    );
+  });
+
   it('encodes the school code', () => {
     expect(reauthPath('en', 'A B')).toBe('/en/sign-in?school=A%20B&next=%2Fen%2Faccount&reauth=1');
   });
