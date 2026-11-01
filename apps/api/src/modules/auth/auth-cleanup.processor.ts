@@ -15,8 +15,9 @@ export const AUTH_CLEANUP_JOB = 'auth-cleanup';
 const DAY = 86_400_000;
 const SESSION_RETENTION_DAYS = 7;
 const EVENT_RETENTION_DAYS = 365;
+const DEVICE_RETENTION_DAYS = 365;
 
-/** Daily: deletes sessions expired or revoked over 7 days ago, and auth events over a year old. */
+/** Daily: deletes sessions expired or revoked over 7 days ago, and auth events and known devices over a year old. */
 @Processor(AUTH_MAINTENANCE_QUEUE)
 export class AuthCleanupProcessor
   extends WorkerHost
@@ -52,21 +53,23 @@ export class AuthCleanupProcessor
     return Promise.resolve();
   }
 
-  async purge(now = new Date()): Promise<{ sessions: number; events: number }> {
+  async purge(now = new Date()): Promise<{ sessions: number; events: number; devices: number }> {
     const sessionCutoff = new Date(now.getTime() - SESSION_RETENTION_DAYS * DAY);
     const eventCutoff = new Date(now.getTime() - EVENT_RETENTION_DAYS * DAY);
-    const [sessions, events] = await this.prisma.$transaction([
+    const deviceCutoff = new Date(now.getTime() - DEVICE_RETENTION_DAYS * DAY);
+    const [sessions, events, devices] = await this.prisma.$transaction([
       this.prisma.session.deleteMany({
         where: { OR: [{ expiresAt: { lt: sessionCutoff } }, { revokedAt: { lt: sessionCutoff } }] },
       }),
       this.prisma.authEvent.deleteMany({ where: { createdAt: { lt: eventCutoff } } }),
+      this.prisma.knownDevice.deleteMany({ where: { lastSeenAt: { lt: deviceCutoff } } }),
     ]);
-    return { sessions: sessions.count, events: events.count };
+    return { sessions: sessions.count, events: events.count, devices: devices.count };
   }
 
-  async process(): Promise<{ sessions: number; events: number }> {
+  async process(): Promise<{ sessions: number; events: number; devices: number }> {
     const counts = await this.purge();
-    this.logger.log(`Purged old sessions and auth events: ${JSON.stringify(counts)}`);
+    this.logger.log(`Purged old sessions, auth events and devices: ${JSON.stringify(counts)}`);
     return counts;
   }
 

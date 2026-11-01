@@ -11,6 +11,7 @@ import type {
 } from '../../generated/prisma/client';
 import { MAX_USER_AGENT_LENGTH } from './auth-events.service';
 import { randomToken, sha256 } from './crypto';
+import { KnownDeviceService } from './known-device.service';
 import { initialExpiry, isExpired, slidExpiry } from './session-expiry';
 
 const DAY = 86_400_000;
@@ -48,7 +49,10 @@ export interface ResolvedSession {
 
 @Injectable()
 export class SessionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly knownDevices: KnownDeviceService,
+  ) {}
 
   /** Every sign-in gets a fresh token (no fixation); only its SHA-256 is stored. */
   async create(input: CreateSessionInput): Promise<{ token: string; session: Session }> {
@@ -179,6 +183,8 @@ export class SessionService {
         },
         data: { revokedAt: now, revokedReason: input.reason },
       });
+      // A new password ends "trust this device": the next sign-in asks for the app code again.
+      await this.knownDevices.clearTrustForUser(userId, tx);
     });
   }
 

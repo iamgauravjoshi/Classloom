@@ -10,6 +10,7 @@ import { AuthProcessor } from './auth.processor';
 import { AUTH_MAINTENANCE_QUEUE, AuthCleanupProcessor } from './auth-cleanup.processor';
 import { AuthEventsService } from './auth-events.service';
 import { AUTH_QUEUE, EmailCodeService } from './email-code.service';
+import { KnownDeviceService } from './known-device.service';
 import { OriginCheckMiddleware } from './origin-check.middleware';
 import { PasswordController } from './password.controller';
 import { PasswordService } from './password.service';
@@ -29,6 +30,7 @@ import { SignInPauseService } from './sign-in-pause.service';
   controllers: [SessionController, SignInController, PasswordController, AccountController],
   providers: [
     SessionService,
+    KnownDeviceService,
     AuthEventsService,
     PasswordService,
     SignInPauseService,
@@ -40,7 +42,13 @@ import { SignInPauseService } from './sign-in-pause.service';
     AuthCleanupProcessor,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [SessionService, AuthEventsService, PasswordService, SignInPauseService],
+  exports: [
+    SessionService,
+    KnownDeviceService,
+    AuthEventsService,
+    PasswordService,
+    SignInPauseService,
+  ],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

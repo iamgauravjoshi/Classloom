@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto';
+
 import { generateSecret, generateSync } from 'otplib';
 
 const PERIOD_SECONDS = 30;
@@ -42,7 +44,14 @@ export function matchTotpStep(
     const step = current + offset;
     if (lastStep !== null && step <= lastStep) continue;
     if (step < 0n) continue;
-    if (codeForStep(secret, step) === cleaned) return step;
+    if (safeEqual(codeForStep(secret, step), cleaned)) return step;
   }
   return null;
+}
+
+/** Both sides are 6 ASCII digits once the regex has passed, so the buffers are the same length. */
+function safeEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a, 'ascii');
+  const right = Buffer.from(b, 'ascii');
+  return left.length === right.length && timingSafeEqual(left, right);
 }

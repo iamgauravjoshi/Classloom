@@ -17,6 +17,17 @@ describe('normaliseRecoveryCode', () => {
     expect(normaliseRecoveryCode('abcde fghjk')).toBe('ABCDEFGHJK');
   });
 
+  it('treats spaced, unhyphenated, lower-case and hyphenated forms as the same value', () => {
+    const forms = ['abcde fghij', 'ABCDEFGHIJ', 'abcde-fghij'].map(normaliseRecoveryCode);
+    expect(new Set(forms).size).toBe(1);
+  });
+
+  it('normalises every generated code to the code without its hyphen', () => {
+    for (const c of generateRecoveryCodes()) {
+      expect(normaliseRecoveryCode(c)).toBe(c.replace('-', ''));
+    }
+  });
+
   it('maps Crockford look-alikes (O to 0, I and L to 1)', () => {
     expect(normaliseRecoveryCode('oilOI-lo123')).toBe('0110110123');
   });
