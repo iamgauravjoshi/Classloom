@@ -34,7 +34,7 @@ interface TwoFactorCodeDialogProps {
   triggerVariant?: 'outline' | 'destructive';
   onReauth: () => void;
   /** Two-step was turned off, or new codes were saved (Done); also on a 409 (changed elsewhere). */
-  onChanged: () => void;
+  onChanged: (stale: boolean) => void;
 }
 
 /**
@@ -70,10 +70,10 @@ export function TwoFactorCodeDialog({
           onReauth={onReauth}
           onLock={() => setLocked(true)}
           onCancel={() => setOpen(false)}
-          onFinished={() => {
+          onFinished={(stale) => {
             setLocked(false);
             setOpen(false);
-            onChanged();
+            onChanged(stale);
           }}
         />
       </DialogContent>
@@ -87,7 +87,7 @@ interface CodeFlowProps {
   onReauth: () => void;
   onLock: () => void;
   onCancel: () => void;
-  onFinished: () => void;
+  onFinished: (stale: boolean) => void;
 }
 
 function CodeFlow({ mode, email, onReauth, onLock, onCancel, onFinished }: CodeFlowProps) {
@@ -118,7 +118,7 @@ function CodeFlow({ mode, email, onReauth, onLock, onCancel, onFinished }: CodeF
           data: recovery ? { recoveryCode: entered } : { code: entered },
         });
         toast.add({ title: t('twoFactor.turnedOff'), type: 'success' });
-        onFinished();
+        onFinished(false);
       } else {
         const { recoveryCodes } = await regenerate.mutateAsync({ data: { code: entered } });
         regenerate.reset();
@@ -134,7 +134,7 @@ function CodeFlow({ mode, email, onReauth, onLock, onCancel, onFinished }: CodeF
       } else if (outcome.kind === 'stale') {
         // Already off (or never on) elsewhere: the page refreshes to the real state.
         toast.add({ title: t('errors.stale') });
-        onFinished();
+        onFinished(true);
       } else {
         setError(errorText(outcome));
       }
@@ -151,7 +151,7 @@ function CodeFlow({ mode, email, onReauth, onLock, onCancel, onFinished }: CodeF
         createdAt={codes.createdAt}
         onDone={() => {
           toast.add({ title: t('twoFactor.codesCreated'), type: 'success' });
-          onFinished();
+          onFinished(false);
         }}
       />
     );

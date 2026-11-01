@@ -53,6 +53,24 @@ export function SectionCard({
   );
 }
 
+/** Focuses a section's heading (`SectionCard` id), after the browser has drawn the change. */
+export function focusSectionTitle(id: string) {
+  requestAnimationFrame(() => document.getElementById(`${id}-title`)?.focus());
+}
+
+/**
+ * When the control that had focus went away (its row ended, or the button is no longer needed),
+ * puts focus on the section's heading instead of leaving it on the page body.
+ */
+export function keepFocusInSection(id: string) {
+  requestAnimationFrame(() => {
+    const active = document.activeElement;
+    if (!active || active === document.body || !active.isConnected) {
+      document.getElementById(`${id}-title`)?.focus();
+    }
+  });
+}
+
 /** The loading line, or the error with "Try again", while a section's list is not there yet. */
 export function LoadState({ isError, onRetry }: { isError: boolean; onRetry: () => void }) {
   const t = useTranslations('account.security');
@@ -131,7 +149,9 @@ export function useErrorText() {
         case 'recentSignIn':
           return t('redirecting');
         case 'error':
-          return tAuth(`errors.${error.key}`);
+          return error.key === 'rateLimited' || error.key === 'unavailable'
+            ? t(`errors.${error.key}`)
+            : tAuth(`errors.${error.key}`);
       }
     },
     [t, tAuth],

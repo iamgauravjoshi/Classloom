@@ -9,7 +9,7 @@ import { useTranslations } from 'next-intl';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { eventLabelKey } from './event-labels';
-import { LoadState, SectionCard, useSecurityDates } from './security-ui';
+import { keepFocusInSection, LoadState, SectionCard, useSecurityDates } from './security-ui';
 
 /** The key every page of the history lives under; invalidating it reloads from the newest. */
 export const activityQueryKey = () => [...getListMyLoginActivityQueryKey(), 'infinite'] as const;
@@ -95,7 +95,9 @@ export function ActivitySection() {
               variant="outline"
               className={`${BUTTON_CLASS} self-start`}
               disabled={history.isFetchingNextPage}
-              onClick={() => void history.fetchNextPage()}
+              onClick={() =>
+                void history.fetchNextPage().then(() => keepFocusInSection('activity'))
+              }
             >
               {history.isFetchingNextPage ? <Spinner aria-hidden="true" /> : null}
               {history.isFetchingNextPage ? t('loadingMore') : t('loadMore')}

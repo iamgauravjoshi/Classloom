@@ -55,7 +55,13 @@ export function RecoveryCodesPanel({
         <Button
           variant="outline"
           className={BUTTON_CLASS}
-          onClick={() => downloadRecoveryCodes(codes, email, createdAt)}
+          onClick={() =>
+            downloadRecoveryCodes(codes, email, createdAt, {
+              title: (address, date) => t('file.title', { email: address, date }),
+              titleNoEmail: (date) => t('file.titleNoEmail', { date }),
+              reminder: t('file.reminder'),
+            })
+          }
         >
           <IconDownload aria-hidden="true" />
           {t('download')}

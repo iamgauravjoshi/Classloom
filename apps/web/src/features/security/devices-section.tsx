@@ -16,7 +16,13 @@ import { useTranslations } from 'next-intl';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { securityErrorOf } from './security-errors';
-import { LoadState, SectionCard, useErrorText, useSecurityDates } from './security-ui';
+import {
+  keepFocusInSection,
+  LoadState,
+  SectionCard,
+  useErrorText,
+  useSecurityDates,
+} from './security-ui';
 
 /** Devices whose trust has not run out, from `GET /me/devices`. */
 const trusted = (devices: MyDevices['devices'], now: number) =>
@@ -46,6 +52,7 @@ export function DevicesSection({ onChanged }: { onChanged: () => void }) {
       }
     }
     await queryClient.invalidateQueries({ queryKey: getListMyDevicesQueryKey() });
+    keepFocusInSection('devices');
     onChanged();
   }
 

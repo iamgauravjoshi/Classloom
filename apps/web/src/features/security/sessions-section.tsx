@@ -17,7 +17,13 @@ import { useTranslations } from 'next-intl';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { securityErrorOf } from './security-errors';
-import { LoadState, SectionCard, useErrorText, useSecurityDates } from './security-ui';
+import {
+  keepFocusInSection,
+  LoadState,
+  SectionCard,
+  useErrorText,
+  useSecurityDates,
+} from './security-ui';
 
 /** Live sessions across all the person's schools; "End" one, or "End all other sessions". */
 export function SessionsSection({ onEnded }: { onEnded: () => void }) {
@@ -42,6 +48,7 @@ export function SessionsSection({ onEnded }: { onEnded: () => void }) {
       }
     }
     await queryClient.invalidateQueries({ queryKey: getListMySessionsQueryKey() });
+    keepFocusInSection('sessions');
     onEnded();
   }
 

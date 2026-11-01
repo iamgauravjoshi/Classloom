@@ -288,7 +288,9 @@
         "recoveryRequired": "Enter a recovery code.",
         "wrongCode": "That code didn't work.",
         "paused": "Too many wrong codes. Try again in 15 minutes.",
-        "stale": "Two-step sign-in was changed in another window. This page has been updated."
+        "stale": "Two-step sign-in was changed in another window. This page has been updated.",
+        "unavailable": "We can't do that right now. Try again in a few minutes.",
+        "rateLimited": "You've made too many changes. Try again in an hour."
       },
       "twoFactor": {
         "title": "Two-step sign-in",
@@ -321,7 +323,8 @@
         "verify": "Turn on",
         "verifying": "Turning on",
         "expired": "This setup has expired. Scan the new QR code and try again.",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "qrFailed": "Couldn't draw the QR code. Enter the key instead."
       },
       "recoveryCodes": {
         "title": "Save your recovery codes",
@@ -331,7 +334,12 @@
         "copy": "Copy",
         "copied": "Recovery codes copied.",
         "saved": "I've saved these codes",
-        "done": "Done"
+        "done": "Done",
+        "file": {
+          "title": "Classloom recovery codes for {email}, created {date}",
+          "titleNoEmail": "Classloom recovery codes, created {date}",
+          "reminder": "Each code can be used once. Keep this file somewhere safe."
+        }
       },
       "codeDialog": {
         "disableTitle": "Turn off two-step sign-in",

@@ -13,16 +13,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { activityQueryKey } from './activity-section';
-import { LoadState, SectionCard, useSecurityDates } from './security-ui';
+import { focusSectionTitle, LoadState, SectionCard, useSecurityDates } from './security-ui';
 import { TwoFactorCodeDialog } from './two-factor-code-dialog';
 import { TwoFactorSetupDialog } from './two-factor-setup-dialog';
 
 const TITLE_ID = 'two-factor';
 
 /** Moves focus to the section's heading once its buttons were swapped by a refetch. */
-function focusTitle() {
-  requestAnimationFrame(() => document.getElementById(`${TITLE_ID}-title`)?.focus());
-}
+const focusTitle = () => focusSectionTitle(TITLE_ID);
 
 interface TwoFactorSectionProps {
   email: string;
@@ -32,6 +30,7 @@ interface TwoFactorSectionProps {
 /** Off: the explanation and "Turn on". On: since when, codes left, "New recovery codes", "Turn off". */
 export function TwoFactorSection({ email, onReauth }: TwoFactorSectionProps) {
   const t = useTranslations('account.security.twoFactor');
+  const tSecurity = useTranslations('account.security');
   const dates = useSecurityDates();
   const queryClient = useQueryClient();
   const status = useGetTwoFactorStatus({
@@ -75,7 +74,8 @@ export function TwoFactorSection({ email, onReauth }: TwoFactorSectionProps) {
               email={email}
               triggerLabel={t('newCodes')}
               onReauth={onReauth}
-              onChanged={() => void refresh()}
+              // After a 409 (turned off elsewhere) the button is gone: focus the heading.
+              onChanged={(stale) => void refresh().then(stale ? focusTitle : undefined)}
             />
             <TwoFactorCodeDialog
               mode="disable"
@@ -95,6 +95,11 @@ export function TwoFactorSection({ email, onReauth }: TwoFactorSectionProps) {
             onReauth={onReauth}
             onEnabled={() => {
               toast.add({ title: t('turnedOn'), type: 'success' });
+              void refresh().then(focusTitle);
+            }}
+            // Already on (turned on elsewhere): say the page was updated, never "turned on".
+            onAlreadyOn={() => {
+              toast.add({ title: tSecurity('errors.stale') });
               void refresh().then(focusTitle);
             }}
           />

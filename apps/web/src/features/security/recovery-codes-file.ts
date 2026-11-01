@@ -10,14 +10,33 @@ const isoDay = (date: Date) =>
     day: '2-digit',
   }).format(date);
 
+/** The file's sentences; the page fills them from its messages. */
+export interface RecoveryCodesFileLabels {
+  title: (email: string, date: string) => string;
+  titleNoEmail: (date: string) => string;
+  reminder: string;
+}
+
+const ENGLISH: RecoveryCodesFileLabels = {
+  title: (email, date) => `Classloom recovery codes for ${email}, created ${date}`,
+  titleNoEmail: (date) => `Classloom recovery codes, created ${date}`,
+  reminder: 'Each code can be used once. Keep this file somewhere safe.',
+};
+
 /**
- * The text of the downloaded file: a header naming the account and the day, a reminder, then one
- * code per line.
+ * The text of the downloaded file: a header naming the account (when known) and the day, a
+ * reminder, then one code per line.
  */
-export function recoveryCodesFile(codes: string[], email: string, createdAt: Date): string {
+export function recoveryCodesFile(
+  codes: string[],
+  email: string,
+  createdAt: Date,
+  labels: RecoveryCodesFileLabels = ENGLISH,
+): string {
+  const day = isoDay(createdAt);
   return [
-    `Classloom recovery codes for ${email}, created ${isoDay(createdAt)}`,
-    'Each code can be used once. Keep this file somewhere safe.',
+    email ? labels.title(email, day) : labels.titleNoEmail(day),
+    labels.reminder,
     '',
     ...codes,
     '',
@@ -25,8 +44,13 @@ export function recoveryCodesFile(codes: string[], email: string, createdAt: Dat
 }
 
 /** Saves the codes as a text file through a temporary object URL. */
-export function downloadRecoveryCodes(codes: string[], email: string, createdAt: Date): void {
-  const blob = new Blob([recoveryCodesFile(codes, email, createdAt)], {
+export function downloadRecoveryCodes(
+  codes: string[],
+  email: string,
+  createdAt: Date,
+  labels?: RecoveryCodesFileLabels,
+): void {
+  const blob = new Blob([recoveryCodesFile(codes, email, createdAt, labels)], {
     type: 'text/plain;charset=utf-8',
   });
   const url = URL.createObjectURL(blob);

@@ -28,4 +28,19 @@ describe('recoveryCodesFile', () => {
   it('names the download file', () => {
     expect(RECOVERY_CODES_FILENAME).toBe('classloom-recovery-codes.txt');
   });
+
+  it('leaves out the email when there is none', () => {
+    const [header] = recoveryCodesFile(CODES, '', createdAt).split('\n');
+    expect(header).toBe('Classloom recovery codes, created 2026-11-02');
+  });
+
+  it('takes its sentences from the given labels', () => {
+    const translated = recoveryCodesFile(CODES, 'asha@example.com', createdAt, {
+      title: (email, date) => `T:${email}:${date}`,
+      titleNoEmail: (date) => `N:${date}`,
+      reminder: 'R',
+    }).split('\n');
+    expect(translated.slice(0, 3)).toEqual(['T:asha@example.com:2026-11-02', 'R', '']);
+    expect(translated.slice(3, 13)).toEqual(CODES);
+  });
 });

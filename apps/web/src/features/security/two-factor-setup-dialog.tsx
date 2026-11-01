@@ -23,11 +23,14 @@ import { BUTTON_CLASS } from '../auth/auth-ui';
 import { CODE_LENGTH, CodeField } from './code-field';
 import { groupKey } from './format';
 import { RecoveryCodesPanel } from './recovery-codes-panel';
-import { securityErrorOf } from './security-errors';
+import { securityErrorOf, setupFailureAction } from './security-errors';
 import { useCopy, useErrorText } from './security-ui';
 
 // The secret and the recovery codes live in this dialog only: never kept in the mutation cache.
 const NOT_CACHED = { mutation: { gcTime: 0 } } as const;
+
+/** `qr` when the code could not be drawn: the key below still works. */
+const QR_FAILED = 'failed';
 
 interface TwoFactorSetupDialogProps {
   email: string;
@@ -35,10 +38,17 @@ interface TwoFactorSetupDialogProps {
   onReauth: () => void;
   /** Two-step is on and the codes were saved (Done). */
   onEnabled: () => void;
+  /** A 409: two-step was already on (turned on elsewhere). The dialog has closed. */
+  onAlreadyOn: () => void;
 }
 
 /** "Turn on" and its three-step dialog: scan the QR code, enter a code, save the recovery codes. */
-export function TwoFactorSetupDialog({ email, onReauth, onEnabled }: TwoFactorSetupDialogProps) {
+export function TwoFactorSetupDialog({
+  email,
+  onReauth,
+  onEnabled,
+  onAlreadyOn,
+}: TwoFactorSetupDialogProps) {
   const t = useTranslations('account.security');
   const [open, setOpen] = useState(false);
   // While the recovery codes show, the dialog only closes through Done.
@@ -61,6 +71,11 @@ export function TwoFactorSetupDialog({ email, onReauth, onEnabled }: TwoFactorSe
           onReauth={onReauth}
           onLock={() => setLocked(true)}
           onCancel={() => setOpen(false)}
+          onAlreadyOn={() => {
+            setLocked(false);
+            setOpen(false);
+            onAlreadyOn();
+          }}
           onDone={() => {
             setLocked(false);
             setOpen(false);
@@ -82,11 +97,12 @@ interface SetupFlowProps {
   onReauth: () => void;
   onLock: () => void;
   onCancel: () => void;
+  onAlreadyOn: () => void;
   onDone: () => void;
 }
 
 /** Mounted while the dialog is open, so its state (the secret, the codes) goes when it closes. */
-function SetupFlow({ email, onReauth, onLock, onCancel, onDone }: SetupFlowProps) {
+function SetupFlow({ email, onReauth, onLock, onCancel, onAlreadyOn, onDone }: SetupFlowProps) {
   const t = useTranslations('account.security');
   const errorText = useErrorText();
   const copy = useCopy();
@@ -112,15 +128,20 @@ function SetupFlow({ email, onReauth, onLock, onCancel, onDone }: SetupFlowProps
         setStep({ name: 'scan', setup });
       } catch (error) {
         const outcome = securityErrorOf(error);
-        if (outcome.kind === 'recentSignIn') {
-          setRedirecting(true);
-          onReauth();
-          return;
+        switch (setupFailureAction(outcome)) {
+          case 'reauth':
+            setRedirecting(true);
+            onReauth();
+            break;
+          case 'alreadyOn':
+            onAlreadyOn();
+            break;
+          default:
+            setFailure(errorText(outcome));
         }
-        setFailure(errorText(outcome));
       }
     },
-    [start, errorText, onReauth],
+    [start, errorText, onReauth, onAlreadyOn],
   );
 
   // One setup per opening (React's development double effect must not start a second one).
@@ -134,9 +155,13 @@ function SetupFlow({ email, onReauth, onLock, onCancel, onDone }: SetupFlowProps
   useEffect(() => {
     if (!otpauthUrl) return;
     let live = true;
-    void toDataURL(otpauthUrl, { margin: 1, width: 192, errorCorrectionLevel: 'M' }).then((url) => {
-      if (live) setQr(url);
-    });
+    toDataURL(otpauthUrl, { margin: 1, width: 192, errorCorrectionLevel: 'M' })
+      .then((url) => {
+        if (live) setQr(url);
+      })
+      .catch(() => {
+        if (live) setQr(QR_FAILED);
+      });
     return () => {
       live = false;
     };
@@ -159,19 +184,19 @@ function SetupFlow({ email, onReauth, onLock, onCancel, onDone }: SetupFlowProps
     } catch (error) {
       const outcome = securityErrorOf(error);
       setCode('');
-      switch (outcome.kind) {
-        case 'recentSignIn':
+      switch (setupFailureAction(outcome)) {
+        case 'reauth':
           setRedirecting(true);
           onReauth();
           break;
-        case 'setupExpired':
+        case 'restart':
           setQr(null);
           await begin(t('setup.expired'));
           break;
-        case 'wrongCode':
-          setCodeError(t('errors.wrongCode'));
+        case 'alreadyOn':
+          onAlreadyOn();
           break;
-        default:
+        case 'show':
           setCodeError(errorText(outcome));
       }
     } finally {
@@ -240,7 +265,11 @@ function SetupFlow({ email, onReauth, onLock, onCancel, onDone }: SetupFlowProps
           </Alert>
         ) : null}
         <div className="flex justify-center">
-          {qr ? (
+          {qr === QR_FAILED ? (
+            <p role="alert" className="text-danger-strong text-sm">
+              {t('setup.qrFailed')}
+            </p>
+          ) : qr ? (
             // A data URL drawn here: next/image has nothing to optimise.
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -255,16 +284,10 @@ function SetupFlow({ email, onReauth, onLock, onCancel, onDone }: SetupFlowProps
           )}
         </div>
         <div className="flex flex-col gap-2">
-          <p className="text-sm" id="setup-key-label">
-            {t('setup.cantScan')}
-          </p>
+          {/* The visible sentence right before the key is its label. */}
+          <p className="text-sm">{t('setup.cantScan')}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <code
-              aria-labelledby="setup-key-label"
-              className="bg-muted rounded-md px-2 py-1 font-mono text-sm break-all"
-            >
-              {key}
-            </code>
+            <code className="bg-muted rounded-md px-2 py-1 font-mono text-sm break-all">{key}</code>
             <Button
               variant="outline"
               className={BUTTON_CLASS}
