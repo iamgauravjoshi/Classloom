@@ -2,6 +2,32 @@ import { z } from 'zod';
 
 import { sixDigitCodeField } from './auth';
 
+/**
+ * Every `AuthEventType` and `AuthMethod` value. Kept in step with the Prisma enums by
+ * apps/api/src/modules/auth/auth-enums.test.ts.
+ */
+export const AUTH_EVENT_TYPES = [
+  'SIGN_IN_SUCCEEDED',
+  'SIGN_IN_FAILED',
+  'SIGN_IN_PAUSED',
+  'CODE_REQUESTED',
+  'PASSWORD_SET',
+  'PASSWORD_CHANGED',
+  'PASSWORD_RESET_REQUESTED',
+  'PASSWORD_RESET',
+  'SIGNED_OUT',
+  'TWO_FACTOR_SUCCEEDED',
+  'TWO_FACTOR_FAILED',
+  'RECOVERY_CODE_USED',
+  'TWO_FACTOR_ENABLED',
+  'TWO_FACTOR_DISABLED',
+  'RECOVERY_CODES_REGENERATED',
+  'DEVICE_TRUSTED',
+  'DEVICE_UNTRUSTED',
+  'SESSION_REVOKED',
+] as const;
+export const AUTH_METHODS = ['PASSWORD', 'EMAIL_CODE', 'RESET_LINK', 'RECOVERY_CODE'] as const;
+
 /** 32 random bytes encoded as unpadded base64url (43 characters). */
 const challengeField = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 
@@ -10,6 +36,15 @@ const recoveryCodeField = z
   .string()
   .max(20)
   .transform((raw) => raw.trim());
+
+/** A blank recovery code (empty or only spaces) counts as not supplied. */
+const dropBlankRecoveryCode = <T extends { recoveryCode?: string }>(value: T): T => {
+  if (value.recoveryCode !== undefined && value.recoveryCode === '') {
+    const { recoveryCode: _blank, ...rest } = value;
+    return rest as T;
+  }
+  return value;
+};
 
 const exactlyOneOf = (value: { code?: string; recoveryCode?: string }) =>
   (value.code === undefined) !== (value.recoveryCode === undefined);
@@ -30,6 +65,7 @@ export const twoFactorVerifyRequestSchema = z
     recoveryCode: recoveryCodeField.optional(),
     trustDevice: z.boolean(),
   })
+  .transform(dropBlankRecoveryCode)
   .refine(exactlyOneOf, oneFactorMessage);
 export type TwoFactorVerifyRequest = z.infer<typeof twoFactorVerifyRequestSchema>;
 
@@ -47,6 +83,7 @@ export const twoFactorDisableRequestSchema = z
     code: sixDigitCodeField.optional(),
     recoveryCode: recoveryCodeField.optional(),
   })
+  .transform(dropBlankRecoveryCode)
   .refine(exactlyOneOf, oneFactorMessage);
 export type TwoFactorDisableRequest = z.infer<typeof twoFactorDisableRequestSchema>;
 
@@ -92,8 +129,8 @@ export type MyDevices = z.infer<typeof myDevicesSchema>;
 
 export const loginActivityEventSchema = z.object({
   id: z.string(),
-  type: z.string(),
-  method: z.string().nullable(),
+  type: z.enum(AUTH_EVENT_TYPES),
+  method: z.enum(AUTH_METHODS).nullable(),
   school: z.object({ code: z.string(), name: z.string() }).nullable(),
   device: z.string(),
   ip: z.string().nullable(),

@@ -10,6 +10,8 @@ enum SessionRevokedReason {
   PASSWORD_CHANGED
   PASSWORD_RESET
   REPLACED
+  REVOKED_BY_USER
+  TWO_FACTOR_DISABLED
 }
 
 enum AuthEventType {
@@ -22,12 +24,22 @@ enum AuthEventType {
   PASSWORD_RESET_REQUESTED
   PASSWORD_RESET
   SIGNED_OUT
+  TWO_FACTOR_SUCCEEDED
+  TWO_FACTOR_FAILED
+  RECOVERY_CODE_USED
+  TWO_FACTOR_ENABLED
+  TWO_FACTOR_DISABLED
+  RECOVERY_CODES_REGENERATED
+  DEVICE_TRUSTED
+  DEVICE_UNTRUSTED
+  SESSION_REVOKED
 }
 
 enum AuthMethod {
   PASSWORD
   EMAIL_CODE
   RESET_LINK
+  RECOVERY_CODE
 }
 
 /// A signed-in browser. The raw token exists only in the cookie; only its SHA-256 is stored.
@@ -88,4 +100,39 @@ model AuthEvent {
 
   @@index([userId, createdAt(sort: Desc)])
   @@map("auth_events")
+}
+
+/// A single-use two-step recovery code. Only the HMAC-SHA-256 of the normalised code is stored.
+/// Regenerating deletes the user's rows and inserts 10 new ones.
+model RecoveryCode {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+  @@map("recovery_codes")
+}
+
+/// A browser that has signed in to this user's account. Only the SHA-256 of the `cl_device`
+/// cookie value is stored. Devices not seen for a year are removed by the daily auth clean-up.
+model KnownDevice {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  deviceHash   Bytes     @map("device_hash")
+  /// "Chrome on Windows", parsed from the user agent at first sight.
+  label        String
+  firstSeenAt  DateTime  @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt   DateTime  @map("last_seen_at") @db.Timestamptz(6)
+  /// now + 30 days when trusted; null when not trusted.
+  trustedUntil DateTime? @map("trusted_until") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceHash])
+  @@index([lastSeenAt])
+  @@map("known_devices")
 }

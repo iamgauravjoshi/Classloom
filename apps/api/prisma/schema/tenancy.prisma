@@ -136,12 +136,21 @@ model User {
   passwordHash      String?   @map("password_hash")
   /// Set whenever the password is set, changed or reset.
   passwordChangedAt DateTime? @map("password_changed_at") @db.Timestamptz(6)
+  /// AES-256-GCM ciphertext (IV + tag + data) of the base32 TOTP secret; null when two-step is off.
+  totpSecretEnc     Bytes?    @map("totp_secret_enc")
+  /// Set when two-step sign-in is turned on; null when off.
+  totpEnabledAt     DateTime? @map("totp_enabled_at") @db.Timestamptz(6)
+  /// The last accepted 30-second time step; a code from that step or earlier is refused (replay).
+  totpLastStep      BigInt?   @map("totp_last_step")
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   memberships Membership[]
   sessions    Session[]
   authEvents  AuthEvent[]
+
+  recoveryCodes RecoveryCode[]
+  knownDevices  KnownDevice[]
 
   @@map("users")
 }

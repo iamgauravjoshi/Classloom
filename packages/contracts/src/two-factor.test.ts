@@ -44,6 +44,22 @@ describe('twoFactorVerifyRequestSchema', () => {
     ).toBe('ABCDE-FGHJK');
   });
 
+  it('treats a blank recovery code as absent', () => {
+    const base = { challenge, trustDevice: false };
+    for (const blank of ['', '   ']) {
+      expect(twoFactorVerifyRequestSchema.safeParse({ ...base, recoveryCode: blank }).success).toBe(
+        false,
+      );
+      const withCode = twoFactorVerifyRequestSchema.safeParse({
+        ...base,
+        code: '123456',
+        recoveryCode: blank,
+      });
+      expect(withCode.success).toBe(true);
+      expect(withCode.data?.recoveryCode).toBeUndefined();
+    }
+  });
+
   it('caps the recovery code at 20 characters', () => {
     expect(
       twoFactorVerifyRequestSchema.safeParse({
@@ -63,6 +79,18 @@ describe('twoFactorDisableRequestSchema', () => {
         .success,
     ).toBe(false);
     expect(twoFactorDisableRequestSchema.safeParse({ code: '123 456' }).data).toEqual({
+      code: '123456',
+    });
+  });
+});
+
+describe('twoFactorDisableRequestSchema blank recovery code', () => {
+  it('treats a blank recovery code as absent', () => {
+    expect(twoFactorDisableRequestSchema.safeParse({ recoveryCode: '  ' }).success).toBe(false);
+    expect(twoFactorDisableRequestSchema.safeParse({ recoveryCode: '' }).success).toBe(false);
+    expect(
+      twoFactorDisableRequestSchema.safeParse({ code: '123456', recoveryCode: ' ' }).data,
+    ).toEqual({
       code: '123456',
     });
   });
@@ -95,6 +123,24 @@ describe('list schemas', () => {
       remember: false,
     };
     expect(mySessionsSchema.parse({ sessions: [row] }).sessions[0]).toEqual(row);
+  });
+
+  it('rejects an unknown event type or method', () => {
+    const event = {
+      id: 'e1',
+      type: 'SIGN_IN_SUCCEEDED',
+      method: null,
+      school: null,
+      device: 'Chrome on Windows',
+      ip: null,
+      at: '2026-11-01T10:00:00.000Z',
+    };
+    const parse = (patch: object) =>
+      loginActivityPageSchema.safeParse({ events: [{ ...event, ...patch }], nextCursor: null });
+    expect(parse({}).success).toBe(true);
+    expect(parse({ type: 'SESSION_REVOKED', method: 'RECOVERY_CODE' }).success).toBe(true);
+    expect(parse({ type: 'MADE_UP' }).success).toBe(false);
+    expect(parse({ method: 'MADE_UP' }).success).toBe(false);
   });
 
   it('accepts a login activity page', () => {
