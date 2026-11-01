@@ -20,6 +20,7 @@ async function exportOpenApi(): Promise<void> {
     PENDING_TENANT_TTL_HOURS: 48,
     WEB_ORIGIN: 'http://localhost:3000',
     AUTH_SECRET: 'openapi-export-only-secret-0123456789',
+    TOTP_ENCRYPTION_KEY: Buffer.alloc(32, 7),
     COOKIE_SECURE: false,
     TRUST_PROXY: 'loopback',
     SIGN_IN_RATE_LIMIT_PER_15_MIN: 30,

@@ -31,7 +31,7 @@ const identifierField = z
   });
 
 /** A 6-digit sign-in code; spaces (as in `482 913`) are ignored. */
-const sixDigitCodeField = z
+export const sixDigitCodeField = z
   .string()
   .transform((raw) => raw.replace(/\s/g, ''))
   .pipe(z.string().regex(/^\d{6}$/, 'Enter the 6-digit code'));

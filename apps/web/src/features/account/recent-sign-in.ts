@@ -11,9 +11,9 @@ export function isRecentSignInRequired(error: unknown): boolean {
 
 /**
  * Where to send the person to prove themselves again: the sign-in page for their school, opened on
- * the email-code step (`reauth=1`), coming back to the account page.
+ * the email-code step (`reauth=1`), coming back to the account page (or `nextPath`).
  */
-export function reauthPath(locale: string, schoolCode: string): string {
-  const next = encodeURIComponent(`/${locale}/account`);
+export function reauthPath(locale: string, schoolCode: string, nextPath?: string): string {
+  const next = encodeURIComponent(nextPath ?? `/${locale}/account`);
   return `/${locale}/sign-in?school=${encodeURIComponent(schoolCode)}&next=${next}&reauth=1`;
 }

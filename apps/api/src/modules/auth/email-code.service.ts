@@ -1,11 +1,6 @@
 import { randomInt, timingSafeEqual } from 'node:crypto';
 
-import type {
-  AuthSession,
-  CodeRequest,
-  CodeRequestAccepted,
-  CodeVerifyRequest,
-} from '@classloom/contracts';
+import type { CodeRequest, CodeRequestAccepted, CodeVerifyRequest } from '@classloom/contracts';
 import {
   Inject,
   Injectable,
@@ -25,8 +20,12 @@ import { maskEmail } from '../tenancy/mask-email';
 import { AuthEventsService } from './auth-events.service';
 import { hmac } from './crypto';
 import { findActiveMembership, findActiveTenant } from './member-lookup';
-import type { SignInMeta } from './password-sign-in.service';
-import { CredentialsChangedError, SessionService } from './session.service';
+import { CredentialsChangedError } from './session.service';
+import {
+  type DeviceSignInMeta,
+  type FirstFactorOutcome,
+  TwoFactorSignInService,
+} from './two-factor-sign-in.service';
 
 export const AUTH_QUEUE = 'auth';
 export const SEND_CODE_JOB = 'send-code';
@@ -103,8 +102,8 @@ export class EmailCodeService {
     private readonly redis: RedisService,
     private readonly producer: QueueProducer,
     private readonly email: EmailService,
-    private readonly sessions: SessionService,
     private readonly events: AuthEventsService,
+    private readonly twoFactorSignIn: TwoFactorSignInService,
   ) {}
 
   private otpKey = (tenantId: string, userId: string) => `auth:otp:${tenantId}:${userId}`;
@@ -191,10 +190,7 @@ export class EmailCodeService {
     });
   }
 
-  async verify(
-    input: CodeVerifyRequest,
-    meta: SignInMeta = {},
-  ): Promise<{ token: string; session: AuthSession; remember: boolean }> {
+  async verify(input: CodeVerifyRequest, meta: DeviceSignInMeta): Promise<FirstFactorOutcome> {
     const eventBase = { method: 'EMAIL_CODE', ip: meta.ip, userAgent: meta.userAgent } as const;
 
     const tenant = await findActiveTenant(this.prisma, input.schoolCode);
@@ -226,35 +222,16 @@ export class EmailCodeService {
         data: { emailVerifiedAt: new Date() },
       });
     }
-    let created: Awaited<ReturnType<SessionService['create']>>;
     try {
-      created = await this.sessions.create({
-        userId: user.id,
-        tenantId: tenant.id,
-        membershipId: membership.id,
-        remember: input.remember,
-        ip: meta.ip,
-        userAgent: meta.userAgent,
-        replacesToken: meta.currentToken,
-        passwordChangedAt: user.passwordChangedAt,
-      });
+      // Either a session or, with two-step on, the challenge; the stale-password check stays here.
+      return await this.twoFactorSignIn.completeFirstFactor(
+        { user, tenant, membership, remember: input.remember, method: 'EMAIL_CODE' },
+        meta,
+      );
     } catch (error) {
       if (error instanceof CredentialsChangedError) throw new InvalidCodeException();
       throw error;
     }
-    const { token, session } = created;
-    await this.events.record({
-      type: 'SIGN_IN_SUCCEEDED',
-      userId: user.id,
-      tenantId: tenant.id,
-      sessionId: session.id,
-      ...eventBase,
-    });
-    return {
-      token,
-      remember: session.remember,
-      session: await this.sessions.toAuthSession({ session, tenant }, membership, user),
-    };
   }
 
   /** Spends a try, compares in constant time, and on a match consumes the code exactly once. */

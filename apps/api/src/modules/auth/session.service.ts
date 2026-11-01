@@ -1,6 +1,10 @@
 import type { AuthSession } from '@classloom/contracts';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
+import { ENV } from '../../core/config/config.module';
+import type { Env } from '../../core/config/env.schema';
+import { EmailService } from '../../core/email/email.service';
+import { passwordChangedEmail } from '../../core/email/templates/password-changed';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
 import type {
@@ -11,9 +15,12 @@ import type {
 } from '../../generated/prisma/client';
 import { MAX_USER_AGENT_LENGTH } from './auth-events.service';
 import { randomToken, sha256 } from './crypto';
+import { KnownDeviceService } from './known-device.service';
 import { initialExpiry, isExpired, slidExpiry } from './session-expiry';
 
 const DAY = 86_400_000;
+/** The password-changed email holds no secret; a failed job is kept a day like the other notices. */
+const KEEP_FAILED_EMAIL_SECONDS = 86_400;
 
 /** Prisma's Bytes type wants a Uint8Array over a plain ArrayBuffer, which a Buffer is not. */
 const tokenHash = (token: string): Uint8Array<ArrayBuffer> => new Uint8Array(sha256(token));
@@ -48,7 +55,14 @@ export interface ResolvedSession {
 
 @Injectable()
 export class SessionService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(SessionService.name);
+
+  constructor(
+    @Inject(ENV) private readonly env: Env,
+    private readonly prisma: PrismaService,
+    private readonly knownDevices: KnownDeviceService,
+    private readonly email: EmailService,
+  ) {}
 
   /** Every sign-in gets a fresh token (no fixation); only its SHA-256 is stored. */
   async create(input: CreateSessionInput): Promise<{ token: string; session: Session }> {
@@ -149,6 +163,8 @@ export class SessionService {
    * Stores a new password and revokes the user's sessions in ONE transaction, so the password can
    * never change while an old session survives. `exceptSessionId` keeps the caller's own session;
    * `verifyEmail` also stamps `email_verified_at` when it is still empty (a reset link proves it).
+   * Once committed, the "password changed" email is queued; a queue failure is logged, never thrown,
+   * because the change has already happened.
    */
   async changePassword(
     userId: string,
@@ -160,10 +176,11 @@ export class SessionService {
     },
   ): Promise<void> {
     const now = new Date();
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
+    const email = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({
         where: { id: userId },
         data: { passwordHash: input.passwordHash, passwordChangedAt: now },
+        select: { email: true },
       });
       if (input.verifyEmail) {
         await tx.user.updateMany({
@@ -179,7 +196,24 @@ export class SessionService {
         },
         data: { revokedAt: now, revokedReason: input.reason },
       });
+      // A new password ends "trust this device": the next sign-in asks for the app code again.
+      await this.knownDevices.clearTrustForUser(userId, tx);
+      return user.email;
     });
+    try {
+      await this.email.enqueue(
+        {
+          to: email,
+          ...passwordChangedEmail({
+            at: now,
+            forgotUrl: `${this.env.WEB_ORIGIN}/en/forgot-password`,
+          }),
+        },
+        { keepFailedSeconds: KEEP_FAILED_EMAIL_SECONDS },
+      );
+    } catch (error) {
+      this.logger.warn(`Password-changed email not queued: ${String(error)}`);
+    }
   }
 
   async toAuthSession(

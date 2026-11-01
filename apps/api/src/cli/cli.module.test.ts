@@ -7,6 +7,7 @@ const env = parseEnv({
   SMTP_URL: 'smtp://localhost:1025',
   REDIS_URL: 'redis://localhost:6379',
   AUTH_SECRET: 'test-auth-secret-0123456789-abcdefghij',
+  TOTP_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
 });
 
 describe('CliModule', () => {

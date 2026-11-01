@@ -1,7 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 
-import { createVerifiedSchool, type VerifiedSchool } from './support/school';
+import { createVerifiedSchool, signInWithCode, type VerifiedSchool } from './support/school';
+import { enableTwoFactorFor } from './support/totp';
 
 const PAGES = [
   '/en/dashboard',
@@ -46,6 +47,28 @@ for (const theme of ['light', 'dark'] as const) {
       });
     }
 
+    test.describe('security page', () => {
+      // The page lists sessions and devices, so it gets a user of its own: the shared one may have
+      // been given trusted devices or other sessions by another test.
+      test.use({ storageState: { cookies: [], origins: [] } });
+
+      test('/en/account/security has no WCAG 2.1 AA violations', async ({ page, playwright }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+
+        await page.goto('/en/account/security');
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+        // Every section has loaded its list.
+        await expect(page.getByRole('button', { name: 'Turn on', exact: true })).toBeVisible();
+        await expect(page.getByText('This device').first()).toBeVisible();
+        await expect(page.getByText('No trusted devices')).toBeVisible();
+        await expect(page.getByText('Signed in with an email code').first()).toBeAttached();
+        await expectNoViolations(page);
+      });
+    });
+
     test.describe('signed out', () => {
       // The auth pages send a signed-in visitor to the dashboard.
       test.use({ storageState: { cookies: [], origins: [] } });
@@ -81,6 +104,59 @@ for (const theme of ['light', 'dark'] as const) {
           page.getByRole('heading', { level: 1, name: 'Check your email' }),
         ).toBeVisible();
         await expect(page.getByText(/Code expires in/)).toBeVisible();
+        await expectNoViolations(page);
+      });
+
+      test('sign-in, two-step step, has no WCAG 2.1 AA violations', async ({
+        page,
+        playwright,
+      }) => {
+        // A school of its own with two-step on, set up from a browser-less context.
+        const password = 'ember lantern 42 quartz';
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await enableTwoFactorFor(request, own, password);
+        await request.dispose();
+
+        await page.goto(`/en/sign-in?school=${own.code}`);
+        await page.getByLabel('Email or mobile number').fill(own.email);
+        await page.getByLabel('Password', { exact: true }).fill(password);
+        await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+        await expect(
+          page.getByRole('heading', { level: 1, name: 'Two-step sign-in' }),
+        ).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Use a recovery code instead' }).click();
+        await expect(page.getByLabel('Recovery code')).toBeVisible();
+        await expectNoViolations(page);
+      });
+
+      test('security, two-step setup dialog, has no WCAG 2.1 AA violations', async ({
+        page,
+        playwright,
+      }) => {
+        // A fresh sign-in: turning two-step on needs one from the last 10 minutes.
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+
+        await page.goto('/en/account/security');
+        await expect(page.getByRole('heading', { level: 1, name: 'My account' })).toBeVisible();
+        const tabs = page.getByRole('navigation', { name: 'Account settings' });
+        await expect(tabs.getByRole('link', { name: 'Security' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        );
+        await page.getByRole('button', { name: 'Turn on' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Turn on two-step sign-in' });
+        await expect(dialog.getByRole('img', { name: /QR code/ })).toBeVisible();
+        await expect(dialog.getByText(/^([A-Z2-7]{4} )+[A-Z2-7]{1,4}$/)).toBeVisible();
+        await expectNoViolations(page);
+
+        await dialog.getByRole('button', { name: 'Next' }).click();
+        await expect(dialog.getByLabel('Authenticator code')).toBeFocused();
         await expectNoViolations(page);
       });
 

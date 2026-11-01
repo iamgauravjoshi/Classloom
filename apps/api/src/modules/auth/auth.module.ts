@@ -10,28 +10,47 @@ import { AuthProcessor } from './auth.processor';
 import { AUTH_MAINTENANCE_QUEUE, AuthCleanupProcessor } from './auth-cleanup.processor';
 import { AuthEventsService } from './auth-events.service';
 import { AUTH_QUEUE, EmailCodeService } from './email-code.service';
+import { KnownDeviceService } from './known-device.service';
 import { OriginCheckMiddleware } from './origin-check.middleware';
 import { PasswordController } from './password.controller';
 import { PasswordService } from './password.service';
 import { PasswordResetService } from './password-reset.service';
 import { PasswordSignInService } from './password-sign-in.service';
+import { SecurityController } from './security.controller';
+import { SecurityService } from './security.service';
 import { SessionController } from './session.controller';
 import { SessionMiddleware } from './session.middleware';
 import { SessionService } from './session.service';
 import { SignInController } from './sign-in.controller';
 import { SignInPauseService } from './sign-in-pause.service';
+import { TwoFactorController } from './two-factor.controller';
+import { TwoFactorService } from './two-factor.service';
+import { TwoFactorChallengeService } from './two-factor-challenge.service';
+import { TwoFactorSignInService } from './two-factor-sign-in.service';
 
 @Module({
   imports: [
     EmailModule,
     BullModule.registerQueue({ name: AUTH_MAINTENANCE_QUEUE }, { name: AUTH_QUEUE }),
   ],
-  controllers: [SessionController, SignInController, PasswordController, AccountController],
+  controllers: [
+    SessionController,
+    SecurityController,
+    SignInController,
+    TwoFactorController,
+    PasswordController,
+    AccountController,
+  ],
   providers: [
     SessionService,
+    KnownDeviceService,
     AuthEventsService,
     PasswordService,
     SignInPauseService,
+    TwoFactorService,
+    SecurityService,
+    TwoFactorChallengeService,
+    TwoFactorSignInService,
     PasswordSignInService,
     EmailCodeService,
     PasswordResetService,
@@ -40,7 +59,14 @@ import { SignInPauseService } from './sign-in-pause.service';
     AuthCleanupProcessor,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [SessionService, AuthEventsService, PasswordService, SignInPauseService],
+  exports: [
+    SessionService,
+    KnownDeviceService,
+    AuthEventsService,
+    PasswordService,
+    SignInPauseService,
+    TwoFactorService,
+  ],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

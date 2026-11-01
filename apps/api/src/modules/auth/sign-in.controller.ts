@@ -5,6 +5,8 @@ import {
   codeRequestSchema,
   codeVerifyRequestSchema,
   passwordSignInRequestSchema,
+  type TwoFactorChallenge,
+  twoFactorChallengeSchema,
 } from '@classloom/contracts';
 import {
   Body,
@@ -38,16 +40,19 @@ import {
   SIGN_IN_THROTTLER,
   skipAllBut,
 } from '../../core/http/throttler-names';
+import { deviceTokenOf, setDeviceCookie } from './device-cookie';
 import { AuthSessionDto } from './dto';
 import { EmailCodeService } from './email-code.service';
 import { PasswordSignInService } from './password-sign-in.service';
 import { Public } from './public.decorator';
 import { readSessionToken, setSessionCookie } from './session-cookie';
+import type { DeviceSignInMeta, FirstFactorOutcome } from './two-factor-sign-in.service';
 
 class PasswordSignInRequestDto extends createZodDto(passwordSignInRequestSchema) {}
 class CodeRequestDto extends createZodDto(codeRequestSchema) {}
 class CodeRequestAcceptedDto extends createZodDto(codeRequestAcceptedSchema) {}
 class CodeVerifyRequestDto extends createZodDto(codeVerifyRequestSchema) {}
+class TwoFactorChallengeDto extends createZodDto(twoFactorChallengeSchema) {}
 
 @ApiTags('auth')
 @Public()
@@ -68,6 +73,10 @@ export class SignInController {
     summary: 'Sign in to a school with an email or mobile and a password',
   })
   @ApiOkResponse({ type: AuthSessionDto })
+  @ApiAcceptedResponse({
+    type: TwoFactorChallengeDto,
+    description: 'Two-step sign-in is on: send the app code to /auth/two-factor/verify',
+  })
   @ApiUnauthorizedResponse({ description: 'Email/mobile or password is incorrect.' })
   @ApiTooManyRequestsResponse({
     description:
@@ -77,14 +86,10 @@ export class SignInController {
     @Body() body: PasswordSignInRequestDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<AuthSession> {
-    const { token, session, remember } = await this.passwordSignIn.signIn(body, {
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      currentToken: readSessionToken(req, this.env),
-    });
-    setSessionCookie(res, this.env, token, remember);
-    return session;
+  ): Promise<AuthSession | TwoFactorChallenge> {
+    const deviceToken = deviceTokenOf(req, this.env);
+    const outcome = await this.passwordSignIn.signIn(body, this.meta(req, deviceToken));
+    return this.respond(outcome, deviceToken, res);
   }
 
   @Post('otp/request')
@@ -112,19 +117,48 @@ export class SignInController {
     summary: 'Sign in to a school with an emailed code',
   })
   @ApiOkResponse({ type: AuthSessionDto })
+  @ApiAcceptedResponse({
+    type: TwoFactorChallengeDto,
+    description: 'Two-step sign-in is on: send the app code to /auth/two-factor/verify',
+  })
   @ApiUnauthorizedResponse({ description: 'That code is incorrect or has expired.' })
   @ApiTooManyRequestsResponse({ description: 'Too many attempts from this address' })
   async verifySignInCode(
     @Body() body: CodeVerifyRequestDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<AuthSession> {
-    const { token, session, remember } = await this.emailCodes.verify(body, {
+  ): Promise<AuthSession | TwoFactorChallenge> {
+    const deviceToken = deviceTokenOf(req, this.env);
+    const outcome = await this.emailCodes.verify(body, this.meta(req, deviceToken));
+    return this.respond(outcome, deviceToken, res);
+  }
+
+  private meta(req: Request, deviceToken: string): DeviceSignInMeta {
+    return {
       ip: req.ip,
       userAgent: req.headers['user-agent'],
       currentToken: readSessionToken(req, this.env),
-    });
-    setSessionCookie(res, this.env, token, remember);
-    return session;
+      deviceToken,
+    };
+  }
+
+  /**
+   * The device cookie is set on every first-factor success; the session cookie only when a
+   * session was made. A pending two-step sign-in answers 202 with the challenge.
+   */
+  private respond(
+    outcome: FirstFactorOutcome,
+    deviceToken: string,
+    res: Response,
+  ): AuthSession | TwoFactorChallenge {
+    if (outcome.kind === 'challenge') {
+      setDeviceCookie(res, this.env, deviceToken);
+      res.status(HttpStatus.ACCEPTED);
+      return outcome.body;
+    }
+    // Session cookie first, as before this cookie existed.
+    setSessionCookie(res, this.env, outcome.token, outcome.remember);
+    setDeviceCookie(res, this.env, deviceToken);
+    return outcome.session;
   }
 }

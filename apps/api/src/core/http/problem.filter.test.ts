@@ -68,6 +68,17 @@ describe('ProblemFilter', () => {
     expect(res.headers['retry-after']).toBe('90');
   });
 
+  it('carries attemptsLeft for two-factor-invalid, including 0', () => {
+    for (const attemptsLeft of [3, 0]) {
+      const { host, res } = mockHost();
+      new ProblemFilter('production').catch(
+        new HttpException({ type: 'two-factor-invalid', title: 'Wrong.', attemptsLeft }, 401),
+        host,
+      );
+      expect(res.body).toMatchObject({ type: 'two-factor-invalid', status: 401, attemptsLeft });
+    }
+  });
+
   it('keeps a custom HttpException message as the detail', () => {
     const { host, res } = mockHost();
     new ProblemFilter('production').catch(new BadRequestException('Section is full'), host);

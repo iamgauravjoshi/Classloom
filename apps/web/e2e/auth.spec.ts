@@ -7,6 +7,7 @@ import {
   signInWithCode,
   type VerifiedSchool,
 } from './support/school';
+import { enableTwoFactorFor, totpCode } from './support/totp';
 
 // Everything here signs in, out or changes passwords, so each test owns a school and its owner and
 // starts with no cookies. The shared owner session (auth.setup.ts) must stay untouched: the device
@@ -168,6 +169,51 @@ test('a wrong password shows one message, whatever is wrong', async ({ page, pla
   await signInByPassword(page, school.email, 'definitely not the password');
   await expect(page.getByText('Email/mobile or password is incorrect.')).toBeVisible();
   await expect(page).toHaveURL(/\/en\/sign-in/);
+});
+
+test.describe('two-step sign-in', () => {
+  const PASSWORD = 'ember lantern 42 quartz';
+
+  /** A school whose owner has two-step on; the code step then leads to the two-step step. */
+  async function reachTwoStep(page: Page, playwright: PlaywrightWorkerArgs['playwright']) {
+    const request = await playwright.request.newContext();
+    const school = await createVerifiedSchool(request);
+    const secrets = await enableTwoFactorFor(request, school, PASSWORD);
+    await request.dispose();
+    await page.goto(`/en/sign-in?school=${school.code}`);
+    await signInByPassword(page, school.email, PASSWORD);
+    await expect(page.getByRole('heading', { level: 1, name: 'Two-step sign-in' })).toBeVisible();
+    return { school, ...secrets };
+  }
+
+  test('an app code finishes the sign-in', async ({ page, playwright }) => {
+    const { school, secret } = await reachTwoStep(page, playwright);
+    // The enabling code used the current 30 s step; the next one is accepted (one step either side).
+    await page
+      .getByLabel('Authenticator code')
+      .fill(totpCode(secret, new Date(Date.now() + 30_000)));
+    await expectDashboard(page, school);
+  });
+
+  test('a wrong code says so, and a recovery code finishes the sign-in', async ({
+    page,
+    playwright,
+  }) => {
+    const { school, recoveryCodes } = await reachTwoStep(page, playwright);
+    await page.getByLabel('Authenticator code').fill('000000');
+    await expect(page.getByText(/That code didn't work\. 4 tries left\./)).toBeVisible();
+
+    await page.getByRole('button', { name: 'Use a recovery code instead' }).click();
+    await page.getByLabel('Recovery code').fill(recoveryCodes[0]!);
+    await page.getByRole('button', { name: 'Verify' }).click();
+    await expectDashboard(page, school);
+  });
+
+  test('"Start again" returns to the credentials step', async ({ page, playwright }) => {
+    await reachTwoStep(page, playwright);
+    await page.getByRole('button', { name: 'Start again' }).click();
+    await expect(page.getByLabel('Email or mobile number')).toBeVisible();
+  });
 });
 
 // A service worker would hide the request from `page.route` in WebKit.

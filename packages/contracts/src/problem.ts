@@ -21,6 +21,8 @@ export const problemDetailsSchema = z.object({
   suggestion: z.string().optional(),
   /** Set on a 429 `sign-in-paused`: seconds until the pause ends (also sent as `Retry-After`). */
   retryAfter: z.number().int().optional(),
+  /** Set on a 401 `two-factor-invalid`: tries left on this sign-in challenge. */
+  attemptsLeft: z.number().int().optional(),
 });
 
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;

@@ -29,6 +29,8 @@ import type {
   ForgotPasswordRequestDto,
   PasswordSignInRequestDto,
   ResetPasswordRequestDto,
+  TwoFactorChallengeDto,
+  TwoFactorVerifyRequestDto,
 } from '../../model';
 
 import { apiFetch } from '../../../fetcher';
@@ -199,7 +201,7 @@ export const signInWithPassword = (
   passwordSignInRequestDto: PasswordSignInRequestDto,
   signal?: AbortSignal,
 ) => {
-  return apiFetch<AuthSessionDto>({
+  return apiFetch<AuthSessionDto | TwoFactorChallengeDto>({
     url: `/auth/sign-in/password`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -358,7 +360,7 @@ export const verifySignInCode = (
   codeVerifyRequestDto: CodeVerifyRequestDto,
   signal?: AbortSignal,
 ) => {
-  return apiFetch<AuthSessionDto>({
+  return apiFetch<AuthSessionDto | TwoFactorChallengeDto>({
     url: `/auth/otp/verify`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -431,6 +433,87 @@ export const useVerifySignInCode = <TError = ErrorType<void>, TContext = unknown
   TContext
 > => {
   return useMutation(getVerifySignInCodeMutationOptions(options), queryClient);
+};
+/**
+ * @summary Finish a two-step sign-in with an authenticator app code or a recovery code
+ */
+export const verifyTwoFactor = (
+  twoFactorVerifyRequestDto: TwoFactorVerifyRequestDto,
+  signal?: AbortSignal,
+) => {
+  return apiFetch<AuthSessionDto>({
+    url: `/auth/two-factor/verify`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: twoFactorVerifyRequestDto,
+    signal,
+  });
+};
+
+export const getVerifyTwoFactorMutationKey = () => ['verifyTwoFactor'] as const;
+
+export const getVerifyTwoFactorMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyTwoFactor>>,
+    TError,
+    VerifyTwoFactorMutationVariables,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof verifyTwoFactor>>,
+  TError,
+  VerifyTwoFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getVerifyTwoFactorMutationKey();
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof verifyTwoFactor>>,
+    VerifyTwoFactorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return verifyTwoFactor(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VerifyTwoFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof verifyTwoFactor>>
+>;
+export type VerifyTwoFactorMutationBody = TwoFactorVerifyRequestDto;
+export type VerifyTwoFactorMutationError = ErrorType<void>;
+export type VerifyTwoFactorMutationVariables = { data: TwoFactorVerifyRequestDto };
+
+/**
+ * @summary Finish a two-step sign-in with an authenticator app code or a recovery code
+ */
+export const useVerifyTwoFactor = <TError = ErrorType<void>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof verifyTwoFactor>>,
+      TError,
+      VerifyTwoFactorMutationVariables,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof verifyTwoFactor>>,
+  TError,
+  VerifyTwoFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getVerifyTwoFactorMutationOptions(options), queryClient);
 };
 /**
  * @summary Email a password reset link (the answer is the same whether or not the account exists)

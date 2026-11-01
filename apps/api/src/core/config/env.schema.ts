@@ -9,6 +9,23 @@ const optionalBooleanString = z.preprocess(
     .optional(),
 );
 
+/** The `.env.example` key. Fine for local development; production refuses it. */
+const DEV_TOTP_ENCRYPTION_KEY = 'ZGV2LW9ubHktdG90cC1rZXktMDEyMzQ1LWFiY2RlZmc=';
+
+/** A base64 string that decodes to exactly 32 bytes, parsed to a Buffer. */
+const encryptionKey = z.string().transform((raw, ctx) => {
+  const key = Buffer.from(raw, 'base64');
+  if (key.length !== 32 || key.toString('base64') !== raw) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'must be the base64 encoding of exactly 32 bytes (openssl rand -base64 32)',
+      input: raw,
+    });
+    return z.NEVER;
+  }
+  return key;
+});
+
 const envSchema = z.object({
   // Required: defaulting to development would expose stack traces if a deploy forgot it.
   NODE_ENV: z.enum(['development', 'test', 'production']),
@@ -28,6 +45,8 @@ const envSchema = z.object({
   WEB_ORIGIN: z.url().default('http://localhost:3000'),
   // HMAC key for sign-in codes and identifier hashes. Rotating it invalidates pending codes.
   AUTH_SECRET: z.string().min(32),
+  // AES-256-GCM key that protects two-step secrets at rest: base64 of 32 bytes. Never logged.
+  TOTP_ENCRYPTION_KEY: encryptionKey,
   // Defaults to true in production and false elsewhere (see the transform below).
   COOKIE_SECURE: optionalBooleanString,
   // Express `trust proxy` value, so request.ip is the browser's address behind the web proxy.
@@ -38,10 +57,23 @@ const envSchema = z.object({
   PASSWORD_RESET_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(10),
 });
 
-const envWithDerivedValues = envSchema.transform((env) => ({
-  ...env,
-  COOKIE_SECURE: env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
-}));
+const envWithDerivedValues = envSchema
+  .superRefine((env, ctx) => {
+    if (
+      env.NODE_ENV === 'production' &&
+      env.TOTP_ENCRYPTION_KEY.toString('base64') === DEV_TOTP_ENCRYPTION_KEY
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['TOTP_ENCRYPTION_KEY'],
+        message: 'is the development value from .env.example; generate your own for production',
+      });
+    }
+  })
+  .transform((env) => ({
+    ...env,
+    COOKIE_SECURE: env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
+  }));
 
 export type Env = z.infer<typeof envWithDerivedValues>;
 

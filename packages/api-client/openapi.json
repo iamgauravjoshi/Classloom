@@ -291,6 +291,434 @@
         ]
       }
     },
+    "/me/two-factor": {
+      "get": {
+        "operationId": "getTwoFactorStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorStatusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Whether two-step sign-in is on, since when, and the recovery codes left",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/two-factor/setup": {
+      "post": {
+        "operationId": "startTwoFactorSetup",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorSetupDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "No sign-in in the last 10 minutes (type recent-sign-in-required)"
+          },
+          "409": {
+            "description": "Two-step sign-in is already on"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Start turning two-step sign-in on; the secret is kept for 10 minutes",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/two-factor/enable": {
+      "post": {
+        "operationId": "enableTwoFactor",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorCodeRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The code is wrong (errors[] path code or recoveryCode)"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "No sign-in in the last 10 minutes (type recent-sign-in-required)"
+          },
+          "409": {
+            "description": "Two-step sign-in is already on"
+          },
+          "410": {
+            "description": "The setup expired; start again"
+          },
+          "429": {
+            "description": "Too many wrong codes in 15 minutes (type two-factor-paused)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Finish turning two-step sign-in on with the first code; returns the recovery codes once",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/two-factor/recovery-codes": {
+      "post": {
+        "operationId": "regenerateRecoveryCodes",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorCodeRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The code is wrong (errors[] path code or recoveryCode)"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "No sign-in in the last 10 minutes (type recent-sign-in-required)"
+          },
+          "409": {
+            "description": "Two-step sign-in is not on"
+          },
+          "429": {
+            "description": "Too many wrong codes in 15 minutes (type two-factor-paused)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Replace the recovery codes; needs a current app code",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/two-factor/disable": {
+      "post": {
+        "operationId": "disableTwoFactor",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorDisableRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Two-step sign-in is off."
+          },
+          "400": {
+            "description": "The code is wrong (errors[] path code or recoveryCode)"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "No sign-in in the last 10 minutes (type recent-sign-in-required)"
+          },
+          "409": {
+            "description": "Two-step sign-in is not on"
+          },
+          "429": {
+            "description": "Too many wrong codes in 15 minutes (type two-factor-paused)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Turn two-step sign-in off with an app code or a recovery code",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/sessions": {
+      "get": {
+        "operationId": "listMySessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySessionsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The live sessions of the signed-in user, across all their schools",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/sessions/revoke-others": {
+      "post": {
+        "operationId": "revokeMyOtherSessions",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "The other sessions are ended."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "429": {
+            "description": "More than 30 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "End every live session except the one in use",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/sessions/{id}/revoke": {
+      "post": {
+        "operationId": "revokeMySession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The session id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The session is ended."
+          },
+          "400": {
+            "description": "This is the current session; use sign out"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "404": {
+            "description": "Not a live session of this user"
+          },
+          "429": {
+            "description": "More than 30 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "End one of the user's other sessions",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/devices": {
+      "get": {
+        "operationId": "listMyDevices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyDevicesDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The browsers that have signed in to this account",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/devices/{id}/untrust": {
+      "post": {
+        "operationId": "untrustMyDevice",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The device id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The device is no longer trusted."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "404": {
+            "description": "Not a device of this user"
+          },
+          "429": {
+            "description": "More than 30 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Stop skipping the app code on this device",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/login-activity": {
+      "get": {
+        "operationId": "listMyLoginActivity",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "nextCursor of the previous page",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginActivityPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The cursor is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Sign-in history for the past 365 days, newest first, 20 per page",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/auth/sign-in/password": {
       "post": {
         "operationId": "signInWithPassword",
@@ -312,6 +740,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Two-step sign-in is on: send the app code to /auth/two-factor/verify",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorChallengeDto"
                 }
               }
             }
@@ -392,6 +830,16 @@
               }
             }
           },
+          "202": {
+            "description": "Two-step sign-in is on: send the app code to /auth/two-factor/verify",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorChallengeDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "That code is incorrect or has expired."
           },
@@ -400,6 +848,47 @@
           }
         },
         "summary": "Sign in to a school with an emailed code",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/two-factor/verify": {
+      "post": {
+        "operationId": "verifyTwoFactor",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorVerifyRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The sign-in has expired (type two-factor-expired), or the code didn't work (type two-factor-invalid, with attemptsLeft)"
+          },
+          "429": {
+            "description": "Too many wrong codes (type two-factor-paused), or too many from this address"
+          },
+          "503": {
+            "description": "The challenge store is unreachable"
+          }
+        },
+        "summary": "Finish a two-step sign-in with an authenticator app code or a recovery code",
         "tags": [
           "auth"
         ]
@@ -989,6 +1478,324 @@
           "expiresAt"
         ]
       },
+      "TwoFactorStatusDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "enabledAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recoveryCodesLeft": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "enabled",
+          "enabledAt",
+          "recoveryCodesLeft"
+        ]
+      },
+      "TwoFactorSetupDto": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string"
+          },
+          "otpauthUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "otpauthUrl"
+        ]
+      },
+      "TwoFactorCodeRequestDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "RecoveryCodesDto": {
+        "type": "object",
+        "properties": {
+          "recoveryCodes": {
+            "minItems": 10,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "recoveryCodes"
+        ]
+      },
+      "TwoFactorDisableRequestDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "recoveryCode": {
+            "type": "string",
+            "maxLength": 20
+          }
+        }
+      },
+      "MySessionsDto": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "current": {
+                  "type": "boolean"
+                },
+                "school": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "name"
+                  ]
+                },
+                "device": {
+                  "type": "string"
+                },
+                "ip": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "signedInAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "lastSeenAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "remember": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "current",
+                "school",
+                "device",
+                "ip",
+                "signedInAt",
+                "lastSeenAt",
+                "remember"
+              ]
+            }
+          }
+        },
+        "required": [
+          "sessions"
+        ]
+      },
+      "MyDevicesDto": {
+        "type": "object",
+        "properties": {
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "current": {
+                  "type": "boolean"
+                },
+                "firstSeenAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "lastSeenAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "trustedUntil": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "current",
+                "firstSeenAt",
+                "lastSeenAt",
+                "trustedUntil"
+              ]
+            }
+          }
+        },
+        "required": [
+          "devices"
+        ]
+      },
+      "LoginActivityPageDto": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "SIGN_IN_SUCCEEDED",
+                    "SIGN_IN_FAILED",
+                    "SIGN_IN_PAUSED",
+                    "CODE_REQUESTED",
+                    "PASSWORD_SET",
+                    "PASSWORD_CHANGED",
+                    "PASSWORD_RESET_REQUESTED",
+                    "PASSWORD_RESET",
+                    "SIGNED_OUT",
+                    "TWO_FACTOR_SUCCEEDED",
+                    "TWO_FACTOR_FAILED",
+                    "RECOVERY_CODE_USED",
+                    "TWO_FACTOR_ENABLED",
+                    "TWO_FACTOR_DISABLED",
+                    "RECOVERY_CODES_REGENERATED",
+                    "DEVICE_TRUSTED",
+                    "DEVICE_UNTRUSTED",
+                    "SESSION_REVOKED"
+                  ]
+                },
+                "method": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "PASSWORD",
+                        "EMAIL_CODE",
+                        "RESET_LINK",
+                        "RECOVERY_CODE"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "school": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "name"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "device": {
+                  "type": "string"
+                },
+                "ip": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "type",
+                "method",
+                "school",
+                "device",
+                "ip",
+                "at"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "events",
+          "nextCursor"
+        ]
+      },
       "PasswordSignInRequestDto": {
         "type": "object",
         "properties": {
@@ -1013,6 +1820,29 @@
           "identifier",
           "password",
           "remember"
+        ]
+      },
+      "TwoFactorChallengeDto": {
+        "type": "object",
+        "properties": {
+          "twoFactorRequired": {
+            "type": "boolean",
+            "const": true
+          },
+          "challenge": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "twoFactorRequired",
+          "challenge",
+          "expiresAt"
         ]
       },
       "CodeRequestDto": {
@@ -1064,6 +1894,29 @@
           "email",
           "code",
           "remember"
+        ]
+      },
+      "TwoFactorVerifyRequestDto": {
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "code": {
+            "type": "string"
+          },
+          "recoveryCode": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "trustDevice": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "challenge",
+          "trustDevice"
         ]
       },
       "ForgotPasswordRequestDto": {

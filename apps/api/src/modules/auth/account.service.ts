@@ -210,7 +210,7 @@ const toMe = (user: User): Me => ({
   hasPassword: user.passwordHash !== null,
 });
 
-const isRecent = (authenticatedAt: Date, now = Date.now()) =>
+export const isRecent = (authenticatedAt: Date, now = Date.now()) =>
   now - authenticatedAt.getTime() <= RECENT_SIGN_IN_MINUTES * 60_000;
 
 function currentPasswordError(message: string): BadRequestException {
