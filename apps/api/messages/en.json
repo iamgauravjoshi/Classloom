@@ -26,6 +26,19 @@
       "linkLabel": "Or open this link:",
       "expiry": "Expires in {minutes} minutes.",
       "ignore": "If you didn't ask for this, ignore this email; your password hasn't changed."
+    },
+    "newDevice": {
+      "subject": "New sign-in to your Classloom account",
+      "heading": "New sign-in to your account",
+      "intro": "Your Classloom account was just signed in to from a device we haven't seen before.",
+      "schoolLabel": "School",
+      "deviceLabel": "Device",
+      "ipLabel": "IP address",
+      "timeLabel": "Time",
+      "time": "{date} at {time} IST",
+      "unknown": "Unknown",
+      "warning": "If this wasn't you, change your password and end the session from Security settings.",
+      "button": "Open Security settings"
     }
   }
 }

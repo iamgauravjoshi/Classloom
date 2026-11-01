@@ -54,11 +54,14 @@ describe('forgot and reset password', () => {
     return { code, email, ...ids };
   }
 
+  /** Reset mails only: a sign-in in a test also sends a new-device email to the address. */
   async function mailsTo(address: string): Promise<MailpitSummary[]> {
     const res = await fetch(
       `${infra.mailpitApiUrl}/api/v1/search?query=${encodeURIComponent(`to:${address}`)}`,
     );
-    return ((await res.json()) as { messages: MailpitSummary[] }).messages;
+    return ((await res.json()) as { messages: MailpitSummary[] }).messages.filter(
+      (m) => m.Subject === 'Reset your Classloom password',
+    );
   }
 
   /** The reset links in every mail to `address`, once at least `count` have arrived (newest first). */

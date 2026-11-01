@@ -1,4 +1,4 @@
-import type { AuthSession, PasswordSignInRequest } from '@classloom/contracts';
+import type { PasswordSignInRequest } from '@classloom/contracts';
 import { parseIdentifier } from '@classloom/utils';
 import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 
@@ -6,8 +6,13 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { AuthEventsService } from './auth-events.service';
 import { findActiveMembership, findActiveTenant } from './member-lookup';
 import { PasswordService } from './password.service';
-import { CredentialsChangedError, SessionService } from './session.service';
+import { CredentialsChangedError } from './session.service';
 import { PAUSE_SECONDS, SignInPauseService } from './sign-in-pause.service';
+import {
+  type DeviceSignInMeta,
+  type FirstFactorOutcome,
+  TwoFactorSignInService,
+} from './two-factor-sign-in.service';
 
 export const INVALID_CREDENTIALS_TITLE = 'Email/mobile or password is incorrect.';
 
@@ -44,15 +49,12 @@ export class PasswordSignInService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
-    private readonly sessions: SessionService,
     private readonly events: AuthEventsService,
     private readonly pauses: SignInPauseService,
+    private readonly twoFactorSignIn: TwoFactorSignInService,
   ) {}
 
-  async signIn(
-    input: PasswordSignInRequest,
-    meta: SignInMeta = {},
-  ): Promise<{ token: string; session: AuthSession; remember: boolean }> {
+  async signIn(input: PasswordSignInRequest, meta: DeviceSignInMeta): Promise<FirstFactorOutcome> {
     const eventBase = { method: 'PASSWORD', ip: meta.ip, userAgent: meta.userAgent } as const;
 
     const tenant = await findActiveTenant(this.prisma, input.schoolCode);
@@ -117,38 +119,22 @@ export class PasswordSignInService {
       });
     }
 
-    let created: Awaited<ReturnType<SessionService['create']>>;
     try {
-      created = await this.sessions.create({
-        userId: user.id,
-        tenantId: tenant.id,
-        membershipId: membership.id,
-        remember: input.remember,
-        ip: meta.ip,
-        userAgent: meta.userAgent,
-        replacesToken: meta.currentToken,
-        passwordChangedAt: user.passwordChangedAt,
-      });
+      // Either a session or, with two-step on, the challenge; the stale-password check stays here.
+      return await this.twoFactorSignIn.completeFirstFactor(
+        {
+          user: { ...user, passwordHash },
+          tenant,
+          membership,
+          remember: input.remember,
+          method: 'PASSWORD',
+        },
+        meta,
+      );
     } catch (error) {
       if (error instanceof CredentialsChangedError) throw new InvalidCredentialsException();
       throw error;
     }
-    const { token, session } = created;
-    await this.events.record({
-      type: 'SIGN_IN_SUCCEEDED',
-      userId: user.id,
-      tenantId: tenant.id,
-      sessionId: session.id,
-      ...eventBase,
-    });
-    return {
-      token,
-      remember: session.remember,
-      session: await this.sessions.toAuthSession({ session, tenant }, membership, {
-        ...user,
-        passwordHash,
-      }),
-    };
   }
 
   private findUser(identifier: string) {

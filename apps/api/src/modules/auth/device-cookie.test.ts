@@ -8,6 +8,9 @@ import {
   readDeviceToken,
 } from './device-cookie';
 
+/** 43 base64url characters, the shape `randomToken` mints. */
+const TOKEN = 'abcdefghijABCDEFGHIJ0123456789_-abcdefghijk';
+
 const secure = { COOKIE_SECURE: true } as Env;
 const plain = { COOKIE_SECURE: false } as Env;
 
@@ -41,17 +44,38 @@ describe('device cookie', () => {
   });
 
   it('reads the token from the raw header', () => {
-    expect(readDeviceToken(reqWith('a=1; cl_device=tok123; b=2'), plain)).toBe('tok123');
-    expect(readDeviceToken(reqWith('__Host-cl_device=tok'), plain)).toBeUndefined();
+    expect(readDeviceToken(reqWith(`a=1; cl_device=${TOKEN}; b=2`), plain)).toBe(TOKEN);
+    expect(readDeviceToken(reqWith(`__Host-cl_device=${TOKEN}`), plain)).toBeUndefined();
     expect(readDeviceToken(reqWith('cl_device='), plain)).toBeUndefined();
     expect(readDeviceToken(reqWith(), plain)).toBeUndefined();
   });
 
+  it('treats anything but exactly 43 base64url characters as absent', () => {
+    const malformed = [
+      'tok123',
+      `${TOKEN}A`,
+      TOKEN.slice(1),
+      `${TOKEN.slice(1)}=`,
+      `${TOKEN.slice(1)}+`,
+    ];
+    for (const value of malformed) {
+      expect(readDeviceToken(reqWith(`cl_device=${value}`), plain)).toBeUndefined();
+    }
+  });
+
   it('reuses an existing token and re-sets the cookie', () => {
     const { res, calls } = fakeRes();
-    expect(ensureDeviceToken(reqWith('cl_device=keepme'), res, plain)).toBe('keepme');
+    expect(ensureDeviceToken(reqWith(`cl_device=${TOKEN}`), res, plain)).toBe(TOKEN);
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({ name: 'cl_device', value: 'keepme' });
+    expect(calls[0]).toMatchObject({ name: 'cl_device', value: TOKEN });
+  });
+
+  it('mints a fresh token in place of a malformed one', () => {
+    const { res, calls } = fakeRes();
+    const token = ensureDeviceToken(reqWith('cl_device=keepme'), res, plain);
+    expect(token).not.toBe('keepme');
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(calls[0]).toMatchObject({ name: 'cl_device', value: token });
   });
 
   it('mints a 32-byte base64url token when there is none', () => {

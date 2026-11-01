@@ -51,11 +51,14 @@ describe('sign-in with an emailed code', () => {
     return { code, email, ...ids };
   }
 
+  /** Sign-in code mails only: a successful sign-in also sends a new-device email. */
   async function mailsTo(address: string): Promise<MailpitSummary[]> {
     const res = await fetch(
       `${infra.mailpitApiUrl}/api/v1/search?query=${encodeURIComponent(`to:${address}`)}`,
     );
-    return ((await res.json()) as { messages: MailpitSummary[] }).messages;
+    return ((await res.json()) as { messages: MailpitSummary[] }).messages.filter((m) =>
+      m.Subject.endsWith('is your Classloom sign-in code'),
+    );
   }
 
   /** The code in the newest mail to `address`, once at least `count` mails have arrived. */

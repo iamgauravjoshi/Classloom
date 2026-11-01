@@ -83,6 +83,25 @@ describe('known devices', () => {
     expect(devices.isTrusted(null, now)).toBe(false);
   });
 
+  it('a later sign-in without trust keeps the existing trust', async () => {
+    const { userId } = await school();
+    const t0 = new Date('2026-03-01T00:00:00Z');
+    const t1 = new Date('2026-03-05T00:00:00Z');
+    await devices.recordSignIn(userId, 'tok', CHROME, { trust: true }, t0);
+    const { device } = await devices.recordSignIn(userId, 'tok', CHROME, { trust: false }, t1);
+    expect(device.trustedUntil?.getTime()).toBe(t0.getTime() + 30 * DAY);
+    expect(device.lastSeenAt).toEqual(t1);
+  });
+
+  it('a later sign-in with trust extends it to 30 days from then', async () => {
+    const { userId } = await school();
+    const t0 = new Date('2026-03-01T00:00:00Z');
+    const t1 = new Date('2026-03-20T00:00:00Z');
+    await devices.recordSignIn(userId, 'tok', CHROME, { trust: true }, t0);
+    const { device } = await devices.recordSignIn(userId, 'tok', CHROME, { trust: true }, t1);
+    expect(device.trustedUntil?.getTime()).toBe(t1.getTime() + 30 * DAY);
+  });
+
   it("untrust refuses another user's device", async () => {
     const a = await school();
     const b = await school();

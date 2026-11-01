@@ -21,19 +21,32 @@ import { SessionMiddleware } from './session.middleware';
 import { SessionService } from './session.service';
 import { SignInController } from './sign-in.controller';
 import { SignInPauseService } from './sign-in-pause.service';
+import { TwoFactorController } from './two-factor.controller';
+import { TwoFactorService } from './two-factor.service';
+import { TwoFactorChallengeService } from './two-factor-challenge.service';
+import { TwoFactorSignInService } from './two-factor-sign-in.service';
 
 @Module({
   imports: [
     EmailModule,
     BullModule.registerQueue({ name: AUTH_MAINTENANCE_QUEUE }, { name: AUTH_QUEUE }),
   ],
-  controllers: [SessionController, SignInController, PasswordController, AccountController],
+  controllers: [
+    SessionController,
+    SignInController,
+    TwoFactorController,
+    PasswordController,
+    AccountController,
+  ],
   providers: [
     SessionService,
     KnownDeviceService,
     AuthEventsService,
     PasswordService,
     SignInPauseService,
+    TwoFactorService,
+    TwoFactorChallengeService,
+    TwoFactorSignInService,
     PasswordSignInService,
     EmailCodeService,
     PasswordResetService,
@@ -48,6 +61,7 @@ import { SignInPauseService } from './sign-in-pause.service';
     AuthEventsService,
     PasswordService,
     SignInPauseService,
+    TwoFactorService,
   ],
 })
 export class AuthModule implements NestModule {
