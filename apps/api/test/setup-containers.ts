@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -86,6 +87,7 @@ export async function startTestInfra(options: { mailpit?: boolean } = {}): Promi
     REGISTRATION_TOKEN_TTL_HOURS: 24,
     PENDING_TENANT_TTL_HOURS: 48,
     AUTH_SECRET: 'integration-test-auth-secret-0123456789',
+    TOTP_ENCRYPTION_KEY: randomBytes(32),
     COOKIE_SECURE: false,
     TRUST_PROXY: 'loopback',
     SIGN_IN_RATE_LIMIT_PER_15_MIN: 30,

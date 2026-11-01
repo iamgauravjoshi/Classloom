@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { parseEnv } from './env.schema';
 
 const validEnv = {
@@ -9,6 +12,7 @@ const validEnv = {
   REDIS_URL: 'redis://localhost:6379',
   WEB_ORIGIN: 'http://localhost:3000',
   AUTH_SECRET: 'test-auth-secret-0123456789-abcdefghij',
+  TOTP_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
 };
 
 describe('parseEnv', () => {
@@ -33,6 +37,7 @@ describe('parseEnv', () => {
       SMTP_URL: validEnv.SMTP_URL,
       REDIS_URL: validEnv.REDIS_URL,
       AUTH_SECRET: validEnv.AUTH_SECRET,
+      TOTP_ENCRYPTION_KEY: validEnv.TOTP_ENCRYPTION_KEY,
     });
     expect(env).toMatchObject({
       API_PORT: 4000,
@@ -128,5 +133,47 @@ describe('parseEnv', () => {
         /CODE_REQUEST_RATE_LIMIT_PER_HOUR/,
       );
     });
+  });
+});
+
+describe('parseEnv TOTP_ENCRYPTION_KEY', () => {
+  const key = Buffer.alloc(32, 7).toString('base64');
+  const { TOTP_ENCRYPTION_KEY: _omit, ...baseEnv } = validEnv;
+  const withKey = (value: string | undefined, extra: Record<string, string> = {}) => ({
+    ...baseEnv,
+    ...extra,
+    ...(value === undefined ? {} : { TOTP_ENCRYPTION_KEY: value }),
+  });
+
+  it('reports a missing key', () => {
+    expect(() => parseEnv(withKey(undefined))).toThrow(/TOTP_ENCRYPTION_KEY/);
+  });
+
+  it('refuses a 31-byte key', () => {
+    expect(() => parseEnv(withKey(Buffer.alloc(31, 1).toString('base64')))).toThrow(
+      /TOTP_ENCRYPTION_KEY/,
+    );
+  });
+
+  it('refuses a value that is not base64', () => {
+    expect(() => parseEnv(withKey('not base64 !!'))).toThrow(/TOTP_ENCRYPTION_KEY/);
+  });
+
+  it('parses a 32-byte key to a Buffer', () => {
+    const parsed = parseEnv(withKey(key)).TOTP_ENCRYPTION_KEY;
+    expect(Buffer.isBuffer(parsed)).toBe(true);
+    expect(parsed.length).toBe(32);
+  });
+
+  it('refuses the .env.example key in production only', () => {
+    const example = readFileSync(resolve(__dirname, '../../../../../.env.example'), 'utf8')
+      .split('\n')
+      .find((line) => line.startsWith('TOTP_ENCRYPTION_KEY='))!
+      .slice('TOTP_ENCRYPTION_KEY='.length)
+      .trim();
+    expect(() => parseEnv(withKey(example))).not.toThrow();
+    expect(() => parseEnv(withKey(example, { NODE_ENV: 'production' }))).toThrow(
+      /TOTP_ENCRYPTION_KEY/,
+    );
   });
 });
