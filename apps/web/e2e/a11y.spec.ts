@@ -7,7 +7,6 @@ import { enableTwoFactorFor } from './support/totp';
 const PAGES = [
   '/en/dashboard',
   '/en/account',
-  '/en/account/security',
   '/en/students',
   '/en/register-school',
   '/en/definitely-missing',
@@ -44,16 +43,31 @@ for (const theme of ['light', 'dark'] as const) {
             page.getByRole('heading', { level: 2, name: 'Set a password' }),
           ).toBeVisible();
         }
-        // Every section has loaded its list.
-        if (path === '/en/account/security') {
-          await expect(page.getByRole('button', { name: /^(Turn on|Turn off)$/ })).toBeVisible();
-          await expect(page.getByText('This device').first()).toBeVisible();
-          await expect(page.getByText('No trusted devices')).toBeVisible();
-          await expect(page.getByText('Signed in with an email code').first()).toBeAttached();
-        }
         await expectNoViolations(page);
       });
     }
+
+    test.describe('security page', () => {
+      // The page lists sessions and devices, so it gets a user of its own: the shared one may have
+      // been given trusted devices or other sessions by another test.
+      test.use({ storageState: { cookies: [], origins: [] } });
+
+      test('/en/account/security has no WCAG 2.1 AA violations', async ({ page, playwright }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+
+        await page.goto('/en/account/security');
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+        // Every section has loaded its list.
+        await expect(page.getByRole('button', { name: 'Turn on', exact: true })).toBeVisible();
+        await expect(page.getByText('This device').first()).toBeVisible();
+        await expect(page.getByText('No trusted devices')).toBeVisible();
+        await expect(page.getByText('Signed in with an email code').first()).toBeAttached();
+        await expectNoViolations(page);
+      });
+    });
 
     test.describe('signed out', () => {
       // The auth pages send a signed-in visitor to the dashboard.
