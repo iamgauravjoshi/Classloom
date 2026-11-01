@@ -342,6 +342,27 @@ describe('turning two-step on and off', () => {
       expect(replay.status).toBe(401);
     });
 
+    it('clears any device trust left from before, so it does not survive an off/on cycle', async () => {
+      const a = await account();
+      // A trust write that raced a disable can leave a trusted device while two-step is off.
+      await owner.knownDevice.create({
+        data: {
+          userId: a.userId,
+          deviceHash: new Uint8Array(sha256('left-over-device')),
+          label: 'Chrome on Windows',
+          firstSeenAt: new Date(),
+          lastSeenAt: new Date(),
+          trustedUntil: new Date(Date.now() + 86_400_000),
+        },
+      });
+      await turnOn(a);
+      expect(
+        await owner.knownDevice.count({ where: { userId: a.userId, trustedUntil: { not: null } } }),
+      ).toBe(0);
+      expect(await owner.knownDevice.count({ where: { userId: a.userId } })).toBe(1);
+      await expectMails(a.email, SUBJECT.enabled, 1);
+    });
+
     it('cannot be run twice with the same setup', async () => {
       const a = await account();
       const setup = twoFactorSetupSchema.parse((await post(a, 'setup')).body);

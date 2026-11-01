@@ -199,6 +199,8 @@ export class TwoFactorService {
       });
       if (count === 0) throw alreadyOn();
       await this.replaceRecoveryCodes(tx, user.id, recoveryCodes);
+      // A trust write that raced an earlier disable must not carry over into the new setup.
+      await this.devices.clearTrustForUser(user.id, tx);
     });
     await this.redis.client.del(this.setupKey(user.id)).catch(() => undefined);
 

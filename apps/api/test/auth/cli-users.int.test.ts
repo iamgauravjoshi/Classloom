@@ -1,3 +1,5 @@
+import os from 'node:os';
+
 import type { INestApplication, INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Command } from 'commander';
@@ -148,6 +150,24 @@ describe('users:disable-2fa', () => {
       reason: 'Lost phone, ticket 42',
     });
     expect((JSON.parse(lines[0] as string) as { by: string }).by).toEqual(expect.any(String));
+    await expectTurnedOffMail(u.email);
+  });
+
+  it('still logs and emails when the OS user cannot be looked up', async () => {
+    const u = await twoStepUser();
+    // Containers often run as a uid with no passwd entry; os.userInfo() then throws.
+    const spy = vi.spyOn(os, 'userInfo').mockImplementation(() => {
+      throw new Error('ENOENT: no such file or directory, uv_os_get_passwd');
+    });
+    try {
+      await run('users:disable-2fa', u.email, '--reason', 'ticket 43');
+    } finally {
+      spy.mockRestore();
+    }
+
+    const line = JSON.parse(lines[0] as string) as { action: string; email: string; by: string };
+    expect(line).toMatchObject({ action: 'disable-2fa', email: u.email });
+    expect(line.by).toBe(process.env.USER || process.env.USERNAME || 'unknown');
     await expectTurnedOffMail(u.email);
   });
 

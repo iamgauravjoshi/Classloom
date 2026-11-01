@@ -13,6 +13,18 @@ import { PlatformPrismaService } from '../core/prisma/platform-prisma.service';
 const KEEP_FAILED_EMAIL_SECONDS = 86_400;
 
 /**
+ * Who ran the command, for the audit line. `os.userInfo()` throws when the uid has no passwd
+ * entry (common in containers), so fall back to the environment and never fail the command.
+ */
+function operatorName(): string {
+  try {
+    return os.userInfo().username;
+  } catch {
+    return process.env.USER || process.env.USERNAME || 'unknown';
+  }
+}
+
+/**
  * Adds the user commands to the platform owner CLI. Like the school commands they run on the
  * owner-role client, throw on errors (`cli.ts` turns that into an exit code) and write one
  * structured line saying who did what and why.
@@ -37,6 +49,7 @@ export function registerUserCommands(
         throw new Error(`Two-step sign-in is not turned on for ${user.email}`);
       }
 
+      const by = operatorName();
       const now = new Date();
       await platform.$transaction(async (tx) => {
         await tx.user.update({
@@ -60,7 +73,7 @@ export function registerUserCommands(
           action: 'disable-2fa',
           email: user.email,
           reason: opts.reason,
-          by: os.userInfo().username,
+          by,
         }),
       );
 
