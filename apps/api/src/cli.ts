@@ -6,6 +6,7 @@ import { CommanderError } from 'commander';
 
 import { CliModule } from './cli/cli.module';
 import { buildCli } from './cli/schools.commands';
+import { registerUserCommands } from './cli/users.commands';
 import { parseEnv } from './core/config/env.schema';
 
 async function main(): Promise<void> {
@@ -21,7 +22,10 @@ async function main(): Promise<void> {
     return;
   }
   try {
-    await buildCli(app, (line) => console.log(line)).parseAsync(process.argv);
+    const out = (line: string): void => console.log(line);
+    const program = buildCli(app, out);
+    registerUserCommands(program, app, out);
+    await program.parseAsync(process.argv);
   } catch (error) {
     if (!(error instanceof CommanderError)) {
       console.error(error instanceof Error ? error.message : String(error));

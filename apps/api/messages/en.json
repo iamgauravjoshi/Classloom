@@ -39,6 +39,36 @@
       "unknown": "Unknown",
       "warning": "If this wasn't you, change your password and end the session from Security settings.",
       "button": "Open Security settings"
+    },
+    "passwordChanged": {
+      "subject": "Your Classloom password was changed",
+      "heading": "Your password was changed",
+      "intro": "The password of your Classloom account was just changed, and your trusted devices were reset.",
+      "timeLabel": "Time",
+      "time": "{date} at {time} IST",
+      "warning": "If this wasn't you, reset your password now.",
+      "button": "Reset password"
+    },
+    "twoFactorChanged": {
+      "timeLabel": "Time",
+      "time": "{date} at {time} IST",
+      "warning": "If this wasn't you, change your password and check Security settings.",
+      "button": "Open Security settings",
+      "enabled": {
+        "subject": "Two-step sign-in was turned on",
+        "heading": "Two-step sign-in was turned on",
+        "intro": "Two-step sign-in is now on for your Classloom account. You will be asked for a code from your authenticator app when you sign in on a device we don't trust."
+      },
+      "disabled": {
+        "subject": "Two-step sign-in was turned off",
+        "heading": "Two-step sign-in was turned off",
+        "intro": "Two-step sign-in is now off for your Classloom account. Your recovery codes and trusted devices were removed."
+      },
+      "codesRegenerated": {
+        "subject": "New recovery codes were created",
+        "heading": "New recovery codes were created",
+        "intro": "New recovery codes were created for your Classloom account. Your old recovery codes no longer work."
+      }
     }
   }
 }

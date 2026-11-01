@@ -153,7 +153,9 @@ describe('two-step at sign-in', () => {
     const res = await fetch(
       `${infra.mailpitApiUrl}/api/v1/search?query=${encodeURIComponent(`to:${address}`)}`,
     );
-    return ((await res.json()) as { messages: MailpitSummary[] }).messages;
+    // Other notices (e.g. password changed) share the inbox; this suite counts new-device mails.
+    const all = ((await res.json()) as { messages: MailpitSummary[] }).messages;
+    return all.filter((mail) => mail.Subject === NEW_DEVICE_SUBJECT);
   }
 
   /** Waits until `count` new-device mails reached `address`, then checks no more follow. */
@@ -171,10 +173,7 @@ describe('two-step at sign-in', () => {
 
   beforeAll(async () => {
     infra = await startTestInfra({ mailpit: true });
-    app = await createApp(
-      { ...infra.env, SIGN_IN_RATE_LIMIT_PER_15_MIN: 1000 },
-      { logger: false },
-    );
+    app = await createApp({ ...infra.env, SIGN_IN_RATE_LIMIT_PER_15_MIN: 1000 }, { logger: false });
     await app.init();
     server = app.getHttpServer() as App;
     owner = ownerPrisma(infra.env);
@@ -239,7 +238,9 @@ describe('two-step at sign-in', () => {
     expect(cookieOf(res, 'cl_session')).toBeUndefined();
     expect(cookieOf(res, 'cl_device')).toMatch(/^[\w-]{43}$/);
     expect(await sessionsOf(s.userId)).toBe(0);
-    const stored: unknown = JSON.parse((await redis.client.get(challengeKey(body.challenge))) as string);
+    const stored: unknown = JSON.parse(
+      (await redis.client.get(challengeKey(body.challenge))) as string,
+    );
     expect(stored).toMatchObject({ method: 'EMAIL_CODE', remember: false });
   });
 
@@ -439,7 +440,9 @@ describe('two-step at sign-in', () => {
   it('emails once for a new device, never for a failed attempt, and not again for a known one', async () => {
     const s = await account();
     const first = await challengeFor(s);
-    expect((await verify({ challenge: first.challenge, code: codeAt(s.secret) }, first.device)).status).toBe(200);
+    expect(
+      (await verify({ challenge: first.challenge, code: codeAt(s.secret) }, first.device)).status,
+    ).toBe(200);
     await expectNewDeviceMails(s.email, 1);
 
     const again = await challengeFor(s, first.device);
