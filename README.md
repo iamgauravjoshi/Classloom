@@ -36,9 +36,9 @@ data).
 - Playwright ports: `E2E_WEB_PORT` (default 3000) and `E2E_API_PORT` (default 4000) move the E2E
   servers aside when dev servers hold those ports. The `/api` rewrite target is fixed at build
   time, so build with the matching address, for example
-  `API_INTERNAL_URL=http://localhost:4100 pnpm --filter @classloom/web build` (Turborepo's strict env
-  mode hides the variable from a plain `pnpm build`), then
-  `E2E_API_PORT=4100 E2E_WEB_PORT=3200 pnpm e2e`.
+  `API_INTERNAL_URL=http://localhost:4100 pnpm build` (`apps/web/turbo.json` passes the variable
+  through and keys the build cache on it), then `E2E_API_PORT=4100 E2E_WEB_PORT=3200 pnpm e2e`.
+  A Vercel build fails if `API_INTERNAL_URL` is not set.
 - Set `TRUST_PROXY` on the API for the chosen hosts so rate limits see the browser address (see
   `docs/superpowers/followups/2026-10-27-tenancy.md`).
 
