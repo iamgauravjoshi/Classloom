@@ -17,6 +17,7 @@ import { PasswordService } from './password.service';
 import { PasswordResetService } from './password-reset.service';
 import { PasswordSignInService } from './password-sign-in.service';
 import { SecurityController } from './security.controller';
+import { SecurityService } from './security.service';
 import { SessionController } from './session.controller';
 import { SessionMiddleware } from './session.middleware';
 import { SessionService } from './session.service';
@@ -47,6 +48,7 @@ import { TwoFactorSignInService } from './two-factor-sign-in.service';
     PasswordService,
     SignInPauseService,
     TwoFactorService,
+    SecurityService,
     TwoFactorChallengeService,
     TwoFactorSignInService,
     PasswordSignInService,

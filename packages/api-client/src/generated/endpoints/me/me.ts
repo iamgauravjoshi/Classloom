@@ -21,7 +21,20 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { MeDto, SetPasswordRequestDto, UpdateMeRequestDto } from '../../model';
+import type {
+  ListMyLoginActivityParams,
+  LoginActivityPageDto,
+  MeDto,
+  MyDevicesDto,
+  MySessionsDto,
+  RecoveryCodesDto,
+  SetPasswordRequestDto,
+  TwoFactorCodeRequestDto,
+  TwoFactorDisableRequestDto,
+  TwoFactorSetupDto,
+  TwoFactorStatusDto,
+  UpdateMeRequestDto,
+} from '../../model';
 
 import { apiFetch } from '../../../fetcher';
 import type { ErrorType } from '../../../fetcher';
@@ -40,6 +53,940 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+/**
+ * @summary Whether two-step sign-in is on, since when, and the recovery codes left
+ */
+export const getTwoFactorStatus = (signal?: AbortSignal) => {
+  return apiFetch<TwoFactorStatusDto>({ url: `/me/two-factor`, method: 'GET', signal });
+};
+
+export const getGetTwoFactorStatusQueryKey = () => {
+  return [`/me/two-factor`] as const;
+};
+
+export const getGetTwoFactorStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTwoFactorStatus>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>>;
+}) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTwoFactorStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTwoFactorStatus>>> = ({ signal }) =>
+    getTwoFactorStatus(signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTwoFactorStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetTwoFactorStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTwoFactorStatus>>
+>;
+export type GetTwoFactorStatusQueryError = ErrorType<void>;
+
+export function useGetTwoFactorStatus<
+  TData = Awaited<ReturnType<typeof getTwoFactorStatus>>,
+  TError = ErrorType<void>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTwoFactorStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getTwoFactorStatus>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTwoFactorStatus<
+  TData = Awaited<ReturnType<typeof getTwoFactorStatus>>,
+  TError = ErrorType<void>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTwoFactorStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getTwoFactorStatus>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTwoFactorStatus<
+  TData = Awaited<ReturnType<typeof getTwoFactorStatus>>,
+  TError = ErrorType<void>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Whether two-step sign-in is on, since when, and the recovery codes left
+ */
+
+export function useGetTwoFactorStatus<
+  TData = Awaited<ReturnType<typeof getTwoFactorStatus>>,
+  TError = ErrorType<void>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTwoFactorStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary Start turning two-step sign-in on; the secret is kept for 10 minutes
+ */
+export const startTwoFactorSetup = (signal?: AbortSignal) => {
+  return apiFetch<TwoFactorSetupDto>({ url: `/me/two-factor/setup`, method: 'POST', signal });
+};
+
+export const getStartTwoFactorSetupMutationKey = () => ['startTwoFactorSetup'] as const;
+
+export const getStartTwoFactorSetupMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startTwoFactorSetup>>,
+    TError,
+    void,
+    TContext
+  >;
+}): UseMutationOptions<Awaited<ReturnType<typeof startTwoFactorSetup>>, TError, void, TContext> => {
+  const mutationKey = getStartTwoFactorSetupMutationKey();
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startTwoFactorSetup>>,
+    void
+  > = () => {
+    return startTwoFactorSetup();
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartTwoFactorSetupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startTwoFactorSetup>>
+>;
+
+export type StartTwoFactorSetupMutationError = ErrorType<void>;
+
+/**
+ * @summary Start turning two-step sign-in on; the secret is kept for 10 minutes
+ */
+export const useStartTwoFactorSetup = <TError = ErrorType<void>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startTwoFactorSetup>>,
+      TError,
+      void,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof startTwoFactorSetup>>, TError, void, TContext> => {
+  return useMutation(getStartTwoFactorSetupMutationOptions(options), queryClient);
+};
+/**
+ * @summary Finish turning two-step sign-in on with the first code; returns the recovery codes once
+ */
+export const enableTwoFactor = (
+  twoFactorCodeRequestDto: TwoFactorCodeRequestDto,
+  signal?: AbortSignal,
+) => {
+  return apiFetch<RecoveryCodesDto>({
+    url: `/me/two-factor/enable`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: twoFactorCodeRequestDto,
+    signal,
+  });
+};
+
+export const getEnableTwoFactorMutationKey = () => ['enableTwoFactor'] as const;
+
+export const getEnableTwoFactorMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof enableTwoFactor>>,
+    TError,
+    EnableTwoFactorMutationVariables,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof enableTwoFactor>>,
+  TError,
+  EnableTwoFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getEnableTwoFactorMutationKey();
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof enableTwoFactor>>,
+    EnableTwoFactorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return enableTwoFactor(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EnableTwoFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof enableTwoFactor>>
+>;
+export type EnableTwoFactorMutationBody = TwoFactorCodeRequestDto;
+export type EnableTwoFactorMutationError = ErrorType<void>;
+export type EnableTwoFactorMutationVariables = { data: TwoFactorCodeRequestDto };
+
+/**
+ * @summary Finish turning two-step sign-in on with the first code; returns the recovery codes once
+ */
+export const useEnableTwoFactor = <TError = ErrorType<void>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof enableTwoFactor>>,
+      TError,
+      EnableTwoFactorMutationVariables,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof enableTwoFactor>>,
+  TError,
+  EnableTwoFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getEnableTwoFactorMutationOptions(options), queryClient);
+};
+/**
+ * @summary Replace the recovery codes; needs a current app code
+ */
+export const regenerateRecoveryCodes = (
+  twoFactorCodeRequestDto: TwoFactorCodeRequestDto,
+  signal?: AbortSignal,
+) => {
+  return apiFetch<RecoveryCodesDto>({
+    url: `/me/two-factor/recovery-codes`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: twoFactorCodeRequestDto,
+    signal,
+  });
+};
+
+export const getRegenerateRecoveryCodesMutationKey = () => ['regenerateRecoveryCodes'] as const;
+
+export const getRegenerateRecoveryCodesMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof regenerateRecoveryCodes>>,
+    TError,
+    RegenerateRecoveryCodesMutationVariables,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof regenerateRecoveryCodes>>,
+  TError,
+  RegenerateRecoveryCodesMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRegenerateRecoveryCodesMutationKey();
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof regenerateRecoveryCodes>>,
+    RegenerateRecoveryCodesMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return regenerateRecoveryCodes(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegenerateRecoveryCodesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof regenerateRecoveryCodes>>
+>;
+export type RegenerateRecoveryCodesMutationBody = TwoFactorCodeRequestDto;
+export type RegenerateRecoveryCodesMutationError = ErrorType<void>;
+export type RegenerateRecoveryCodesMutationVariables = { data: TwoFactorCodeRequestDto };
+
+/**
+ * @summary Replace the recovery codes; needs a current app code
+ */
+export const useRegenerateRecoveryCodes = <TError = ErrorType<void>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof regenerateRecoveryCodes>>,
+      TError,
+      RegenerateRecoveryCodesMutationVariables,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof regenerateRecoveryCodes>>,
+  TError,
+  RegenerateRecoveryCodesMutationVariables,
+  TContext
+> => {
+  return useMutation(getRegenerateRecoveryCodesMutationOptions(options), queryClient);
+};
+/**
+ * @summary Turn two-step sign-in off with an app code or a recovery code
+ */
+export const disableTwoFactor = (
+  twoFactorDisableRequestDto: TwoFactorDisableRequestDto,
+  signal?: AbortSignal,
+) => {
+  return apiFetch<void>({
+    url: `/me/two-factor/disable`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: twoFactorDisableRequestDto,
+    signal,
+  });
+};
+
+export const getDisableTwoFactorMutationKey = () => ['disableTwoFactor'] as const;
+
+export const getDisableTwoFactorMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof disableTwoFactor>>,
+    TError,
+    DisableTwoFactorMutationVariables,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof disableTwoFactor>>,
+  TError,
+  DisableTwoFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDisableTwoFactorMutationKey();
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof disableTwoFactor>>,
+    DisableTwoFactorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return disableTwoFactor(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DisableTwoFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof disableTwoFactor>>
+>;
+export type DisableTwoFactorMutationBody = TwoFactorDisableRequestDto;
+export type DisableTwoFactorMutationError = ErrorType<void>;
+export type DisableTwoFactorMutationVariables = { data: TwoFactorDisableRequestDto };
+
+/**
+ * @summary Turn two-step sign-in off with an app code or a recovery code
+ */
+export const useDisableTwoFactor = <TError = ErrorType<void>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof disableTwoFactor>>,
+      TError,
+      DisableTwoFactorMutationVariables,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof disableTwoFactor>>,
+  TError,
+  DisableTwoFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getDisableTwoFactorMutationOptions(options), queryClient);
+};
+/**
+ * @summary The live sessions of the signed-in user, across all their schools
+ */
+export const listMySessions = (signal?: AbortSignal) => {
+  return apiFetch<MySessionsDto>({ url: `/me/sessions`, method: 'GET', signal });
+};
+
+export const getListMySessionsQueryKey = () => {
+  return [`/me/sessions`] as const;
+};
+
+export const getListMySessionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMySessions>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMySessions>>, TError, TData>>;
+}) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMySessionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMySessions>>> = ({ signal }) =>
+    listMySessions(signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMySessions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListMySessionsQueryResult = NonNullable<Awaited<ReturnType<typeof listMySessions>>>;
+export type ListMySessionsQueryError = ErrorType<void>;
+
+export function useListMySessions<
+  TData = Awaited<ReturnType<typeof listMySessions>>,
+  TError = ErrorType<void>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMySessions>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMySessions>>,
+          TError,
+          Awaited<ReturnType<typeof listMySessions>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMySessions<
+  TData = Awaited<ReturnType<typeof listMySessions>>,
+  TError = ErrorType<void>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMySessions>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMySessions>>,
+          TError,
+          Awaited<ReturnType<typeof listMySessions>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMySessions<
+  TData = Awaited<ReturnType<typeof listMySessions>>,
+  TError = ErrorType<void>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMySessions>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary The live sessions of the signed-in user, across all their schools
+ */
+
+export function useListMySessions<
+  TData = Awaited<ReturnType<typeof listMySessions>>,
+  TError = ErrorType<void>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMySessions>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListMySessionsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary End every live session except the one in use
+ */
+export const revokeMyOtherSessions = (signal?: AbortSignal) => {
+  return apiFetch<void>({ url: `/me/sessions/revoke-others`, method: 'POST', signal });
+};
+
+export const getRevokeMyOtherSessionsMutationKey = () => ['revokeMyOtherSessions'] as const;
+
+export const getRevokeMyOtherSessionsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeMyOtherSessions>>,
+    TError,
+    void,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeMyOtherSessions>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = getRevokeMyOtherSessionsMutationKey();
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeMyOtherSessions>>,
+    void
+  > = () => {
+    return revokeMyOtherSessions();
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeMyOtherSessionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeMyOtherSessions>>
+>;
+
+export type RevokeMyOtherSessionsMutationError = ErrorType<void>;
+
+/**
+ * @summary End every live session except the one in use
+ */
+export const useRevokeMyOtherSessions = <TError = ErrorType<void>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeMyOtherSessions>>,
+      TError,
+      void,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof revokeMyOtherSessions>>, TError, void, TContext> => {
+  return useMutation(getRevokeMyOtherSessionsMutationOptions(options), queryClient);
+};
+/**
+ * @summary End one of the user's other sessions
+ */
+export const revokeMySession = (id: string, signal?: AbortSignal) => {
+  return apiFetch<void>({ url: `/me/sessions/${id}/revoke`, method: 'POST', signal });
+};
+
+export const getRevokeMySessionMutationKey = () => ['revokeMySession'] as const;
+
+export const getRevokeMySessionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeMySession>>,
+    TError,
+    RevokeMySessionMutationVariables,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeMySession>>,
+  TError,
+  RevokeMySessionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevokeMySessionMutationKey();
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeMySession>>,
+    RevokeMySessionMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return revokeMySession(id);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeMySessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeMySession>>
+>;
+
+export type RevokeMySessionMutationError = ErrorType<void>;
+export type RevokeMySessionMutationVariables = { id: string };
+
+/**
+ * @summary End one of the user's other sessions
+ */
+export const useRevokeMySession = <TError = ErrorType<void>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeMySession>>,
+      TError,
+      RevokeMySessionMutationVariables,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokeMySession>>,
+  TError,
+  RevokeMySessionMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevokeMySessionMutationOptions(options), queryClient);
+};
+/**
+ * @summary The browsers that have signed in to this account
+ */
+export const listMyDevices = (signal?: AbortSignal) => {
+  return apiFetch<MyDevicesDto>({ url: `/me/devices`, method: 'GET', signal });
+};
+
+export const getListMyDevicesQueryKey = () => {
+  return [`/me/devices`] as const;
+};
+
+export const getListMyDevicesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyDevices>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyDevices>>, TError, TData>>;
+}) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMyDevicesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyDevices>>> = ({ signal }) =>
+    listMyDevices(signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyDevices>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListMyDevicesQueryResult = NonNullable<Awaited<ReturnType<typeof listMyDevices>>>;
+export type ListMyDevicesQueryError = ErrorType<void>;
+
+export function useListMyDevices<
+  TData = Awaited<ReturnType<typeof listMyDevices>>,
+  TError = ErrorType<void>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyDevices>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyDevices>>,
+          TError,
+          Awaited<ReturnType<typeof listMyDevices>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyDevices<
+  TData = Awaited<ReturnType<typeof listMyDevices>>,
+  TError = ErrorType<void>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyDevices>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyDevices>>,
+          TError,
+          Awaited<ReturnType<typeof listMyDevices>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyDevices<
+  TData = Awaited<ReturnType<typeof listMyDevices>>,
+  TError = ErrorType<void>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyDevices>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary The browsers that have signed in to this account
+ */
+
+export function useListMyDevices<
+  TData = Awaited<ReturnType<typeof listMyDevices>>,
+  TError = ErrorType<void>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyDevices>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListMyDevicesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+/**
+ * @summary Stop skipping the app code on this device
+ */
+export const untrustMyDevice = (id: string, signal?: AbortSignal) => {
+  return apiFetch<void>({ url: `/me/devices/${id}/untrust`, method: 'POST', signal });
+};
+
+export const getUntrustMyDeviceMutationKey = () => ['untrustMyDevice'] as const;
+
+export const getUntrustMyDeviceMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof untrustMyDevice>>,
+    TError,
+    UntrustMyDeviceMutationVariables,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof untrustMyDevice>>,
+  TError,
+  UntrustMyDeviceMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUntrustMyDeviceMutationKey();
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof untrustMyDevice>>,
+    UntrustMyDeviceMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return untrustMyDevice(id);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UntrustMyDeviceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof untrustMyDevice>>
+>;
+
+export type UntrustMyDeviceMutationError = ErrorType<void>;
+export type UntrustMyDeviceMutationVariables = { id: string };
+
+/**
+ * @summary Stop skipping the app code on this device
+ */
+export const useUntrustMyDevice = <TError = ErrorType<void>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof untrustMyDevice>>,
+      TError,
+      UntrustMyDeviceMutationVariables,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof untrustMyDevice>>,
+  TError,
+  UntrustMyDeviceMutationVariables,
+  TContext
+> => {
+  return useMutation(getUntrustMyDeviceMutationOptions(options), queryClient);
+};
+/**
+ * @summary Sign-in history for the past 365 days, newest first, 20 per page
+ */
+export const listMyLoginActivity = (params?: ListMyLoginActivityParams, signal?: AbortSignal) => {
+  return apiFetch<LoginActivityPageDto>({
+    url: `/me/login-activity`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getListMyLoginActivityQueryKey = (params?: ListMyLoginActivityParams) => {
+  return [`/me/login-activity`, ...(params ? [params] : [])] as const;
+};
+
+export const getListMyLoginActivityQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyLoginActivity>>,
+  TError = ErrorType<void>,
+>(
+  params?: ListMyLoginActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyLoginActivity>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMyLoginActivityQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyLoginActivity>>> = ({ signal }) =>
+    listMyLoginActivity(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyLoginActivity>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListMyLoginActivityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyLoginActivity>>
+>;
+export type ListMyLoginActivityQueryError = ErrorType<void>;
+
+export function useListMyLoginActivity<
+  TData = Awaited<ReturnType<typeof listMyLoginActivity>>,
+  TError = ErrorType<void>,
+>(
+  params: undefined | ListMyLoginActivityParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyLoginActivity>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyLoginActivity>>,
+          TError,
+          Awaited<ReturnType<typeof listMyLoginActivity>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyLoginActivity<
+  TData = Awaited<ReturnType<typeof listMyLoginActivity>>,
+  TError = ErrorType<void>,
+>(
+  params?: ListMyLoginActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyLoginActivity>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyLoginActivity>>,
+          TError,
+          Awaited<ReturnType<typeof listMyLoginActivity>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyLoginActivity<
+  TData = Awaited<ReturnType<typeof listMyLoginActivity>>,
+  TError = ErrorType<void>,
+>(
+  params?: ListMyLoginActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyLoginActivity>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Sign-in history for the past 365 days, newest first, 20 per page
+ */
+
+export function useListMyLoginActivity<
+  TData = Awaited<ReturnType<typeof listMyLoginActivity>>,
+  TError = ErrorType<void>,
+>(
+  params?: ListMyLoginActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyLoginActivity>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListMyLoginActivityQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 /**
  * @summary The signed-in user
