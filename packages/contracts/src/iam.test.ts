@@ -5,11 +5,14 @@ import {
   BUILT_IN_ROLE_DEFAULTS,
   BUILT_IN_ROLE_KEYS,
   canGrant,
+  createInvitationRequestSchema,
   createRoleRequestSchema,
   effectivePermissions,
   PERMISSION_CATALOGUE,
   permissionSchema,
   ROLE_PRESETS,
+  setMemberRolesRequestSchema,
+  updateRoleRequestSchema,
   withImpliedView,
 } from './iam';
 
@@ -168,5 +171,73 @@ describe('createRoleRequestSchema', () => {
     expect(createRoleRequestSchema.safeParse({ ...base, permissions: ['nope.view'] }).success).toBe(
       false,
     );
+  });
+});
+
+describe('schema limits', () => {
+  const role = (over: object) => ({
+    name: 'Front desk',
+    permissions: ['students.view'],
+    requiresTwoFactor: false,
+    ...over,
+  });
+  const ok = (n: number) => 'a'.repeat(n);
+
+  it('bounds the role name to 2-40 characters', () => {
+    const results = [1, 2, 40, 41].map(
+      (n) => createRoleRequestSchema.safeParse(role({ name: ok(n) })).success,
+    );
+    expect(results).toEqual([false, true, true, false]);
+  });
+
+  it('bounds the description to 200 characters', () => {
+    expect(createRoleRequestSchema.safeParse(role({ description: ok(200) })).success).toBe(true);
+    expect(createRoleRequestSchema.safeParse(role({ description: ok(201) })).success).toBe(false);
+  });
+
+  it('bounds the invitee name to 2-80 characters', () => {
+    const results = [1, 2, 80, 81].map(
+      (n) =>
+        createInvitationRequestSchema.safeParse({ email: 'a@b.co', name: ok(n), roleIds: ['r1'] })
+          .success,
+    );
+    expect(results).toEqual([false, true, true, false]);
+  });
+
+  it('requires at least one role id', () => {
+    expect(
+      createInvitationRequestSchema.safeParse({ email: 'a@b.co', name: 'Anita', roleIds: [] })
+        .success,
+    ).toBe(false);
+    expect(setMemberRolesRequestSchema.safeParse({ roleIds: [] }).success).toBe(false);
+  });
+
+  it('trims and lower-cases the invitation email', () => {
+    const parsed = createInvitationRequestSchema.parse({
+      email: '  Anita@Example.COM ',
+      name: 'Anita',
+      roleIds: ['r1'],
+    });
+    expect(parsed.email).toBe('anita@example.com');
+  });
+
+  it('removes duplicate permissions and role ids', () => {
+    expect(
+      createRoleRequestSchema.parse(role({ permissions: ['students.view', 'students.view'] }))
+        .permissions,
+    ).toEqual(['students.view']);
+    expect(setMemberRolesRequestSchema.parse({ roleIds: ['a', 'a', 'b'] }).roleIds).toEqual([
+      'a',
+      'b',
+    ]);
+  });
+
+  it('needs at least one field to update a role', () => {
+    expect(updateRoleRequestSchema.safeParse({}).success).toBe(false);
+    expect(updateRoleRequestSchema.safeParse({ requiresTwoFactor: false }).success).toBe(true);
+  });
+
+  it('freezes the shared permission list', () => {
+    expect(Object.isFrozen(ALL_PERMISSIONS)).toBe(true);
   });
 });

@@ -61,8 +61,8 @@ export const PERMISSION_CATALOGUE: readonly {
   { module: 'iam', actions: ['view', 'manage'] },
 ];
 
-export const ALL_PERMISSIONS: readonly string[] = PERMISSION_CATALOGUE.flatMap((m) =>
-  m.actions.map((a) => `${m.module}.${a}`),
+export const ALL_PERMISSIONS: readonly string[] = Object.freeze(
+  PERMISSION_CATALOGUE.flatMap((m) => m.actions.map((a) => `${m.module}.${a}`)),
 );
 
 /** A permission key, `module.action`. Validate with `permissionSchema`. */
@@ -133,7 +133,7 @@ export const BUILT_IN_ROLE_DEFAULTS: Record<
   ADMIN: {
     name: 'Admin',
     description: 'Runs the school office with access to every module.',
-    permissions: ALL_PERMISSIONS,
+    permissions: [...ALL_PERMISSIONS],
     requiresTwoFactor: true,
   },
   ACCOUNTANT: {
@@ -209,7 +209,7 @@ export const ROLE_PRESETS: {
   readOnly: ALL_PERMISSIONS.filter((p) => p.endsWith('.view')),
   editor: ALL_PERMISSIONS.filter((p) => /\.(view|create|edit)$/.test(p)),
   manager: ALL_PERMISSIONS.filter((p) => !p.endsWith('.delete') && !p.startsWith('iam.')),
-  fullAccess: ALL_PERMISSIONS,
+  fullAccess: [...ALL_PERMISSIONS],
 };
 
 /* ------------------------------------------------------------------ */
@@ -250,8 +250,13 @@ export function withImpliedView(perms: Iterable<string>): string[] {
 /* Schemas (spec §8-9)                                                 */
 /* ------------------------------------------------------------------ */
 
-const permissionsField = z.array(permissionSchema).max(ALL_PERMISSIONS.length);
-const roleNameField = z.string().trim().min(2).max(60);
+const unique = <T extends string>(xs: T[]): T[] => [...new Set(xs)];
+const permissionsField = z
+  .array(permissionSchema)
+  .max(ALL_PERMISSIONS.length * 2)
+  .transform(unique);
+const roleIdsField = z.array(z.string()).min(1).transform(unique);
+const roleNameField = z.string().trim().min(2).max(40);
 const roleDescriptionField = z.string().trim().max(200);
 const personNameField = z.string().trim().min(2).max(80);
 
@@ -278,12 +283,16 @@ export const createRoleRequestSchema = z.object({
 });
 export type CreateRoleRequest = z.infer<typeof createRoleRequestSchema>;
 
-export const updateRoleRequestSchema = z.object({
-  name: roleNameField.optional(),
-  description: roleDescriptionField.optional(),
-  permissions: permissionsField.optional(),
-  requiresTwoFactor: z.boolean().optional(),
-});
+export const updateRoleRequestSchema = z
+  .object({
+    name: roleNameField.optional(),
+    description: roleDescriptionField.optional(),
+    permissions: permissionsField.optional(),
+    requiresTwoFactor: z.boolean().optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), {
+    message: 'Change at least one field',
+  });
 export type UpdateRoleRequest = z.infer<typeof updateRoleRequestSchema>;
 
 export const permissionCatalogueResponseSchema = z.object({
@@ -319,7 +328,7 @@ export const membersPageSchema = z.object({
 export type MembersPage = z.infer<typeof membersPageSchema>;
 
 export const setMemberRolesRequestSchema = z.object({
-  roleIds: z.array(z.string()).min(1),
+  roleIds: roleIdsField,
 });
 export type SetMemberRolesRequest = z.infer<typeof setMemberRolesRequestSchema>;
 
@@ -337,7 +346,7 @@ export type Invitation = z.infer<typeof invitationSchema>;
 export const createInvitationRequestSchema = z.object({
   email: emailField,
   name: personNameField,
-  roleIds: z.array(z.string()).min(1),
+  roleIds: roleIdsField,
 });
 export type CreateInvitationRequest = z.infer<typeof createInvitationRequestSchema>;
 
