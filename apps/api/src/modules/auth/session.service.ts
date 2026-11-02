@@ -7,7 +7,12 @@ import { EmailService } from '../../core/email/email.service';
 import { passwordChangedEmail } from '../../core/email/templates/password-changed';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
-import type { Session, SessionRevokedReason, TenantStatus } from '../../generated/prisma/client';
+import type {
+  Prisma,
+  Session,
+  SessionRevokedReason,
+  TenantStatus,
+} from '../../generated/prisma/client';
 import type { MemberAccess } from '../iam/permissions';
 import { MAX_USER_AGENT_LENGTH } from './auth-events.service';
 import { randomToken, sha256 } from './crypto';
@@ -144,13 +149,29 @@ export class SessionService {
     userId: string,
     reason: SessionRevokedReason,
     exceptSessionId?: string,
+    tx?: Prisma.TransactionClient,
   ): Promise<void> {
-    await this.prisma.session.updateMany({
+    await (tx ?? this.prisma).session.updateMany({
       where: {
         userId,
         revokedAt: null,
         ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}),
       },
+      data: { revokedAt: new Date(), revokedReason: reason },
+    });
+  }
+
+  /**
+   * Ends every live session of one membership, i.e. one person at one school. Pass `tx` to do it
+   * in the caller's transaction, so a status change and the end of the sessions commit together.
+   */
+  async revokeAllForMembership(
+    membershipId: string,
+    reason: SessionRevokedReason,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    await (tx ?? this.prisma).session.updateMany({
+      where: { membershipId, revokedAt: null },
       data: { revokedAt: new Date(), revokedReason: reason },
     });
   }

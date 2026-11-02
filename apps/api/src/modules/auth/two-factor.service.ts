@@ -35,6 +35,7 @@ import { generateRecoveryCodes, hashRecoveryCode, normaliseRecoveryCode } from '
 import type { RequestAuth } from './request-auth';
 import { decryptSecret, encryptSecret } from './secret-box';
 import { generateTotpSecret, matchTotpStep, otpauthUrl } from './totp';
+import { clearTwoFactorState } from './two-factor-state';
 
 export const MAX_WRONG_TWO_FACTOR_CODES = 5;
 export const TWO_FACTOR_PAUSE_SECONDS = 15 * 60;
@@ -246,12 +247,7 @@ export class TwoFactorService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: user.id },
-        data: { totpSecretEnc: null, totpEnabledAt: null, totpLastStep: null },
-      });
-      await tx.recoveryCode.deleteMany({ where: { userId: user.id } });
-      await this.devices.clearTrustForUser(user.id, tx);
+      await clearTwoFactorState(tx, user.id);
     });
     await this.afterChange('TWO_FACTOR_DISABLED', 'DISABLED', user.email, auth, meta);
   }

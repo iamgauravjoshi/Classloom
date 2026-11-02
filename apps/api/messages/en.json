@@ -49,6 +49,16 @@
       "warning": "If this wasn't you, reset your password now.",
       "button": "Reset password"
     },
+    "twoFactorResetByAdmin": {
+      "subject": "Your school turned off two-step sign-in",
+      "heading": "Your school turned off two-step sign-in",
+      "intro": "An admin at {school} turned off two-step sign-in for your Classloom account. Your recovery codes and trusted devices were removed, and you were signed out of every school.",
+      "schoolLabel": "School",
+      "timeLabel": "Time",
+      "time": "{date} at {time} IST",
+      "warning": "If you weren't expecting this, tell your school admin. You can turn two-step sign-in back on in Security settings.",
+      "button": "Open Security settings"
+    },
     "twoFactorChanged": {
       "timeLabel": "Time",
       "time": "{date} at {time} IST",
