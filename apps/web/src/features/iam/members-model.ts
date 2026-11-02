@@ -126,3 +126,15 @@ export function actionsFor(
   }
   return actions;
 }
+
+/**
+ * The roles the Change roles dialog lists: what the viewer may give, plus what the person holds
+ * that the viewer cannot change. Empty means there is nothing to choose (Save stays off).
+ */
+export function offeredRoles(
+  roles: readonly Role[],
+  heldIds: ReadonlySet<string>,
+  assignableIds: ReadonlySet<string>,
+): Role[] {
+  return roles.filter((role) => assignableIds.has(role.id) || heldIds.has(role.id));
+}

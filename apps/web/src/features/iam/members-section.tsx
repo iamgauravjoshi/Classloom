@@ -465,7 +465,7 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
             ) : null}
             {showMembers && members.isFetchNextPageError ? (
               <Alert variant="destructive" className="flex flex-col items-start gap-3">
-                <AlertDescription>{t('loadMoreFailed')}</AlertDescription>
+                <AlertDescription role="alert">{t('loadMoreFailed')}</AlertDescription>
                 <Button
                   variant="outline"
                   className={BUTTON_CLASS}
@@ -498,7 +498,6 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
       />
       <ResetTwoFactorDialog
         row={dialog?.kind === 'reset' ? dialog.row : null}
-        schoolCode={viewer.schoolCode}
         onClose={closeDialog}
         onDone={reload}
         onReauth={reauth}

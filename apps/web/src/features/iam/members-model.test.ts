@@ -7,6 +7,7 @@ import {
   canActOnMember,
   filterInvitations,
   mergeMembersAndInvites,
+  offeredRoles,
   type Row,
 } from './members-model';
 
@@ -204,5 +205,23 @@ describe('actionsFor', () => {
     );
     expect(actionsFor(owner, viewer)).toEqual([]);
     expect(actionsFor(owner, { ...viewer, isOwner: true })).toEqual(['roles', 'deactivate']);
+  });
+});
+
+describe('offeredRoles', () => {
+  const a = role({ id: 'a' });
+  const b = role({ id: 'b' });
+  const c = role({ id: 'c' });
+
+  it('lists what the viewer may give and what the person holds', () => {
+    expect(offeredRoles([a, b, c], new Set(['c']), new Set(['a'])).map((r) => r.id)).toEqual([
+      'a',
+      'c',
+    ]);
+  });
+
+  it('is empty when the viewer can give none and the person holds none, or there are no roles', () => {
+    expect(offeredRoles([a, b], new Set(), new Set())).toEqual([]);
+    expect(offeredRoles([], new Set(['a']), new Set(['a']))).toEqual([]);
   });
 });

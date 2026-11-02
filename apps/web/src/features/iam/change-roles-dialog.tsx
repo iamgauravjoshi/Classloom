@@ -20,7 +20,7 @@ import { BUTTON_CLASS } from '../auth/auth-ui';
 import type { FinalFocus } from './confirm-dialogs';
 import { iamErrorOf, isStale } from './iam-errors';
 import { RoleChecklist, useIamErrorText, useLastShown } from './iam-ui';
-import type { MemberRow } from './members-model';
+import { type MemberRow, offeredRoles } from './members-model';
 
 const NOT_CACHED = { mutation: { gcTime: 0 } } as const;
 
@@ -88,9 +88,7 @@ function RolesForm({
 
   // What the viewer may offer, plus what the person holds that the viewer cannot change.
   const locked = new Set([...heldIds].filter((id) => !assignableIds.has(id)));
-  const offered = (roles ?? []).filter(
-    (role) => assignableIds.has(role.id) || heldIds.has(role.id),
-  );
+  const offered = offeredRoles(roles ?? [], heldIds, assignableIds);
 
   async function save() {
     if (!roles) return;
@@ -140,6 +138,10 @@ function RolesForm({
           <Spinner aria-hidden="true" />
           {t('loading')}
         </p>
+      ) : offered.length === 0 ? (
+        <p className="text-muted-foreground text-sm" role="status">
+          {t('noneToAssign')}
+        </p>
       ) : (
         <RoleChecklist
           legend={t('roles')}
@@ -169,7 +171,11 @@ function RolesForm({
         <Button type="button" variant="outline" className={BUTTON_CLASS} onClick={onClose}>
           {t('cancel')}
         </Button>
-        <Button type="submit" className={BUTTON_CLASS} disabled={pending || !roles || rolesFailed}>
+        <Button
+          type="submit"
+          className={BUTTON_CLASS}
+          disabled={pending || !roles || rolesFailed || offered.length === 0}
+        >
           {pending ? <Spinner aria-hidden="true" /> : null}
           {pending ? t('submitting') : t('submit')}
         </Button>

@@ -705,7 +705,8 @@
       "saved": "Roles updated for {name}.",
       "required": "Choose at least one role.",
       "loading": "Loading roles",
-      "rolesLoadFailed": "We couldn't load the roles. Close this and try again."
+      "rolesLoadFailed": "We couldn't load the roles. Close this and try again.",
+      "noneToAssign": "You can't assign any roles."
     },
     "confirm": {
       "cancel": "Cancel",

@@ -16,10 +16,9 @@ import {
 } from '@classloom/ui/components/ui/dialog';
 import { Spinner } from '@classloom/ui/components/ui/spinner';
 import { toast } from '@classloom/ui/components/ui/toast';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
-import { reauthPath } from '../account/recent-sign-in';
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { iamErrorOf, isStale } from './iam-errors';
 import { useIamErrorText, useLastShown } from './iam-ui';
@@ -178,13 +177,12 @@ export function DeactivateDialog({
  */
 export function ResetTwoFactorDialog({
   row,
-  schoolCode,
   onClose,
   onDone,
+  onReauth,
   finalFocus,
-}: RowDialogProps<MemberRow> & { schoolCode: string }) {
+}: RowDialogProps<MemberRow>) {
   const t = useTranslations('iam.confirm.reset');
-  const locale = useLocale();
   const errorText = useIamErrorText();
   const reset = useResetMemberTwoFactor(NOT_CACHED);
   const [error, setError] = useState<string | null>(null);
@@ -203,7 +201,7 @@ export function ResetTwoFactorDialog({
       const outcome = iamErrorOf(failure);
       if (outcome === 'recentSignIn') {
         setRedirecting(true);
-        window.location.assign(reauthPath(locale, schoolCode, `/${locale}/users-roles`));
+        onReauth();
       } else {
         if (isStale(failure)) onDone();
         setError(errorText(outcome));
