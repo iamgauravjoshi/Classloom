@@ -10,13 +10,13 @@ const groups: NavGroup[] = [
   {
     key: 'people',
     items: [
-      { key: 'students', href: '/students', icon: X, permission: 'students.read' },
+      { key: 'students', href: '/students', icon: X, permission: 'students.view' },
       {
         key: 'fees',
         href: '/fees',
         icon: X,
-        permission: 'fees.read',
-        children: [{ key: 'collect', href: '/fees/collect', icon: X, permission: 'fees.collect' }],
+        permission: 'fees.view',
+        children: [{ key: 'collect', href: '/fees/collect', icon: X, permission: 'fees.create' }],
       },
       { key: 'help', href: '/help', icon: X },
     ],
@@ -26,13 +26,13 @@ const groups: NavGroup[] = [
 
 describe('filterNav', () => {
   it('keeps items the user may see and items without a permission', () => {
-    const out = filterNav(groups, new Set(['students.read', 'fees.read']));
+    const out = filterNav(groups, new Set(['students.view', 'fees.view']));
     expect(out.map((g) => g.key)).toEqual(['people']);
     expect(out[0]?.items.map((i) => i.key)).toEqual(['students', 'fees', 'help']);
   });
 
   it('removes children the user lacks permission for', () => {
-    const out = filterNav(groups, new Set(['students.read', 'fees.read']));
+    const out = filterNav(groups, new Set(['students.view', 'fees.view']));
     expect(out[0]?.items[1]?.children).toEqual([]);
   });
 

@@ -1,4 +1,4 @@
-import { ALL_PERMISSIONS, type AuthSession, BUILT_IN_ROLE_DEFAULTS } from '@classloom/contracts';
+import type { AuthSession } from '@classloom/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { ENV } from '../../core/config/config.module';
@@ -8,6 +8,7 @@ import { passwordChangedEmail } from '../../core/email/templates/password-change
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
 import type { Session, SessionRevokedReason, TenantStatus } from '../../generated/prisma/client';
+import type { MemberAccess } from '../iam/permissions';
 import { MAX_USER_AGENT_LENGTH } from './auth-events.service';
 import { randomToken, sha256 } from './crypto';
 import { KnownDeviceService } from './known-device.service';
@@ -211,10 +212,13 @@ export class SessionService {
     }
   }
 
+  /**
+   * The contract session. `access` is the member's roles and effective permissions as loaded
+   * for this request or sign-in (`request.auth` or `findActiveMembership`).
+   */
   async toAuthSession(
     resolved: ResolvedSession,
-    // IAM: replaced in Task 3 (the member's roles and permissions are loaded from the database).
-    _membership: { id: string },
+    access: Pick<MemberAccess, 'roles' | 'permissions'>,
     user: {
       id: string;
       name: string;
@@ -240,9 +244,10 @@ export class SessionService {
       },
       school: { id: tenant.id, code: tenant.code.toUpperCase(), name: tenant.name },
       campus: { id: campus.id, name: campus.name },
-      // IAM: replaced in Task 3. Until then every active member is treated as an owner.
-      roles: [{ key: 'OWNER', name: BUILT_IN_ROLE_DEFAULTS.OWNER.name }],
-      permissions: [...ALL_PERMISSIONS],
+      roles: access.roles.map((role) => ({ key: role.key, name: role.name })),
+      // Catalogue order (MemberAccess builds the set in that order).
+      permissions: [...access.permissions],
+      // Set from the session once required two-step sign-in lands (spec §10).
       twoFactorSetupRequired: false,
       remember: session.remember,
       expiresAt: session.expiresAt.toISOString(),

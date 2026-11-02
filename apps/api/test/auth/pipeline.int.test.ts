@@ -77,7 +77,7 @@ describe('request pipeline', () => {
       const body = authSessionSchema.parse(res.body);
       expect(body.school.code).toBe(s.code);
       expect(body.school.code).toBe(body.school.code.toUpperCase());
-      // IAM: replaced in Task 3 (every active member is treated as an owner until then).
+      // The seeded member holds Owner, which means every permission.
       expect(body.roles).toEqual([{ key: 'OWNER', name: 'Owner' }]);
       expect(body.permissions).toEqual([...ALL_PERMISSIONS]);
       expect(body.twoFactorSetupRequired).toBe(false);

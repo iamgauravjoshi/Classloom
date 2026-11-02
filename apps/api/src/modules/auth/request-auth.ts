@@ -1,11 +1,18 @@
+import type { MemberRole } from '../iam/permissions';
+
 /** Who is calling, resolved from the session cookie by `SessionMiddleware`. */
 export interface RequestAuth {
   sessionId: string;
   userId: string;
   tenantId: string;
   membershipId: string;
-  // IAM: replaced in Task 3 (roles, permissions, isOwner). Every active member is an owner until then.
-  role: 'OWNER';
+  /** The member's roles, loaded on every request (ordered by name). */
+  roles: MemberRole[];
+  /** Effective permissions, computed on every request: a change applies to the next request. */
+  permissions: ReadonlySet<string>;
+  isOwner: boolean;
+  /** The session must set up two-step sign-in before anything else (spec §10). */
+  twoFactorSetupRequired: boolean;
   remember: boolean;
   authenticatedAt: Date;
 }

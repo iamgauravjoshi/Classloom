@@ -52,10 +52,8 @@
     "more": "More"
   },
   "roles": {
-    "admin": "School admin",
-    "teacher": "Teacher",
-    "parent": "Parent",
-    "student": "Student"
+    "owner": "Owner",
+    "none": "No role"
   },
   "dashboard": {
     "title": "Dashboard",

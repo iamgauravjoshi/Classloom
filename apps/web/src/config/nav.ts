@@ -18,7 +18,7 @@ export interface NavItem {
   key: string;
   href: string;
   icon: Icon;
-  /** Permission key required to see the item; items without one are always visible. */
+  /** Catalogue permission (`module.action`) required to see the item; none means always visible. */
   permission?: string;
   children?: NavItem[];
 }
@@ -37,28 +37,28 @@ export const navConfig: NavGroup[] = [
   {
     key: 'people',
     items: [
-      { key: 'students', href: '/students', icon: IconSchool, permission: 'students.read' },
-      { key: 'admissions', href: '/admissions', icon: IconUserPlus, permission: 'admissions.read' },
-      { key: 'parents', href: '/parents', icon: IconUsersGroup, permission: 'parents.read' },
-      { key: 'staff', href: '/staff', icon: IconUserStar, permission: 'staff.read' },
+      { key: 'students', href: '/students', icon: IconSchool, permission: 'students.view' },
+      { key: 'admissions', href: '/admissions', icon: IconUserPlus, permission: 'admissions.view' },
+      { key: 'parents', href: '/parents', icon: IconUsersGroup, permission: 'parents.view' },
+      { key: 'staff', href: '/staff', icon: IconUserStar, permission: 'staff.view' },
     ],
   },
   {
     key: 'academic',
     items: [
-      { key: 'classes', href: '/classes', icon: IconUsers, permission: 'classes.read' },
-      { key: 'subjects', href: '/subjects', icon: IconBook, permission: 'subjects.read' },
+      { key: 'classes', href: '/classes', icon: IconUsers, permission: 'classes.view' },
+      { key: 'subjects', href: '/subjects', icon: IconBook, permission: 'subjects.view' },
       {
         key: 'timetable',
         href: '/timetable',
         icon: IconCalendarTime,
-        permission: 'timetable.read',
+        permission: 'timetable.view',
       },
     ],
   },
   {
     key: 'finance',
-    items: [{ key: 'fees', href: '/fees', icon: IconCash, permission: 'fees.read' }],
+    items: [{ key: 'fees', href: '/fees', icon: IconCash, permission: 'fees.view' }],
   },
   {
     key: 'settings',
@@ -67,9 +67,9 @@ export const navConfig: NavGroup[] = [
         key: 'schoolProfile',
         href: '/school-profile',
         icon: IconSettings,
-        permission: 'settings.school',
+        permission: 'settings.view',
       },
-      { key: 'usersRoles', href: '/users-roles', icon: IconUserShield, permission: 'iam.users' },
+      { key: 'usersRoles', href: '/users-roles', icon: IconUserShield, permission: 'iam.view' },
     ],
   },
 ];
@@ -79,8 +79,3 @@ export const comingSoonSections: string[] = navConfig
   .flatMap((group) => group.items)
   .map((item) => item.href.slice(1))
   .filter((section) => section !== 'dashboard');
-
-/** Every permission a nav item asks for. The school owner holds all of them until Part 3. */
-export const allNavPermissions: string[] = navConfig
-  .flatMap((group) => group.items)
-  .flatMap((item) => (item.permission ? [item.permission] : []));

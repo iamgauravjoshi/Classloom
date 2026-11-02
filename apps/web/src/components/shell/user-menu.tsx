@@ -19,7 +19,7 @@ import { useTranslations } from 'next-intl';
 
 import { clearSentCode } from '@/features/auth/sent-code';
 import { Link, useRouter } from '@/i18n/navigation';
-import type { Role } from '@/lib/session';
+import type { RoleLabel } from '@/lib/session';
 import { leavesAfterSignOut } from '@/lib/sign-out';
 
 const initials = (name: string) =>
@@ -32,10 +32,10 @@ const initials = (name: string) =>
 
 export function UserMenu({
   user,
-  role,
+  roleLabel,
 }: {
   user: { name: string; avatarUrl?: string };
-  role: Role;
+  roleLabel: RoleLabel;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -72,7 +72,9 @@ export function UserMenu({
         <DropdownMenuGroup>
           <DropdownMenuLabel className="flex flex-col">
             <span className="text-foreground truncate">{user.name}</span>
-            <span className="truncate text-xs font-normal">{t(`roles.${role}`)}</span>
+            <span className="truncate text-xs font-normal">
+              {roleLabel.kind === 'named' ? roleLabel.name : t(`roles.${roleLabel.kind}`)}
+            </span>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

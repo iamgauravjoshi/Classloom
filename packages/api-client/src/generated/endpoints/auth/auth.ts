@@ -52,7 +52,7 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
 };
 
 /**
- * @summary The signed-in user, school and role
+ * @summary The signed-in user, school, roles and permissions
  */
 export const getAuthSession = (signal?: AbortSignal) => {
   return apiFetch<AuthSessionDto>({ url: `/auth/session`, method: 'GET', signal });
@@ -129,7 +129,7 @@ export function useGetAuthSession<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary The signed-in user, school and role
+ * @summary The signed-in user, school, roles and permissions
  */
 
 export function useGetAuthSession<

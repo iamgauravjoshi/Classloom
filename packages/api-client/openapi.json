@@ -270,7 +270,7 @@
             "cookie": []
           }
         ],
-        "summary": "The signed-in user, school and role",
+        "summary": "The signed-in user, school, roles and permissions",
         "tags": [
           "auth"
         ]
