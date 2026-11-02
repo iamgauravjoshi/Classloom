@@ -565,6 +565,53 @@
       "invalidBody": "Reset links work once and expire after 30 minutes.",
       "requestNew": "Request a new link",
       "backToSignIn": "Back to sign in"
+    },
+    "join": {
+      "metaTitle": "Join your school",
+      "loading": "Checking your invitation",
+      "title": "You're invited",
+      "invitation": "Join <strong>{school}</strong> as {roles}.",
+      "forPerson": "Invitation for {name} ({email}).",
+      "join": "Join",
+      "joining": "Joining",
+      "retry": "Try again",
+      "otherAccount": {
+        "title": "This invitation is for {email}",
+        "body": "You're signed in as someone else. Sign out to join {school} with this invitation.",
+        "action": "Sign out and join",
+        "working": "Signing out"
+      },
+      "gone": {
+        "title": "This link has expired or was already used",
+        "body": "Ask your school to send you a new invitation.",
+        "signIn": "Go to sign-in"
+      },
+      "alreadyMember": {
+        "title": "You're already a member of {school}",
+        "body": "Sign in to carry on.",
+        "signIn": "Go to sign-in"
+      },
+      "welcome": {
+        "title": "Welcome to {school}",
+        "body": "You're signed in. You can set a password now, or keep signing in with an emailed code.",
+        "bodyDone": "You're signed in and ready to go.",
+        "setPassword": "Set a password",
+        "continue": "Continue"
+      }
     }
+  },
+  "accessDenied": {
+    "title": "You don't have access to this page",
+    "body": "Your role doesn't include this page. If you need it, ask a school owner or administrator.",
+    "backToDashboard": "Back to dashboard",
+    "toAccount": "Go to my account"
+  },
+  "setupTwoFactor": {
+    "metaTitle": "Set up two-step sign-in",
+    "title": "Set up two-step sign-in",
+    "reason": "Your school requires two-step sign-in for your role.",
+    "explain": "Set it up now with an authenticator app. Until it is on, you can't use the rest of Classloom.",
+    "signOut": "Sign out",
+    "signingOut": "Signing out"
   }
 }

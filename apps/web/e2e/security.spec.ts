@@ -8,7 +8,12 @@ import {
 } from '@playwright/test';
 
 import { latestEmailTo, mailIds } from './support/mailpit';
-import { createVerifiedSchool, signInWithCode, WEB_ORIGIN } from './support/school';
+import {
+  createVerifiedSchool,
+  relaxOwnerTwoFactor,
+  signInWithCode,
+  WEB_ORIGIN,
+} from './support/school';
 import { enableTwoFactorFor, totpCode } from './support/totp';
 
 // Everything here signs in and out, ends sessions or changes two-step settings, so each test owns a
@@ -290,6 +295,8 @@ test.describe('a sign-in that is too old', () => {
     await signInAndSetPassword(request, first);
     await request.dispose();
     await apiSignIn(page.request, second);
+    // Owner requires two-step by default, which would send this session to the setup page.
+    await relaxOwnerTwoFactor(page.request);
 
     await page.route('**/api/me/two-factor/setup', (route) =>
       route.fulfill({

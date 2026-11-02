@@ -19,7 +19,7 @@ describe('navConfig', () => {
     expect(
       Object.fromEntries(navItems.map((item) => [item.href, item.permission ?? null])),
     ).toEqual({
-      '/dashboard': null,
+      '/dashboard': 'dashboard.view',
       '/students': 'students.view',
       '/admissions': 'admissions.view',
       '/parents': 'parents.view',

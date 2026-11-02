@@ -1,7 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 
-import { createVerifiedSchool, signInWithCode, type VerifiedSchool } from './support/school';
+import { inviteAs, newInvitee } from './support/invitations';
+import {
+  createVerifiedSchool,
+  signInWithCode,
+  signInWithCodeKeepingRequirement,
+  type VerifiedSchool,
+  WEB_ORIGIN,
+} from './support/school';
 import { enableTwoFactorFor } from './support/totp';
 
 const PAGES = [
@@ -157,6 +164,69 @@ for (const theme of ['light', 'dark'] as const) {
 
         await dialog.getByRole('button', { name: 'Next' }).click();
         await expect(dialog.getByLabel('Authenticator code')).toBeFocused();
+        await expectNoViolations(page);
+      });
+
+      test('join, the invitation, has no WCAG 2.1 AA violations', async ({ page, playwright }) => {
+        const owner = await playwright.request.newContext();
+        const own = await createVerifiedSchool(owner);
+        await signInWithCode(owner, own);
+        const link = await inviteAs(owner, newInvitee());
+        await owner.dispose();
+
+        await page.goto(link);
+        await expect(page.getByRole('button', { name: 'Join', exact: true })).toBeVisible();
+        await expect(page).toHaveURL(/\/en\/join$/);
+        await expectNoViolations(page);
+      });
+
+      test('join, a spent link, has no WCAG 2.1 AA violations', async ({ page }) => {
+        await page.goto(`/en/join?token=${UNUSED_TOKEN}`);
+        await expect(
+          page.getByRole('heading', {
+            level: 1,
+            name: 'This link has expired or was already used',
+          }),
+        ).toBeVisible();
+        await expectNoViolations(page);
+      });
+
+      test('setup-two-factor has no WCAG 2.1 AA violations', async ({ page, playwright }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCodeKeepingRequirement(page.request, own);
+
+        await page.goto('/en/dashboard');
+        await expect(page).toHaveURL(/\/en\/setup-two-factor/);
+        await expect(
+          page.getByRole('heading', { level: 1, name: 'Set up two-step sign-in' }),
+        ).toBeVisible();
+        await expect(page.getByRole('img', { name: /QR code/ })).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Next' }).click();
+        await expect(page.getByLabel('Authenticator code')).toBeFocused();
+        await expectNoViolations(page);
+      });
+
+      test('the access-denied page has no WCAG 2.1 AA violations', async ({ page, playwright }) => {
+        const owner = await playwright.request.newContext();
+        const own = await createVerifiedSchool(owner);
+        await signInWithCode(owner, own);
+        const link = await inviteAs(owner, newInvitee());
+        await owner.dispose();
+        // A Teacher has no fees permission.
+        const accepted = await page.request.post(`${WEB_ORIGIN}/api/invitations/accept`, {
+          data: { token: new URL(link).searchParams.get('token') },
+          headers: { origin: WEB_ORIGIN },
+        });
+        expect(accepted.status(), await accepted.text()).toBe(200);
+
+        await page.goto('/en/fees');
+        await expect(
+          page.getByRole('heading', { level: 2, name: "You don't have access to this page" }),
+        ).toBeVisible();
         await expectNoViolations(page);
       });
 

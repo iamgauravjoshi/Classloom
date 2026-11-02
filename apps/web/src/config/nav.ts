@@ -32,7 +32,14 @@ export interface NavGroup {
 export const navConfig: NavGroup[] = [
   {
     key: 'main',
-    items: [{ key: 'dashboard', href: '/dashboard', icon: IconLayoutDashboard }],
+    items: [
+      {
+        key: 'dashboard',
+        href: '/dashboard',
+        icon: IconLayoutDashboard,
+        permission: 'dashboard.view',
+      },
+    ],
   },
   {
     key: 'people',

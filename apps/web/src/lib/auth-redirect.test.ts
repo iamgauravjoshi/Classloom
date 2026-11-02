@@ -20,6 +20,7 @@ describe('isPublicPath', () => {
       '/en/sign-in',
       '/en/forgot-password',
       '/en/reset-password',
+      '/en/join',
       '/en/register-school',
       '/en/register-school/verify',
       '/en/terms',
@@ -85,7 +86,19 @@ describe('signedInAuthRedirect', () => {
   });
 });
 
+describe('signedInAuthRedirect for join', () => {
+  it('leaves the join page alone: an invitation may be opened while signed in as someone else', () => {
+    expect(signedInAuthRedirect('/en/join')).toBeNull();
+    expect(signedInAuthRedirect('/en/join?token=abc')).toBeNull();
+  });
+});
+
 describe('signedInAuthRedirect with reauth', () => {
+  it('lets a session that must set up two-step prove itself again, coming back to the setup page', () => {
+    const next = encodeURIComponent('/en/setup-two-factor?next=/en/dashboard');
+    expect(signedInAuthRedirect(`/en/sign-in?school=GISD&next=${next}&reauth=1`)).toBeNull();
+  });
+
   it('lets a signed-in visitor stay on sign-in when reauth=1', () => {
     expect(
       signedInAuthRedirect('/en/sign-in?next=%2Fen%2Faccount&reauth=1&school=GISD'),

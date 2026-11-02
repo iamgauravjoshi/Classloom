@@ -7,6 +7,7 @@ const PUBLIC_SECTIONS: ReadonlySet<string> = new Set([
   'sign-in',
   'forgot-password',
   'reset-password',
+  'join',
   'register-school',
   'terms',
   'privacy',
@@ -56,7 +57,8 @@ export function signedInAuthRedirect(location: string): string | null {
   const locale = localeOf(pathname) ?? routing.defaultLocale;
   const dashboard = `/${locale}/dashboard`;
   const section = pathname.split('/')[2];
-  if (section === 'reset-password') return null;
+  // The join page stays too: an invitation may be opened while signed in as someone else.
+  if (section === 'reset-password' || section === 'join') return null;
   if (section === 'sign-in') {
     const query = new URLSearchParams(search);
     // Proving yourself again before a sensitive change is meant for a signed-in visitor.

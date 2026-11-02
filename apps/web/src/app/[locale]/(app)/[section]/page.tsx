@@ -11,10 +11,13 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
+import { AccessDenied } from '@/components/access-denied';
 import { AppPageHeader } from '@/components/app-page-header';
 import { comingSoonSections, navConfig } from '@/config/nav';
 import { Link } from '@/i18n/navigation';
 import { routing } from '@/i18n/routing';
+import { canOpenSection } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server-session';
 
 // Only the placeholder sections in the nav exist; any other single-segment path is a 404.
 export const dynamicParams = false;
@@ -46,6 +49,14 @@ export default async function ComingSoonPage({ params }: PageProps<'/[locale]/[s
   setRequestLocale(locale);
   const t = await getTranslations();
   const title = t(`nav.${key}`);
+
+  // The sidebar hides what the role lacks; a typed address gets this instead of the page.
+  const { permissions } = await requireServerSession();
+  if (!canOpenSection(section, permissions)) {
+    return (
+      <AccessDenied title={title} canOpenDashboard={canOpenSection('dashboard', permissions)} />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

@@ -77,10 +77,25 @@ export async function createVerifiedSchool(
 }
 
 /**
- * Signs the owner in with an emailed code, through the web app's `/api` proxy. Pass the page's
- * (or context's) `request` so the session cookie lands in that browser context.
+ * Signs the owner in with an emailed code, through the web app's `/api` proxy, and lets the owner
+ * use the whole app (see `relaxOwnerTwoFactor`). Pass the page's (or context's) `request` so the
+ * session cookie lands in that browser context.
  */
 export async function signInWithCode(
+  request: APIRequestContext,
+  school: Pick<VerifiedSchool, 'code' | 'email'>,
+  remember = true,
+): Promise<void> {
+  await signInWithCodeKeepingRequirement(request, school, remember);
+  // Owner requires two-step by default, which would limit the session to the setup routes.
+  await relaxOwnerTwoFactor(request);
+}
+
+/**
+ * The same sign-in, but the owner keeps the Owner role's two-step requirement: the session is
+ * limited to the setup routes, as a real new school's owner is. For reaching the setup page.
+ */
+export async function signInWithCodeKeepingRequirement(
   request: APIRequestContext,
   school: Pick<VerifiedSchool, 'code' | 'email'>,
   remember = true,
@@ -110,8 +125,6 @@ export async function signInWithCode(
     remember,
   });
   expect(verified.status(), await verified.text()).toBe(200);
-  // Owner requires two-step by default, which would limit the session to the setup routes.
-  await relaxOwnerTwoFactor(request);
 }
 
 /** The app code for a base32 secret, `offsetMs` from now. */
