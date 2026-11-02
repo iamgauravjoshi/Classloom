@@ -1,4 +1,4 @@
-import { ApiError } from '@classloom/api-client';
+import { ApiError, type AuthSessionDto, type TwoFactorChallengeDto } from '@classloom/api-client';
 
 export type JoinErrorKey = 'rateLimited' | 'temporarilyUnavailable' | 'network' | 'generic';
 
@@ -33,4 +33,19 @@ export function acceptOutcomeOf(error: unknown): AcceptOutcome {
     }
   }
   return { kind: 'error', key: commonKey(error) };
+}
+
+/** What a successful accept (200 or 202) leads to: the welcome, or the two-step code step. */
+export type AcceptResult =
+  { kind: 'signedIn' } | { kind: 'challenge'; challenge: string; expiresAt: number };
+
+export function acceptResultOf(result: AuthSessionDto | TwoFactorChallengeDto): AcceptResult {
+  if ('twoFactorRequired' in result) {
+    return {
+      kind: 'challenge',
+      challenge: result.challenge,
+      expiresAt: Date.parse(result.expiresAt),
+    };
+  }
+  return { kind: 'signedIn' };
 }

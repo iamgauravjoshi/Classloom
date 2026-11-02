@@ -7,7 +7,7 @@ import {
   signInWithCodeKeepingRequirement,
   WEB_ORIGIN,
 } from './support/school';
-import { totpCode } from './support/totp';
+import { enableTwoFactorFor, totpCode } from './support/totp';
 
 // Each test has a school of its own and no saved sign-in: they sign people in and out.
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -48,6 +48,33 @@ test.describe('joining from an invitation', () => {
     }
     await page.goto('/en/students');
     await expect(page.getByText(/is coming soon/)).toBeVisible();
+  });
+
+  test('a person with two-step on is asked for the app code, then lands in the school', async ({
+    page,
+    playwright,
+  }) => {
+    const request = await playwright.request.newContext();
+    // The invitee is already someone at another school, with two-step on.
+    const other = await createVerifiedSchool(request);
+    const { secret } = await enableTwoFactorFor(request, other);
+    const school = await createVerifiedSchool(request);
+    await signInWithCode(request, school);
+    const link = await inviteAs(request, { email: other.email, name: other.name });
+    await request.dispose();
+
+    await page.goto(link);
+    await page.getByRole('button', { name: 'Join', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Two-step sign-in' })).toBeVisible();
+    // The code that enabled two-step is spent: use the next 30-second step's.
+    await page
+      .getByLabel('Authenticator code')
+      .fill(totpCode(secret, new Date(Date.now() + 30_000)));
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Welcome to Global International School' }),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Continue' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
   });
 
   test('a spent link says it has expired', async ({ page, playwright }) => {
@@ -127,6 +154,14 @@ test.describe('required two-step setup', () => {
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByLabel('Authenticator code').fill(totpCode(key));
     await expect(page.getByRole('heading', { name: 'Save your recovery codes' })).toBeVisible();
+    // The codes are never shown again: no signing out, and leaving the page asks first.
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeDisabled();
+    const asked = await page.evaluate(() => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(asked).toBe(true);
     await page.getByRole('checkbox', { name: "I've saved these codes" }).check();
     await page.getByRole('button', { name: 'Done' }).click();
 

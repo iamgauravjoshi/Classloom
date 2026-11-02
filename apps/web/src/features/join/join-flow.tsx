@@ -22,7 +22,7 @@ import { leavesAfterSignOut } from '@/lib/sign-out';
 import { AuthLogo, BUTTON_CLASS } from '../auth/auth-ui';
 import { TwoFactorStep } from '../auth/two-factor-step';
 import { isOtherAccount } from './invitee';
-import { acceptOutcomeOf, type JoinErrorKey, previewErrorKey } from './join-errors';
+import { acceptOutcomeOf, acceptResultOf, type JoinErrorKey, previewErrorKey } from './join-errors';
 
 interface JoinFlowProps {
   /** The address of whoever is signed in in this browser (read by the page), if anyone. */
@@ -76,7 +76,8 @@ export function JoinFlow({ signedInEmail }: JoinFlowProps) {
       },
     },
   );
-  const accept = useAcceptInvitation();
+  // No caching: the token must not outlive the request in the mutation cache.
+  const accept = useAcceptInvitation({ mutation: { gcTime: 0 } });
   const signOut = useSignOut();
 
   const card = { logo: <AuthLogo />, copyright: t('copyright') };
@@ -86,12 +87,9 @@ export function JoinFlow({ signedInEmail }: JoinFlowProps) {
     setFailure(null);
     try {
       const result = await accept.mutateAsync({ data: { token } });
-      if ('twoFactorRequired' in result) {
-        setPhase({
-          step: 'two-factor',
-          challenge: result.challenge,
-          expiresAt: Date.parse(result.expiresAt),
-        });
+      const next = acceptResultOf(result);
+      if (next.kind === 'challenge') {
+        setPhase({ step: 'two-factor', challenge: next.challenge, expiresAt: next.expiresAt });
       } else {
         setPhase({ step: 'welcome' });
       }

@@ -1,7 +1,7 @@
 import { ApiError } from '@classloom/api-client';
 import { describe, expect, it } from 'vitest';
 
-import { acceptOutcomeOf, previewErrorKey } from './join-errors';
+import { acceptOutcomeOf, acceptResultOf, previewErrorKey } from './join-errors';
 
 const problem = (status: number, type = 'about:blank') =>
   new ApiError(status, { type, title: 't', status });
@@ -44,5 +44,26 @@ describe('acceptOutcomeOf', () => {
       key: 'temporarilyUnavailable',
     });
     expect(acceptOutcomeOf(problem(0))).toEqual({ kind: 'error', key: 'network' });
+  });
+});
+
+describe('acceptResultOf', () => {
+  it('maps a 202 two-step challenge to the code step, with the expiry in milliseconds', () => {
+    expect(
+      acceptResultOf({
+        twoFactorRequired: true,
+        challenge: 'abc',
+        expiresAt: '2026-11-02T10:00:00.000Z',
+      }),
+    ).toEqual({
+      kind: 'challenge',
+      challenge: 'abc',
+      expiresAt: Date.parse('2026-11-02T10:00:00.000Z'),
+    });
+  });
+
+  it('maps a 200 session to signed in', () => {
+    const session = { user: { id: 'u' }, permissions: [] } as never;
+    expect(acceptResultOf(session)).toEqual({ kind: 'signedIn' });
   });
 });

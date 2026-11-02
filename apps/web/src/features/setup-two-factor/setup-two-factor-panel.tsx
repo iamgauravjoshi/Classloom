@@ -6,7 +6,7 @@ import { Button } from '@classloom/ui/components/ui/button';
 import { toast } from '@classloom/ui/components/ui/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useRouter } from '@/i18n/navigation';
 import { leavesAfterSignOut } from '@/lib/sign-out';
@@ -42,6 +42,20 @@ export function SetupTwoFactorPanel({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [leaving, setLeaving] = useState(false);
+  // The recovery codes are on screen: they are never shown again, so leaving must be a choice.
+  const [locked, setLocked] = useState(false);
+  const guard = useRef(false);
+
+  useEffect(() => {
+    if (!locked) return;
+    const ask = (event: BeforeUnloadEvent) => {
+      if (!guard.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', ask);
+    return () => window.removeEventListener('beforeunload', ask);
+  }, [locked]);
   const signOut = useSignOut({
     mutation: {
       onSettled: (_data, error) => {
@@ -63,6 +77,8 @@ export function SetupTwoFactorPanel({
 
   // A full load: the layout reads the session again, and the cleared flag lets the page open.
   const finish = useCallback(() => {
+    // Done was pressed: the codes are saved, so the navigation below must not be questioned.
+    guard.current = false;
     setLeaving(true);
     window.location.assign(nextPath);
   }, [nextPath]);
@@ -88,6 +104,10 @@ export function SetupTwoFactorPanel({
           <TwoFactorSetupFlow
             email={email}
             surface="page"
+            onLock={() => {
+              guard.current = true;
+              setLocked(true);
+            }}
             onReauth={onReauth}
             onAlreadyOn={finish}
             onDone={finish}
@@ -98,7 +118,7 @@ export function SetupTwoFactorPanel({
         <Button
           variant="outline"
           className={BUTTON_CLASS}
-          disabled={signOut.isPending}
+          disabled={signOut.isPending || locked}
           onClick={() => signOut.mutate()}
         >
           {signOut.isPending ? t('signingOut') : t('signOut')}
