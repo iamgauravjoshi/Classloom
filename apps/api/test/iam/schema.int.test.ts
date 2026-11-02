@@ -20,7 +20,8 @@ async function preIamConfig(): Promise<{ dir: string; config: string }> {
   const target = path.join(dir, 'migrations');
   const entries = await readdir(migrationsDir, { withFileTypes: true });
   for (const entry of entries) {
-    if (entry.isDirectory() && entry.name.endsWith('_iam')) continue;
+    // The IAM migration and every later one are applied by the test itself.
+    if (entry.isDirectory() && entry.name >= '20261102100000_iam') continue;
     await cp(path.join(migrationsDir, entry.name), path.join(target, entry.name), {
       recursive: true,
     });

@@ -735,4 +735,104 @@ describe('members API', () => {
       ).toBe(429);
     });
   });
+
+  describe('fix round 1', () => {
+    it('serialises parallel demotions of the last two owners (exactly one 409)', async () => {
+      for (let round = 0; round < 3; round += 1) {
+        const s = await school();
+        const second = await member(s.tenantId, { roleKey: 'OWNER' });
+        const teacher = await builtIn(s.tenantId, 'TEACHER');
+        const [a, b] = await Promise.all([
+          send('put', s.cookie, `/iam/members/${second.membershipId}/roles`, {
+            roleIds: [teacher.id],
+          }),
+          send('put', second.cookie, `/iam/members/${s.membershipId}/roles`, {
+            roleIds: [teacher.id],
+          }),
+        ]);
+        expect([a.status, b.status].sort()).toEqual([200, 409]);
+        const owners = await owner.membership.count({
+          where: {
+            tenantId: s.tenantId,
+            status: 'ACTIVE',
+            roles: { some: { role: { key: 'OWNER' } } },
+          },
+        });
+        expect(owners).toBe(1);
+      }
+    });
+
+    it('keeps an owner when a demotion races a deactivation', async () => {
+      for (let round = 0; round < 3; round += 1) {
+        const s = await school();
+        const second = await member(s.tenantId, { roleKey: 'OWNER' });
+        const teacher = await builtIn(s.tenantId, 'TEACHER');
+        const [a, b] = await Promise.all([
+          send('put', s.cookie, `/iam/members/${second.membershipId}/roles`, {
+            roleIds: [teacher.id],
+          }),
+          send('post', second.cookie, `/iam/members/${s.membershipId}/deactivate`),
+        ]);
+        expect([a.status, b.status].filter((c) => c === 409)).toHaveLength(1);
+        const owners = await owner.membership.count({
+          where: {
+            tenantId: s.tenantId,
+            status: 'ACTIVE',
+            roles: { some: { role: { key: 'OWNER' } } },
+          },
+        });
+        expect(owners).toBe(1);
+      }
+    });
+
+    it('treats an upper-case copy of your own id as yourself (400)', async () => {
+      const s = await school();
+      await member(s.tenantId, { roleKey: 'OWNER' });
+      await enableTwoFactor(s.userId);
+      const id = s.membershipId.toUpperCase();
+      expect((await send('post', s.cookie, `/iam/members/${id}/deactivate`)).status).toBe(400);
+      expect((await send('post', s.cookie, `/iam/members/${id}/reset-two-factor`)).status).toBe(
+        400,
+      );
+    });
+
+    it('never resets someone who owns another school (403)', async () => {
+      const s = await school();
+      const other = await school();
+      const t = await member(s.tenantId);
+      await enableTwoFactor(t.userId);
+      await addMember(owner, other.tenantId, t.userId, 'OWNER');
+      const res = await send('post', s.cookie, `/iam/members/${t.membershipId}/reset-two-factor`);
+      expect(res.status).toBe(403);
+      expect((res.body as Problem).type).toBe('permission-denied');
+      expect(
+        (await owner.user.findUniqueOrThrow({ where: { id: t.userId } })).totpSecretEnc,
+      ).not.toBeNull();
+    });
+
+    it('applies the escalation rule to reactivation', async () => {
+      const s = await school();
+      const manager = await managerWith(s.tenantId); // iam.* only
+      const t = await member(s.tenantId); // Teacher
+      await send('post', s.cookie, `/iam/members/${t.membershipId}/deactivate`);
+      const denied = await send(
+        'post',
+        manager.cookie,
+        `/iam/members/${t.membershipId}/reactivate`,
+      );
+      expect(denied.status).toBe(403);
+      expect((denied.body as Problem).type).toBe('permission-denied');
+      expect(
+        (await owner.membership.findUniqueOrThrow({ where: { id: t.membershipId } })).status,
+      ).toBe('DEACTIVATED');
+      expect(
+        (await send('post', s.cookie, `/iam/members/${t.membershipId}/reactivate`)).status,
+      ).toBe(200);
+    });
+
+    it('rejects a roleId that is not a UUID (400)', async () => {
+      const s = await school();
+      expect((await get(s.cookie, '/iam/members?roleId=nope')).status).toBe(400);
+    });
+  });
 });

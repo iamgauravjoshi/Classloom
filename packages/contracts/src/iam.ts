@@ -333,7 +333,7 @@ export type MembersPage = z.infer<typeof membersPageSchema>;
 /** `GET /iam/members` filters. `status` omitted lists ACTIVE and DEACTIVATED (REVOKED is hidden). */
 export const listMembersQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
-  roleId: z.string().optional(),
+  roleId: z.uuid().optional(),
   status: z.enum(MEMBER_STATUSES).optional(),
   cursor: z.string().max(500).optional(),
 });

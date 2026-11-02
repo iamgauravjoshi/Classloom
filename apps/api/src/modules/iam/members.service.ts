@@ -72,9 +72,6 @@ export class MembersService {
   /** One page of the school's members, sorted by name then id (keyset), 25 per page. */
   async list(auth: RequestAuth, query: ListMembersQuery): Promise<MembersPage> {
     const after = query.cursor === undefined ? null : decodeCursor(query.cursor);
-    if (query.roleId !== undefined && !UUID.test(query.roleId)) {
-      return { members: [], nextCursor: null };
-    }
     const search = query.search?.trim();
     const where: Prisma.MembershipWhereInput = {
       tenantId: auth.tenantId,
@@ -132,7 +129,7 @@ export class MembersService {
     await this.limits.countMutation(auth.userId);
     if (roleIds.some((id) => !UUID.test(id))) throw unknownRoles();
     const row = await this.write(auth, async (tx) => {
-      const target = await this.load(tx, membershipId);
+      const target = await this.loadLocked(tx, auth.tenantId, membershipId);
       const wanted = await tx.role.findMany({
         where: { id: { in: roleIds } },
         select: { id: true, key: true, name: true, permissions: { select: { permission: true } } },
@@ -191,11 +188,12 @@ export class MembersService {
   /** Blocks sign-in and ends the person's sessions at this school; their other schools are untouched. */
   async deactivate(auth: RequestAuth, membershipId: string, meta: MemberMeta): Promise<Member> {
     await this.limits.countMutation(auth.userId);
-    if (membershipId === auth.membershipId) {
-      throw new BadRequestException("You can't deactivate yourself.");
-    }
     const row = await this.write(auth, async (tx) => {
-      const target = await this.load(tx, membershipId);
+      const target = await this.loadLocked(tx, auth.tenantId, membershipId);
+      // Compared after loading: the path may spell the same id in another case.
+      if (target.id === auth.membershipId || target.userId === auth.userId) {
+        throw new BadRequestException("You can't deactivate yourself.");
+      }
       if (target.status === 'DEACTIVATED') return target;
       const holdsOwner = target.roles.some((r) => r.role.key === OWNER_ROLE_KEY);
       if (holdsOwner) await this.assertNotLastOwner(tx, auth.tenantId, target.id);
@@ -224,9 +222,14 @@ export class MembersService {
   async reactivate(auth: RequestAuth, membershipId: string, meta: MemberMeta): Promise<Member> {
     await this.limits.countMutation(auth.userId);
     const row = await this.write(auth, async (tx) => {
-      const target = await this.load(tx, membershipId);
+      const target = await this.loadLocked(tx, auth.tenantId, membershipId);
       if (target.status === 'ACTIVE') return target;
-      if (target.roles.some((r) => r.role.key === OWNER_ROLE_KEY) && !auth.isOwner) {
+      // Reactivating restores their roles, so it follows the same no-escalation rule.
+      const held = target.roles.map((r) => r.role);
+      if (held.some((r) => r.key === OWNER_ROLE_KEY) && !auth.isOwner) {
+        throw new PermissionDeniedException();
+      }
+      if (!canGrant(auth.permissions, held.flatMap(permissionsOf))) {
         throw new PermissionDeniedException();
       }
       await tx.membership.update({
@@ -254,18 +257,22 @@ export class MembersService {
    */
   async resetTwoFactor(auth: RequestAuth, membershipId: string, meta: MemberMeta): Promise<void> {
     await this.limits.countMutation(auth.userId);
-    if (membershipId === auth.membershipId) {
-      throw new BadRequestException(
-        'Use My account › Security to change your own two-step sign-in.',
-      );
-    }
     if (!isRecent(auth.authenticatedAt)) throw new RecentSignInRequiredException();
 
     const target = await this.write(auth, async (tx) => {
-      const row = await this.load(tx, membershipId);
+      const row = await this.loadLocked(tx, auth.tenantId, membershipId);
+      if (row.id === auth.membershipId || row.userId === auth.userId) {
+        throw new BadRequestException(
+          'Use My account › Security to change your own two-step sign-in.',
+        );
+      }
       if (row.roles.some((r) => r.role.key === OWNER_ROLE_KEY) && !auth.isOwner) {
         throw new PermissionDeniedException();
       }
+      // The reset ends sessions at every school, so it must not reach another school's owner.
+      const [elsewhere] = await tx.$queryRaw<{ owner: boolean }[]>`
+        SELECT user_is_owner_elsewhere(${row.userId}::uuid, ${auth.tenantId}::uuid) AS owner`;
+      if (elsewhere?.owner) throw new PermissionDeniedException();
       if (row.user.totpSecretEnc === null || row.user.totpEnabledAt === null) {
         throw new ConflictException({
           type: 'two-factor-off',
@@ -326,24 +333,48 @@ export class MembersService {
   }
 
   /**
-   * Locks the school's ACTIVE owners (in id order, so two requests cannot deadlock) and throws
-   * 409 `last-owner` when `membershipId` is the only one. REVOKED seats that still hold Owner
-   * (a migration artefact) are not owners here.
+   * Locks the target and the school's ACTIVE owners in one statement, in id order (so two
+   * requests cannot deadlock), then loads the target. The lock is what serialises the last-owner
+   * check: later statements in a READ COMMITTED transaction see what the lock holder committed.
+   */
+  private async loadLocked(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+  ): Promise<MemberRow> {
+    if (!UUID.test(id)) throw new NotFoundException('Member not found');
+    const target = id.toLowerCase();
+    await tx.$queryRaw`
+      SELECT m.id FROM memberships m
+      WHERE m.tenant_id = ${tenantId}::uuid
+        AND (m.id = ${target}::uuid
+          OR (m.status = 'ACTIVE' AND m.id IN (
+            SELECT mr.membership_id FROM membership_roles mr
+            JOIN roles r ON r.id = mr.role_id
+            WHERE mr.tenant_id = ${tenantId}::uuid AND r.key = ${OWNER_ROLE_KEY})))
+      ORDER BY m.id
+      FOR UPDATE OF m`;
+    return this.load(tx, target);
+  }
+
+  /**
+   * Throws 409 `last-owner` when no ACTIVE owner other than `membershipId` exists. Call it only
+   * after `loadLocked`: the count is a separate statement, so it sees a fresh snapshot taken after
+   * the lock. REVOKED seats that still hold Owner (a migration artefact) do not count.
    */
   private async assertNotLastOwner(
     tx: Prisma.TransactionClient,
     tenantId: string,
     membershipId: string,
   ): Promise<void> {
-    const owners = await tx.$queryRaw<{ id: string }[]>`
-      SELECT m.id::text AS id
+    const [counted] = await tx.$queryRaw<{ others: number }[]>`
+      SELECT count(DISTINCT m.id)::int AS others
       FROM memberships m
       JOIN membership_roles mr ON mr.membership_id = m.id
       JOIN roles r ON r.id = mr.role_id
-      WHERE m.tenant_id = ${tenantId}::uuid AND m.status = 'ACTIVE' AND r.key = ${OWNER_ROLE_KEY}
-      ORDER BY m.id
-      FOR UPDATE OF m`;
-    if (!owners.some((o) => o.id !== membershipId)) throw lastOwner();
+      WHERE m.tenant_id = ${tenantId}::uuid AND m.status = 'ACTIVE'
+        AND r.key = ${OWNER_ROLE_KEY} AND m.id <> ${membershipId}::uuid`;
+    if (counted?.others === 0) throw lastOwner();
   }
 
   /** The latest SIGN_IN_SUCCEEDED per user at this school (platform-level `auth_events`). */
