@@ -1077,6 +1077,285 @@
           "me"
         ]
       }
+    },
+    "/iam/roles": {
+      "get": {
+        "operationId": "listRoles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolesResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The school's roles with their permissions",
+        "tags": [
+          "iam"
+        ]
+      },
+      "post": {
+        "operationId": "createRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The name or an unknown permission key is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage, or grants a permission you lack (type permission-denied)"
+          },
+          "404": {
+            "description": "The role to copy does not exist"
+          },
+          "409": {
+            "description": "The name is taken (errors[] path name)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Create a custom role, optionally as a copy of another; 60 changes per hour",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/permissions": {
+      "get": {
+        "operationId": "listPermissions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionCatalogueDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The permission catalogue",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/roles/{id}": {
+      "put": {
+        "operationId": "updateRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not valid, or the change is not allowed for this role"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage, changes a permission you lack, or an owner-only change (type permission-denied)"
+          },
+          "404": {
+            "description": "No such role in this school"
+          },
+          "409": {
+            "description": "The name is taken (errors[] path name)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Change a role; a built-in role keeps its name and Owner only its two-step setting",
+        "tags": [
+          "iam"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The role was deleted."
+          },
+          "400": {
+            "description": "A built-in role cannot be deleted"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such role in this school"
+          },
+          "409": {
+            "description": "Someone still holds the role (type role-in-use)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Delete a custom role nobody holds",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/roles/{id}/reset": {
+      "post": {
+        "operationId": "resetRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a built-in role"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage or the reset changes a permission you lack"
+          },
+          "404": {
+            "description": "No such role in this school"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Restore a built-in role's default permissions, description and two-step setting",
+        "tags": [
+          "iam"
+        ]
+      }
     }
   },
   "info": {
@@ -2045,6 +2324,311 @@
         "required": [
           "newPassword"
         ]
+      },
+      "RolesResponseDto": {
+        "type": "object",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "requiresTwoFactor": {
+                  "type": "boolean"
+                },
+                "permissions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "memberCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "id",
+                "key",
+                "name",
+                "description",
+                "requiresTwoFactor",
+                "permissions",
+                "memberCount"
+              ]
+            }
+          }
+        },
+        "required": [
+          "roles"
+        ]
+      },
+      "PermissionCatalogueDto": {
+        "type": "object",
+        "properties": {
+          "modules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "module": {
+                  "type": "string"
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "keys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "labelKey": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "module",
+                "actions",
+                "keys",
+                "labelKey"
+              ]
+            }
+          }
+        },
+        "required": [
+          "modules"
+        ]
+      },
+      "CreateRoleRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "permissions": {
+            "maxItems": 108,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "dashboard.view",
+                "students.view",
+                "students.create",
+                "students.edit",
+                "students.delete",
+                "students.export",
+                "admissions.view",
+                "admissions.create",
+                "admissions.edit",
+                "admissions.delete",
+                "admissions.approve",
+                "admissions.export",
+                "parents.view",
+                "parents.create",
+                "parents.edit",
+                "parents.delete",
+                "staff.view",
+                "staff.create",
+                "staff.edit",
+                "staff.delete",
+                "staff.export",
+                "classes.view",
+                "classes.manage",
+                "subjects.view",
+                "subjects.manage",
+                "timetable.view",
+                "timetable.manage",
+                "attendance.view",
+                "attendance.create",
+                "attendance.edit",
+                "attendance.export",
+                "exams.view",
+                "exams.create",
+                "exams.edit",
+                "exams.approve",
+                "exams.export",
+                "fees.view",
+                "fees.create",
+                "fees.edit",
+                "fees.approve",
+                "fees.export",
+                "library.view",
+                "library.manage",
+                "transport.view",
+                "transport.manage",
+                "communication.view",
+                "communication.create",
+                "communication.approve",
+                "reports.view",
+                "reports.export",
+                "settings.view",
+                "settings.manage",
+                "iam.view",
+                "iam.manage"
+              ]
+            }
+          },
+          "requiresTwoFactor": {
+            "type": "boolean"
+          },
+          "cloneFromRoleId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "permissions",
+          "requiresTwoFactor"
+        ]
+      },
+      "RoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "requiresTwoFactor": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "memberCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "description",
+          "requiresTwoFactor",
+          "permissions",
+          "memberCount"
+        ]
+      },
+      "UpdateRoleRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "permissions": {
+            "maxItems": 108,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "dashboard.view",
+                "students.view",
+                "students.create",
+                "students.edit",
+                "students.delete",
+                "students.export",
+                "admissions.view",
+                "admissions.create",
+                "admissions.edit",
+                "admissions.delete",
+                "admissions.approve",
+                "admissions.export",
+                "parents.view",
+                "parents.create",
+                "parents.edit",
+                "parents.delete",
+                "staff.view",
+                "staff.create",
+                "staff.edit",
+                "staff.delete",
+                "staff.export",
+                "classes.view",
+                "classes.manage",
+                "subjects.view",
+                "subjects.manage",
+                "timetable.view",
+                "timetable.manage",
+                "attendance.view",
+                "attendance.create",
+                "attendance.edit",
+                "attendance.export",
+                "exams.view",
+                "exams.create",
+                "exams.edit",
+                "exams.approve",
+                "exams.export",
+                "fees.view",
+                "fees.create",
+                "fees.edit",
+                "fees.approve",
+                "fees.export",
+                "library.view",
+                "library.manage",
+                "transport.view",
+                "transport.manage",
+                "communication.view",
+                "communication.create",
+                "communication.approve",
+                "reports.view",
+                "reports.export",
+                "settings.view",
+                "settings.manage",
+                "iam.view",
+                "iam.manage"
+              ]
+            }
+          },
+          "requiresTwoFactor": {
+            "type": "boolean"
+          }
+        }
       }
     }
   }
