@@ -613,5 +613,131 @@
     "explain": "Set it up now with an authenticator app. Until it is on, you can't use the rest of Classloom.",
     "signOut": "Sign out",
     "signingOut": "Signing out"
+  },
+  "iam": {
+    "metaTitle": "Users & roles",
+    "title": "Users & roles",
+    "tabs": {
+      "label": "Users and roles sections",
+      "members": "Members",
+      "roles": "Roles"
+    },
+    "rolesTab": {
+      "title": "Roles",
+      "body": "Managing roles is coming soon. For now, you can give people the built-in roles from the Members tab."
+    },
+    "members": {
+      "title": "Members",
+      "description": "Everyone who works at this school, and the people you've invited.",
+      "invite": "Invite people",
+      "search": "Search members",
+      "searchPlaceholder": "Name or email",
+      "roleFilter": "Role",
+      "allRoles": "All roles",
+      "statusFilter": "Status",
+      "allStatuses": "All statuses",
+      "status": {
+        "ACTIVE": "Active",
+        "INVITED": "Invited",
+        "DEACTIVATED": "Deactivated",
+        "REVOKED": "Removed"
+      },
+      "caption": "Members and pending invitations",
+      "name": "Name",
+      "roles": "Roles",
+      "statusColumn": "Status",
+      "twoStep": "Two-step",
+      "twoStepOn": "On",
+      "twoStepOff": "Off",
+      "lastSignIn": "Last sign-in",
+      "never": "Never",
+      "you": "You",
+      "expires": "Expires {date}",
+      "noRoles": "No role",
+      "actions": "Actions",
+      "actionsFor": "Actions for {name}",
+      "empty": "No one matches these filters.",
+      "emptyAll": "No members yet.",
+      "loadMore": "Show more",
+      "loadingMore": "Loading",
+      "loadFailed": "We couldn't load the members. Check your connection and try again.",
+      "retry": "Try again",
+      "loading": "Loading",
+      "reactivatedToast": "{name} was reactivated.",
+      "resentToast": "Invitation sent again to {email}."
+    },
+    "menu": {
+      "changeRoles": "Change roles",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "resetTwoFactor": "Reset two-step",
+      "resend": "Resend invitation",
+      "revoke": "Revoke invitation"
+    },
+    "invite": {
+      "title": "Invite people",
+      "description": "They'll get an email with a link to join. The link works for 7 days.",
+      "email": "Email",
+      "name": "Name",
+      "roles": "Roles",
+      "rolesHint": "Choose at least one. You can only give roles that don't go beyond your own access.",
+      "noRoles": "There are no roles you can give.",
+      "rolesLoadFailed": "We couldn't load the roles. Close this and try again.",
+      "submit": "Send invitation",
+      "submitting": "Sending",
+      "cancel": "Cancel",
+      "sent": "Invitation sent to {email}.",
+      "errors": {
+        "email": "Enter a valid email address.",
+        "name": "Enter their name, 2 to 80 characters.",
+        "roles": "Choose at least one role."
+      }
+    },
+    "changeRoles": {
+      "title": "Change roles for {name}",
+      "description": "Choose what {name} can do at this school.",
+      "roles": "Roles",
+      "locked": "You can't change this role.",
+      "submit": "Save roles",
+      "submitting": "Saving",
+      "cancel": "Cancel",
+      "saved": "Roles updated for {name}.",
+      "required": "Choose at least one role."
+    },
+    "confirm": {
+      "cancel": "Cancel",
+      "deactivate": {
+        "title": "Deactivate {name}?",
+        "body": "They'll be signed out now and can't sign in to this school until reactivated.",
+        "action": "Deactivate",
+        "pending": "Deactivating",
+        "done": "{name} was deactivated."
+      },
+      "reset": {
+        "title": "Reset two-step for {name}?",
+        "body": "They'll be signed out of every school, and their authenticator app and recovery codes will stop working. We'll email them. They can turn two-step on again from their account.",
+        "action": "Reset two-step",
+        "pending": "Resetting",
+        "done": "Two-step was reset for {name}.",
+        "redirecting": "Taking you to sign in again."
+      },
+      "revoke": {
+        "title": "Revoke the invitation for {name}?",
+        "body": "The link in their email will stop working. You can invite them again later.",
+        "action": "Revoke invitation",
+        "pending": "Revoking",
+        "done": "Invitation for {name} was revoked."
+      }
+    },
+    "errors": {
+      "lastOwner": "A school needs at least one active owner. Make someone else an owner first.",
+      "alreadyMember": "This person is already a member of this school.",
+      "alreadyInvited": "This person already has an open invitation. Resend it from the list.",
+      "permissionDenied": "You don't have permission to do that.",
+      "recentSignIn": "Taking you to sign in again.",
+      "twoFactorOff": "Two-step sign-in is already off for this person.",
+      "rateLimited": "Too many changes for now. Try again later.",
+      "generic": "Something went wrong. Try again."
+    }
   }
 }

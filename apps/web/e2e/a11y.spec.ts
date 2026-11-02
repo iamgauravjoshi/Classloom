@@ -76,6 +76,41 @@ for (const theme of ['light', 'dark'] as const) {
       });
     });
 
+    test.describe('users and roles', () => {
+      // The page lists the school's people, so it gets a school of its own with one invitation.
+      test.use({ storageState: { cookies: [], origins: [] } });
+
+      test('/en/users-roles has no WCAG 2.1 AA violations, list and invite dialog', async ({
+        page,
+        playwright,
+      }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        // The owner is relaxed (no required two-step), so the session reaches the page.
+        await signInWithCode(page.request, own);
+        const invitee = newInvitee('Ravi Kumar');
+        await inviteAs(page.request, invitee);
+
+        await page.goto('/en/users-roles');
+        await expect(page.getByRole('heading', { level: 1, name: 'Users & roles' })).toBeVisible();
+        const tabs = page.getByRole('navigation', { name: 'Users and roles sections' });
+        await expect(tabs.getByRole('link', { name: 'Members' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        );
+        await expect(page.getByText(invitee.email).filter({ visible: true }).first()).toBeVisible();
+        await expect(page.getByText(own.email).filter({ visible: true }).first()).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Invite people' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Invite people' });
+        await expect(dialog.getByLabel('Email')).toBeFocused();
+        await expect(dialog.getByRole('checkbox', { name: 'Teacher', exact: true })).toBeVisible();
+        await expectNoViolations(page);
+      });
+    });
+
     test.describe('signed out', () => {
       // The auth pages send a signed-in visitor to the dashboard.
       test.use({ storageState: { cookies: [], origins: [] } });
