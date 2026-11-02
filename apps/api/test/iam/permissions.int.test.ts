@@ -143,11 +143,21 @@ describe('permissions in the request pipeline', () => {
     expect(res.body).toMatchObject({ type: 'permission-denied', status: 403 });
   });
 
-  it('is 401, not 403, without a session; public and undecorated routes need no permission', async () => {
+  it('is 401, not 403, without a session; undecorated routes need no permission', async () => {
     expect((await request(server).get('/__probe/fees')).status).toBe(401);
-    expect((await request(server).get('/__probe/public')).status).toBe(200);
     const m = await memberWith(['TEACHER']);
     expect((await request(server).get('/__probe/open').set('Cookie', m.cookie)).status).toBe(200);
+  });
+
+  it('enforces @RequirePermission on a @Public() route too', async () => {
+    const m = await memberWith(['TEACHER']);
+    expect((await request(server).get('/__probe/public')).status).toBe(401);
+    const teacher = await request(server).get('/__probe/public').set('Cookie', m.cookie);
+    expect(teacher.status).toBe(403);
+    expect(teacher.body).toMatchObject({ type: 'permission-denied' });
+    expect((await request(server).get('/__probe/public').set('Cookie', m.ownerCookie)).status).toBe(
+      200,
+    );
   });
 
   it('applies a role change to the same session on its next request', async () => {

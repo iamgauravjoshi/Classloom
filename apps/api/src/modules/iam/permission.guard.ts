@@ -8,7 +8,6 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 
-import { IS_PUBLIC } from '../auth/public.decorator';
 import { REQUIRED_PERMISSIONS } from './require-permission.decorator';
 
 /** The caller lacks a permission the route needs. */
@@ -25,7 +24,8 @@ export class PermissionDeniedException extends ForbiddenException {
 /**
  * Global guard registered after `AuthGuard`: a route marked `@RequirePermission(...)` needs every
  * listed key in `request.auth.permissions` (computed per request, so a change applies to the next
- * request). `@Public()` routes and routes without the decorator pass.
+ * request). Routes without the decorator pass. The decorator wins over `@Public()`: a public route
+ * that also requires a permission still needs a session holding it.
  */
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -33,12 +33,11 @@ export class PermissionGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const targets = [context.getHandler(), context.getClass()];
-    if (this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC, targets)) return true;
     const required = this.reflector.getAllAndMerge<string[]>(REQUIRED_PERMISSIONS, targets);
     if (required.length === 0) return true;
 
+    // A required permission wins over `@Public()`: the route still needs a session holding it.
     const auth = context.switchToHttp().getRequest<Request>().auth;
-    // AuthGuard runs first and already refuses this; kept so the guard never fails open alone.
     if (!auth) throw new UnauthorizedException('Sign in to continue');
     if (!required.every((key) => auth.permissions.has(key))) throw new PermissionDeniedException();
     return true;

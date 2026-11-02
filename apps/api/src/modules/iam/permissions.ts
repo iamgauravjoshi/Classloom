@@ -1,4 +1,4 @@
-import { ALL_PERMISSIONS, effectivePermissions } from '@classloom/contracts';
+import { ALL_PERMISSIONS, effectivePermissions, OWNER_ROLE_KEY } from '@classloom/contracts';
 
 import type { Prisma } from '../../generated/prisma/client';
 
@@ -21,8 +21,6 @@ export interface MemberAccess {
   /** True when any held role requires two-step sign-in. */
   requiresTwoFactor: boolean;
 }
-
-export const OWNER_ROLE_KEY = 'OWNER';
 
 /**
  * The `select` for a membership's roles and their permissions. Nest it under a membership query

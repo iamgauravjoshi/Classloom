@@ -7,10 +7,9 @@ import { EmailService } from '../../core/email/email.service';
 import { newDeviceEmail } from '../../core/email/templates/new-device';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import type { TenantStatus, User } from '../../generated/prisma/client';
-import type { MemberAccess } from '../iam/permissions';
 import { AuthEventsService } from './auth-events.service';
 import { KnownDeviceService } from './known-device.service';
-import { findActiveMembership } from './member-lookup';
+import { findActiveMembership, findMemberAccess } from './member-lookup';
 import type { SignInMeta } from './password-sign-in.service';
 import { CredentialsChangedError, SessionService } from './session.service';
 import { TwoFactorService } from './two-factor.service';
@@ -48,7 +47,7 @@ export class TwoFactorInvalidException extends UnauthorizedException {
 export interface FirstFactorResult {
   user: User;
   tenant: { id: string; code: string; name: string; status: TenantStatus };
-  membership: { id: string; access: MemberAccess };
+  membership: { id: string };
   remember: boolean;
   method: 'PASSWORD' | 'EMAIL_CODE';
 }
@@ -137,7 +136,11 @@ export class TwoFactorSignInService {
       kind: 'session',
       token,
       remember: session.remember,
-      session: await this.sessions.toAuthSession({ session, tenant }, membership.access, user),
+      session: await this.sessions.toAuthSession(
+        { session, tenant },
+        await findMemberAccess(this.prisma, tenant.id, membership.id),
+        user,
+      ),
     };
   }
 
@@ -219,7 +222,11 @@ export class TwoFactorSignInService {
     return {
       token,
       remember: session.remember,
-      session: await this.sessions.toAuthSession({ session, tenant }, membership.access, user),
+      session: await this.sessions.toAuthSession(
+        { session, tenant },
+        await findMemberAccess(this.prisma, tenant.id, membership.id),
+        user,
+      ),
     };
   }
 

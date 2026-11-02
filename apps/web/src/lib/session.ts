@@ -1,4 +1,4 @@
-import type { AuthSession } from '@classloom/contracts';
+import { type AuthSession, OWNER_ROLE_KEY } from '@classloom/contracts';
 import { academicYearOf } from '@classloom/utils';
 
 /**
@@ -27,7 +27,7 @@ export function toShellSession(session: AuthSession): ShellSession {
     user: { name: session.user.name },
     portal: 'staff',
     roles: session.roles.map((role) => ({ key: role.key, name: role.name })),
-    isOwner: session.roles.some((role) => role.key === 'OWNER'),
+    isOwner: session.roles.some((role) => role.key === OWNER_ROLE_KEY),
     permissions: [...session.permissions],
     campus: { id: session.campus.id, name: session.campus.name },
     academicYear: academicYearOf(new Date()),

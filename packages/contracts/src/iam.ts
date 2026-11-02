@@ -80,8 +80,11 @@ function moduleKeys(module: IamModule): string[] {
 /* Built-in roles (spec §5)                                            */
 /* ------------------------------------------------------------------ */
 
+/** The Owner role's key. Owner has no stored permissions: it means every permission. */
+export const OWNER_ROLE_KEY = 'OWNER';
+
 export const BUILT_IN_ROLE_KEYS = [
-  'OWNER',
+  OWNER_ROLE_KEY,
   'PRINCIPAL',
   'ADMIN',
   'ACCOUNTANT',
@@ -222,7 +225,7 @@ export function effectivePermissions(
 ): Set<string> {
   const result = new Set<string>();
   for (const role of roles) {
-    if (role.key === 'OWNER') return new Set(ALL_PERMISSIONS);
+    if (role.key === OWNER_ROLE_KEY) return new Set(ALL_PERMISSIONS);
     for (const p of role.permissions) result.add(p);
   }
   return result;
