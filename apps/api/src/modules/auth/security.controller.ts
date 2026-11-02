@@ -53,6 +53,7 @@ import { readDeviceToken } from './device-cookie';
 import type { RequestAuth } from './request-auth';
 import { type SecurityMeta, SecurityService } from './security.service';
 import { type SettingsMeta, TwoFactorService } from './two-factor.service';
+import { AllowDuringTwoFactorSetup } from './two-factor-setup.guard';
 
 class TwoFactorStatusDto extends withNullableProperties(createZodDto(twoFactorStatusSchema)) {}
 class TwoFactorSetupDto extends createZodDto(twoFactorSetupSchema) {}
@@ -90,6 +91,7 @@ export class SecurityController {
   }
 
   @Get('two-factor')
+  @AllowDuringTwoFactorSetup()
   @ApiOperation({
     operationId: 'getTwoFactorStatus',
     summary: 'Whether two-step sign-in is on, since when, and the recovery codes left',
@@ -101,6 +103,7 @@ export class SecurityController {
   }
 
   @Post('two-factor/setup')
+  @AllowDuringTwoFactorSetup()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     operationId: 'startTwoFactorSetup',
@@ -115,6 +118,7 @@ export class SecurityController {
   }
 
   @Post('two-factor/enable')
+  @AllowDuringTwoFactorSetup()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     operationId: 'enableTwoFactor',

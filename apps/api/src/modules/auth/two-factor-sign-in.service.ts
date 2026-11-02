@@ -14,6 +14,7 @@ import type { SignInMeta } from './password-sign-in.service';
 import { CredentialsChangedError, SessionService } from './session.service';
 import { TwoFactorService } from './two-factor.service';
 import { type FirstFactorMethod, TwoFactorChallengeService } from './two-factor-challenge.service';
+import { needsTwoFactorSetup } from './two-factor-setup.guard';
 
 /** Failed new-device emails hold no secret; kept a day like the other security emails. */
 const KEEP_FAILED_EMAIL_SECONDS = 86_400;
@@ -138,7 +139,7 @@ export class TwoFactorSignInService {
       remember: session.remember,
       session: await this.sessions.toAuthSession(
         { session, tenant },
-        await findMemberAccess(this.prisma, tenant.id, membership.id),
+        await this.signInAccess(tenant.id, membership.id, user),
         user,
       ),
     };
@@ -224,9 +225,18 @@ export class TwoFactorSignInService {
       remember: session.remember,
       session: await this.sessions.toAuthSession(
         { session, tenant },
-        await findMemberAccess(this.prisma, tenant.id, membership.id),
+        await this.signInAccess(tenant.id, membership.id, user),
         user,
       ),
+    };
+  }
+
+  /** The member's access for the sign-in response, with whether they must set up two-step. */
+  private async signInAccess(tenantId: string, membershipId: string, user: User) {
+    const access = await findMemberAccess(this.prisma, tenantId, membershipId);
+    return {
+      ...access,
+      twoFactorSetupRequired: needsTwoFactorSetup(access.roles, user.totpEnabledAt),
     };
   }
 

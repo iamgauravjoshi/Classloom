@@ -52,6 +52,8 @@ describe('roles API', () => {
         email: `m${counter}@roles.test`,
         name: `Member ${counter}`,
         emailVerifiedAt: new Date(),
+        // Has two-step on, so a built-in role that requires it does not limit the member.
+        totpEnabledAt: new Date(),
       },
     });
     const membership = await owner.membership.create({ data: { tenantId, userId: user.id } });
@@ -468,6 +470,9 @@ describe('roles API', () => {
     it("lets only an owner edit Owner's requiresTwoFactor", async () => {
       const s = await school();
       const ownerRole = await builtIn(s.tenantId, 'OWNER');
+      // Seeded owners do not require two-step (see `seedSchool`); this test starts from the default.
+      await owner.role.update({ where: { id: ownerRole.id }, data: { requiresTwoFactor: true } });
+      await owner.user.update({ where: { id: s.userId }, data: { totpEnabledAt: new Date() } });
       const admin = await memberWithRole(s.tenantId, (await builtIn(s.tenantId, 'ADMIN')).id);
       const denied = await send('put', admin.cookie, `/iam/roles/${ownerRole.id}`, {
         requiresTwoFactor: false,

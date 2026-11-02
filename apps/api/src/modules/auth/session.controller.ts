@@ -30,6 +30,7 @@ import { Public } from './public.decorator';
 import type { RequestAuth } from './request-auth';
 import { SessionService } from './session.service';
 import { clearSessionCookie, readSessionToken } from './session-cookie';
+import { AllowDuringTwoFactorSetup } from './two-factor-setup.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -42,6 +43,7 @@ export class SessionController {
   ) {}
 
   @Get('session')
+  @AllowDuringTwoFactorSetup()
   @ApiCookieAuth()
   @ApiOperation({
     operationId: 'getAuthSession',

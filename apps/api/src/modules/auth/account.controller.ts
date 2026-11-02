@@ -24,6 +24,7 @@ import { withNullableProperties } from '../../core/http/nullable-openapi';
 import { AccountService } from './account.service';
 import { CurrentAuth } from './current-auth.decorator';
 import type { RequestAuth } from './request-auth';
+import { AllowDuringTwoFactorSetup } from './two-factor-setup.guard';
 
 class MeDto extends withNullableProperties(createZodDto(meSchema)) {}
 class UpdateMeRequestDto extends withNullableProperties(createZodDto(updateMeRequestSchema)) {}
@@ -36,6 +37,7 @@ export class AccountController {
   constructor(private readonly account: AccountService) {}
 
   @Get()
+  @AllowDuringTwoFactorSetup()
   @ApiOperation({ operationId: 'getMe', summary: 'The signed-in user' })
   @ApiOkResponse({ type: MeDto })
   @ApiUnauthorizedResponse({ description: 'No valid session' })

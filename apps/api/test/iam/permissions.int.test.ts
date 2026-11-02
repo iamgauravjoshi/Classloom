@@ -63,6 +63,8 @@ describe('permissions in the request pipeline', () => {
         email: `m${counter}@perm.in`,
         name: `Member ${counter}`,
         emailVerifiedAt: new Date(),
+        // Has two-step on, so a built-in role that requires it does not limit the member.
+        totpEnabledAt: new Date(),
       },
     });
     let membershipId: string;

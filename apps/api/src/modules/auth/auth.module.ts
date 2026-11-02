@@ -26,6 +26,7 @@ import { SignInPauseService } from './sign-in-pause.service';
 import { TwoFactorController } from './two-factor.controller';
 import { TwoFactorService } from './two-factor.service';
 import { TwoFactorChallengeService } from './two-factor-challenge.service';
+import { TwoFactorSetupGuard } from './two-factor-setup.guard';
 import { TwoFactorSignInService } from './two-factor-sign-in.service';
 
 @Module({
@@ -58,6 +59,7 @@ import { TwoFactorSignInService } from './two-factor-sign-in.service';
     AuthProcessor,
     AuthCleanupProcessor,
     { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: TwoFactorSetupGuard },
   ],
   exports: [
     SessionService,

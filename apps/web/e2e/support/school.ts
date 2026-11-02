@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 
 import { type APIRequestContext, expect } from '@playwright/test';
+import { generateSync } from 'otplib';
 
 import { latestEmailTo, mailIds, verificationLink } from './mailpit';
 
@@ -109,4 +110,43 @@ export async function signInWithCode(
     remember,
   });
   expect(verified.status(), await verified.text()).toBe(200);
+  // Owner requires two-step by default, which would limit the session to the setup routes.
+  await relaxOwnerTwoFactor(request);
+}
+
+/** The app code for a base32 secret, `offsetMs` from now. */
+const codeFor = (secret: string, offsetMs = 0) =>
+  generateSync({ secret, epoch: Math.floor((Date.now() + offsetMs) / 1000) });
+
+/**
+ * Lets the signed-in owner use the whole app without two-step sign-in. Owner requires it by
+ * default, which limits a session without it to the setup routes, and only a session outside that
+ * limit can change a role. So it turns two-step on, switches the requirement off on the Owner role,
+ * then turns two-step off again: the owner ends as it was, and a later sign-in needs no second
+ * step. `signInWithCode` calls it, so a test's owner is not limited to the setup routes.
+ */
+export async function relaxOwnerTwoFactor(request: APIRequestContext): Promise<void> {
+  const setup = await post(request, '/me/two-factor/setup', {});
+  expect(setup.status(), await setup.text()).toBe(200);
+  const { secret } = (await setup.json()) as { secret: string };
+  const enabled = await post(request, '/me/two-factor/enable', { code: codeFor(secret) });
+  expect(enabled.status(), await enabled.text()).toBe(200);
+
+  const roles = await request.get(`${WEB_ORIGIN}/api/iam/roles`);
+  expect(roles.status(), await roles.text()).toBe(200);
+  const ownerRole = (
+    (await roles.json()) as { roles: { id: string; key: string | null }[] }
+  ).roles.find((role) => role.key === 'OWNER');
+  expect(ownerRole).toBeDefined();
+  const updated = await request.put(`${WEB_ORIGIN}/api/iam/roles/${ownerRole?.id}`, {
+    data: { requiresTwoFactor: false },
+    headers: { origin: WEB_ORIGIN },
+  });
+  expect(updated.status(), await updated.text()).toBe(200);
+
+  // A code for the next 30-second step: the one just used cannot be used twice.
+  const disabled = await post(request, '/me/two-factor/disable', {
+    code: codeFor(secret, 30_000),
+  });
+  expect(disabled.status(), await disabled.text()).toBe(204);
 }

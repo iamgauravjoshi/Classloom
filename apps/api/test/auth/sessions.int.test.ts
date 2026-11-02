@@ -261,7 +261,11 @@ describe('sessions, auth events and clean-up', () => {
       where: { tenantId: s.tenantId, isPrimary: true },
     });
 
-    const authSession = await sessions.toAuthSession(resolved!, access, user);
+    const authSession = await sessions.toAuthSession(
+      resolved!,
+      { ...access, twoFactorSetupRequired: false },
+      user,
+    );
 
     expect(authSession).toEqual({
       user: {

@@ -40,6 +40,12 @@ export async function seedSchool(
     },
   });
   await prisma.$executeRaw`SELECT seed_builtin_roles(${tenant.id}::uuid)`;
+  // Owner requires two-step by default, which would limit every seeded owner (they have none) to
+  // the setup routes. Tests of the requirement itself switch it back on.
+  await prisma.role.updateMany({
+    where: { tenantId: tenant.id, key: 'OWNER' },
+    data: { requiresTwoFactor: false },
+  });
   const membership = await addMember(prisma, tenant.id, user.id);
   return { tenantId: tenant.id, userId: user.id, membershipId: membership.id };
 }

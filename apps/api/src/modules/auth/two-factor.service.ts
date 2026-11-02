@@ -200,6 +200,11 @@ export class TwoFactorService {
       });
       if (count === 0) throw alreadyOn();
       await this.replaceRecoveryCodes(tx, user.id, recoveryCodes);
+      // The requirement is met: clear the stored flag on all the user's sessions.
+      await tx.session.updateMany({
+        where: { userId: user.id, twoFactorSetupRequired: true },
+        data: { twoFactorSetupRequired: false },
+      });
       // A trust write that raced an earlier disable must not carry over into the new setup.
       await this.devices.clearTrustForUser(user.id, tx);
     });

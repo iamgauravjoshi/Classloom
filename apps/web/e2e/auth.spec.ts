@@ -4,6 +4,7 @@ import { latestEmailTo, verificationLink } from './support/mailpit';
 import {
   createVerifiedSchool,
   registerPendingSchool,
+  relaxOwnerTwoFactor,
   signInWithCode,
   type VerifiedSchool,
 } from './support/school';
@@ -85,6 +86,8 @@ test('journey: register, code sign-in, password, mobile sign-in, reset and sign 
   // The email code goes to the dashboard, which names the owner and the school.
   await signInByCode(page, school.email);
   await expectDashboard(page, school);
+  // Owner requires two-step by default; this journey is about the pages that follow, not that.
+  await relaxOwnerTwoFactor(page.request);
   // Below lg the sidebar (which names the school) is a sheet behind the toggle.
   if ((page.viewportSize()?.width ?? 0) < 1024) {
     await page.getByRole('button', { name: 'Toggle sidebar', exact: true }).click();

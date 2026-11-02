@@ -8,6 +8,7 @@ import { TenantContext } from '../../core/tenancy/tenant-context';
 import { MEMBER_ROLES_SELECT, toMemberAccess } from '../iam/permissions';
 import { SessionService } from './session.service';
 import { clearSessionCookie, readSessionToken, setSessionCookie } from './session-cookie';
+import { needsTwoFactorSetup } from './two-factor-setup.guard';
 
 /**
  * `X-Session-Touch: skip` validates the session without sliding it (no `last_seen_at` update, no
@@ -46,7 +47,11 @@ export class SessionMiddleware implements NestMiddleware {
                 status: 'ACTIVE',
               },
               // The roles come in the same query, under the same tenant context and RLS.
-              select: { id: true, roles: MEMBER_ROLES_SELECT },
+              select: {
+                id: true,
+                roles: MEMBER_ROLES_SELECT,
+                user: { select: { totpEnabledAt: true } },
+              },
             }),
           )
         : null;
@@ -70,7 +75,7 @@ export class SessionMiddleware implements NestMiddleware {
         roles,
         permissions,
         isOwner,
-        twoFactorSetupRequired: false,
+        twoFactorSetupRequired: needsTwoFactorSetup(roles, membership.user.totpEnabledAt),
         remember: session.remember,
         authenticatedAt: session.authenticatedAt,
       };
