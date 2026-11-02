@@ -24,6 +24,12 @@ describe('TENANT_SCOPED_MODELS', () => {
     expect(modelsWithTenantId()).toEqual(expect.arrayContaining(['Campus', 'Membership']));
   });
 
+  it('scopes every IAM table (spec section 6: all are row-level secured)', () => {
+    for (const model of ['Role', 'RolePermission', 'MembershipRole', 'Invitation', 'AuditEvent']) {
+      expect((TENANT_SCOPED_MODELS as ReadonlySet<string>).has(model)).toBe(true);
+    }
+  });
+
   it('lists every model with a tenantId field, unless it is an explicit platform exemption', () => {
     const missing = modelsWithTenantId().filter(
       (m) =>

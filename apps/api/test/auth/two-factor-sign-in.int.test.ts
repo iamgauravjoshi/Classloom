@@ -18,7 +18,7 @@ import { encryptSecret } from '../../src/modules/auth/secret-box';
 import { SessionService } from '../../src/modules/auth/session.service';
 import { generateTotpSecret } from '../../src/modules/auth/totp';
 import { ownerPrisma, startTestInfra, type TestInfra } from '../setup-containers';
-import { seedSchool } from './helpers';
+import { addMember, seedSchool } from './helpers';
 
 const PASSWORD = 'correct horse battery';
 const CHROME =
@@ -393,9 +393,7 @@ describe('two-step at sign-in', () => {
       email: `other${counter}@two.step`,
       password: PASSWORD,
     });
-    await owner.membership.create({
-      data: { tenantId: other.tenantId, userId: s.userId, role: 'OWNER' },
-    });
+    await addMember(owner, other.tenantId, s.userId);
     const second = await passwordSignIn({ code: `TFB${counter}`, email: s.email }, { device });
     expect(second.status).toBe(200);
     expect(authSessionSchema.parse(second.body).school.id).toBe(other.tenantId);

@@ -51,7 +51,7 @@ export class SessionController {
     const resolved = token ? await this.sessions.resolve(token) : null;
     const user = await this.prisma.user.findUnique({ where: { id: auth.userId } });
     if (!resolved || !user) throw new UnauthorizedException('Sign in to continue');
-    return this.sessions.toAuthSession(resolved, { role: auth.role }, user);
+    return this.sessions.toAuthSession(resolved, { id: auth.membershipId }, user);
   }
 
   @Post('sign-out')

@@ -39,8 +39,25 @@ export async function seedSchool(
       passwordChangedAt: passwordHash ? now : null,
     },
   });
-  const membership = await prisma.membership.create({
-    data: { tenantId: tenant.id, userId: user.id, role: 'OWNER' },
-  });
+  await prisma.$executeRaw`SELECT seed_builtin_roles(${tenant.id}::uuid)`;
+  const membership = await addMember(prisma, tenant.id, user.id);
   return { tenantId: tenant.id, userId: user.id, membershipId: membership.id };
+}
+
+/**
+ * Creates a membership in a school seeded with the built-in roles and gives it a built-in role
+ * (Owner by default). Pass the owner-role client from `ownerPrisma(env)`.
+ */
+export async function addMember(
+  prisma: PrismaClient,
+  tenantId: string,
+  userId: string,
+  roleKey = 'OWNER',
+): Promise<{ id: string }> {
+  const role = await prisma.role.findFirstOrThrow({ where: { tenantId, key: roleKey } });
+  const membership = await prisma.membership.create({ data: { tenantId, userId } });
+  await prisma.membershipRole.create({
+    data: { tenantId, membershipId: membership.id, roleId: role.id },
+  });
+  return { id: membership.id };
 }

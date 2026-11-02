@@ -1,4 +1,4 @@
-import type { AuthSession } from '@classloom/contracts';
+import { ALL_PERMISSIONS, type AuthSession, BUILT_IN_ROLE_DEFAULTS } from '@classloom/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { ENV } from '../../core/config/config.module';
@@ -7,12 +7,7 @@ import { EmailService } from '../../core/email/email.service';
 import { passwordChangedEmail } from '../../core/email/templates/password-changed';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
-import type {
-  MembershipRole,
-  Session,
-  SessionRevokedReason,
-  TenantStatus,
-} from '../../generated/prisma/client';
+import type { Session, SessionRevokedReason, TenantStatus } from '../../generated/prisma/client';
 import { MAX_USER_AGENT_LENGTH } from './auth-events.service';
 import { randomToken, sha256 } from './crypto';
 import { KnownDeviceService } from './known-device.service';
@@ -218,7 +213,8 @@ export class SessionService {
 
   async toAuthSession(
     resolved: ResolvedSession,
-    membership: { role: MembershipRole },
+    // IAM: replaced in Task 3 (the member's roles and permissions are loaded from the database).
+    _membership: { id: string },
     user: {
       id: string;
       name: string;
@@ -244,7 +240,10 @@ export class SessionService {
       },
       school: { id: tenant.id, code: tenant.code.toUpperCase(), name: tenant.name },
       campus: { id: campus.id, name: campus.name },
-      role: membership.role,
+      // IAM: replaced in Task 3. Until then every active member is treated as an owner.
+      roles: [{ key: 'OWNER', name: BUILT_IN_ROLE_DEFAULTS.OWNER.name }],
+      permissions: [...ALL_PERMISSIONS],
+      twoFactorSetupRequired: false,
       remember: session.remember,
       expiresAt: session.expiresAt.toISOString(),
     };

@@ -6,7 +6,7 @@ import type { Env } from '../../core/config/env.schema';
 import { EmailService } from '../../core/email/email.service';
 import { newDeviceEmail } from '../../core/email/templates/new-device';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import type { MembershipRole, TenantStatus, User } from '../../generated/prisma/client';
+import type { TenantStatus, User } from '../../generated/prisma/client';
 import { AuthEventsService } from './auth-events.service';
 import { KnownDeviceService } from './known-device.service';
 import { findActiveMembership } from './member-lookup';
@@ -47,7 +47,7 @@ export class TwoFactorInvalidException extends UnauthorizedException {
 export interface FirstFactorResult {
   user: User;
   tenant: { id: string; code: string; name: string; status: TenantStatus };
-  membership: { id: string; role: MembershipRole };
+  membership: { id: string };
   remember: boolean;
   method: 'PASSWORD' | 'EMAIL_CODE';
 }

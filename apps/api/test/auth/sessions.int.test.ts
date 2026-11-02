@@ -1,3 +1,4 @@
+import { ALL_PERMISSIONS } from '@classloom/contracts';
 import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import type { Queue } from 'bullmq';
@@ -271,7 +272,10 @@ describe('sessions, auth events and clean-up', () => {
       },
       school: { id: s.tenantId, code: s.code, name: `School ${s.code}` },
       campus: { id: campus.id, name: campus.name },
-      role: 'OWNER',
+      // IAM: replaced in Task 3 (every active member is treated as an owner until then).
+      roles: [{ key: 'OWNER', name: 'Owner' }],
+      permissions: [...ALL_PERMISSIONS],
+      twoFactorSetupRequired: false,
       remember: true,
       expiresAt: resolved!.session.expiresAt.toISOString(),
     });

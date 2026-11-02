@@ -103,7 +103,7 @@ describe('tenant data isolation', () => {
       const user = await prisma.user.create({ data: { email: 'asha@school.in', name: 'Asha' } });
       const membership = await ctx.run(B, () =>
         prisma.scoped.membership.create({
-          data: { userId: user.id, role: 'OWNER' } as never,
+          data: { userId: user.id } as never,
         }),
       );
       expect(membership.tenantId).toBe(B);

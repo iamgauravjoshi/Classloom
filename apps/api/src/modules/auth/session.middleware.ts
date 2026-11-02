@@ -43,7 +43,7 @@ export class SessionMiddleware implements NestMiddleware {
                 userId: resolved.session.userId,
                 status: 'ACTIVE',
               },
-              select: { role: true },
+              select: { id: true, status: true }, // IAM: replaced in Task 3
             }),
           )
         : null;
@@ -63,7 +63,7 @@ export class SessionMiddleware implements NestMiddleware {
         userId: session.userId,
         tenantId: session.tenantId,
         membershipId: session.membershipId,
-        role: membership.role,
+        role: 'OWNER', // IAM: replaced in Task 3
         remember: session.remember,
         authenticatedAt: session.authenticatedAt,
       };

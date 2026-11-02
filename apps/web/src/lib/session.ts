@@ -12,8 +12,6 @@ export interface ShellSession {
   academicYear: string;
 }
 
-const ROLE_OF: Record<AuthSession['role'], Role> = { OWNER: 'admin' };
-
 /**
  * Maps the API session to the shell's. Until Part 3 adds real permissions, the school owner (the
  * only role so far) is an admin who sees every nav item, passed in as `navPermissions`.
@@ -21,7 +19,8 @@ const ROLE_OF: Record<AuthSession['role'], Role> = { OWNER: 'admin' };
 export function toShellSession(session: AuthSession, navPermissions: string[]): ShellSession {
   return {
     user: { name: session.user.name },
-    role: ROLE_OF[session.role],
+    // IAM: replaced in Task 3 (the shell maps the session's roles and permissions).
+    role: 'admin',
     permissions: [...navPermissions],
     campus: { id: session.campus.id, name: session.campus.name },
     academicYear: academicYearOf(new Date()),

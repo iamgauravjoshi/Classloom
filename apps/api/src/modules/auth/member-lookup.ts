@@ -18,7 +18,7 @@ export function findActiveMembership(
   return withTenant(prisma, tenantId, (tx) =>
     tx.membership.findFirst({
       where: { tenantId, userId: userId ?? NO_USER_ID, status: 'ACTIVE' },
-      select: { id: true, role: true },
+      select: { id: true, status: true }, // IAM: replaced in Task 3
     }),
   );
 }

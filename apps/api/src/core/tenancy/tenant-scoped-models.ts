@@ -3,9 +3,22 @@
  * and each has a forced row-level security policy in its migration. A unit test fails if a
  * model with a `tenantId` field is in neither this set nor PLATFORM_MODELS_WITH_TENANT_FK.
  */
-export const TENANT_SCOPED_MODELS: ReadonlySet<'Campus' | 'Membership'> = new Set([
+export const TENANT_SCOPED_MODELS: ReadonlySet<
+  | 'Campus'
+  | 'Membership'
+  | 'Role'
+  | 'RolePermission'
+  | 'MembershipRole'
+  | 'Invitation'
+  | 'AuditEvent'
+> = new Set([
   'Campus',
   'Membership',
+  'Role',
+  'RolePermission',
+  'MembershipRole',
+  'Invitation',
+  'AuditEvent',
 ] as const);
 
 export type TenantScopedModel =

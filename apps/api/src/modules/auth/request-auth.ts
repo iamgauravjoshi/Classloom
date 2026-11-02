@@ -1,12 +1,11 @@
-import type { MembershipRole } from '../../generated/prisma/client';
-
 /** Who is calling, resolved from the session cookie by `SessionMiddleware`. */
 export interface RequestAuth {
   sessionId: string;
   userId: string;
   tenantId: string;
   membershipId: string;
-  role: Extract<MembershipRole, 'OWNER'>;
+  // IAM: replaced in Task 3 (roles, permissions, isOwner). Every active member is an owner until then.
+  role: 'OWNER';
   remember: boolean;
   authenticatedAt: Date;
 }

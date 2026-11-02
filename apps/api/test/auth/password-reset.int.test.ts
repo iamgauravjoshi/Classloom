@@ -10,7 +10,7 @@ import { RedisService } from '../../src/core/redis/redis.service';
 import type { PrismaClient } from '../../src/generated/prisma/client';
 import { createApp } from '../../src/main';
 import { ownerPrisma, startTestInfra, type TestInfra } from '../setup-containers';
-import { seedSchool } from './helpers';
+import { addMember, seedSchool } from './helpers';
 
 const WEB_ORIGIN = 'http://localhost:3000';
 const OLD_PASSWORD = 'correct horse battery';
@@ -197,9 +197,7 @@ describe('forgot and reset password', () => {
     const dead = await school();
     await owner.tenant.update({ where: { id: dead.tenantId }, data: { status: 'SUSPENDED' } });
     const live = await school();
-    await owner.membership.create({
-      data: { tenantId: live.tenantId, userId: dead.userId, role: 'OWNER' },
-    });
+    await addMember(owner, live.tenantId, dead.userId);
     expect(await requestLink(dead.email, dead.email)).toContain('/en/reset-password?token=');
   });
 
@@ -306,9 +304,7 @@ describe('forgot and reset password', () => {
   it('refuses a password containing the code of any school the user belongs to', async () => {
     const first = await school();
     const second = await school();
-    await owner.membership.create({
-      data: { tenantId: second.tenantId, userId: first.userId, role: 'OWNER' },
-    });
+    await addMember(owner, second.tenantId, first.userId);
     const token = tokenOf(await requestLink(first.email, first.email));
 
     for (const code of [first.code, second.code]) {

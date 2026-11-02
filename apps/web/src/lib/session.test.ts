@@ -1,4 +1,4 @@
-import type { AuthSession } from '@classloom/contracts';
+import { ALL_PERMISSIONS, type AuthSession } from '@classloom/contracts';
 import { academicYearOf } from '@classloom/utils';
 import { describe, expect, it } from 'vitest';
 
@@ -14,7 +14,9 @@ const session: AuthSession = {
   },
   school: { id: 't1', code: 'GISD', name: 'Global International School' },
   campus: { id: 'c1', name: 'Global International School, Dehradun' },
-  role: 'OWNER',
+  roles: [{ key: 'OWNER', name: 'Owner' }],
+  permissions: [...ALL_PERMISSIONS],
+  twoFactorSetupRequired: false,
   remember: true,
   expiresAt: '2026-11-26T00:00:00.000Z',
 };

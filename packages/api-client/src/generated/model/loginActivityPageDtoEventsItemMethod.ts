@@ -15,4 +15,5 @@ export const LoginActivityPageDtoEventsItemMethod = {
   EMAIL_CODE: 'EMAIL_CODE',
   RESET_LINK: 'RESET_LINK',
   RECOVERY_CODE: 'RECOVERY_CODE',
+  INVITE: 'INVITE',
 } as const;

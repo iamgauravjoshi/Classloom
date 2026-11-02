@@ -26,7 +26,13 @@ export const AUTH_EVENT_TYPES = [
   'DEVICE_UNTRUSTED',
   'SESSION_REVOKED',
 ] as const;
-export const AUTH_METHODS = ['PASSWORD', 'EMAIL_CODE', 'RESET_LINK', 'RECOVERY_CODE'] as const;
+export const AUTH_METHODS = [
+  'PASSWORD',
+  'EMAIL_CODE',
+  'RESET_LINK',
+  'RECOVERY_CODE',
+  'INVITE',
+] as const;
 
 /** 32 random bytes encoded as unpadded base64url (43 characters). */
 const challengeField = z.string().regex(/^[A-Za-z0-9_-]{43}$/);

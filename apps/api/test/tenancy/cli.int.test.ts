@@ -31,7 +31,7 @@ describe('platform owner CLI', () => {
     const user = await platform.user.create({
       data: { email, name: email, emailVerifiedAt: new Date() },
     });
-    await platform.tenant.create({
+    const tenant = await platform.tenant.create({
       data: {
         code,
         name: `School ${code}`,
@@ -42,9 +42,26 @@ describe('platform owner CLI', () => {
         termsAcceptedAt: new Date(),
         status: tenantStatus,
         campuses: { create: { name: 'Main', isPrimary: true, city: 'Dehradun', state: 'UK' } },
-        memberships: { create: { userId: user.id, role: 'OWNER' } },
       },
     });
+    await platform.$executeRaw`SELECT seed_builtin_roles(${tenant.id}::uuid)`;
+    const roles = await platform.role.findMany({ where: { tenantId: tenant.id } });
+    const roleId = (key: string) => roles.find((r) => r.key === key)!.id;
+    // A non-owner member first, so the list must pick the owner by role, not by position.
+    const teacher = await platform.user.create({
+      data: { email: `teacher-${email}`, name: 'Teacher', emailVerifiedAt: new Date() },
+    });
+    for (const [userId, key] of [
+      [teacher.id, 'TEACHER'],
+      [user.id, 'OWNER'],
+    ] as const) {
+      const membership = await platform.membership.create({
+        data: { tenantId: tenant.id, userId },
+      });
+      await platform.membershipRole.create({
+        data: { tenantId: tenant.id, membershipId: membership.id, roleId: roleId(key) },
+      });
+    }
   }
 
   beforeAll(async () => {

@@ -8,6 +8,7 @@
 
 export * from './authSessionDto';
 export * from './authSessionDtoCampus';
+export * from './authSessionDtoRolesItem';
 export * from './authSessionDtoSchool';
 export * from './authSessionDtoUser';
 export * from './cancelRegistrationRequestDto';

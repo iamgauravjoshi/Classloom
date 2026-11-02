@@ -1456,9 +1456,35 @@
               "name"
             ]
           },
-          "role": {
-            "type": "string",
-            "const": "OWNER"
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "key",
+                "name"
+              ]
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "twoFactorSetupRequired": {
+            "type": "boolean"
           },
           "remember": {
             "type": "boolean"
@@ -1473,7 +1499,9 @@
           "user",
           "school",
           "campus",
-          "role",
+          "roles",
+          "permissions",
+          "twoFactorSetupRequired",
           "remember",
           "expiresAt"
         ]
@@ -1728,7 +1756,8 @@
                         "PASSWORD",
                         "EMAIL_CODE",
                         "RESET_LINK",
-                        "RECOVERY_CODE"
+                        "RECOVERY_CODE",
+                        "INVITE"
                       ]
                     },
                     {

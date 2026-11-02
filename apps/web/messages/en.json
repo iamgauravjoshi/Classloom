@@ -402,6 +402,7 @@
             "EMAIL_CODE": "Signed in with an email code",
             "RESET_LINK": "Signed in after a password reset",
             "RECOVERY_CODE": "Signed in with a recovery code",
+            "INVITE": "Signed in by accepting an invitation",
             "OTHER": "Signed in"
           },
           "SIGN_IN_FAILED": {
@@ -409,6 +410,7 @@
             "EMAIL_CODE": "Sign-in failed: wrong email code",
             "RESET_LINK": "Sign-in failed: the reset link didn't work",
             "RECOVERY_CODE": "Sign-in failed: wrong recovery code",
+            "INVITE": "Sign-in failed: the invitation didn't work",
             "OTHER": "Sign-in failed"
           },
           "SIGN_IN_PAUSED": "Sign-in paused after too many tries",
