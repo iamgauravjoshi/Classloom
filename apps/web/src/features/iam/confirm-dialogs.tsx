@@ -21,7 +21,7 @@ import { useState } from 'react';
 
 import { reauthPath } from '../account/recent-sign-in';
 import { BUTTON_CLASS } from '../auth/auth-ui';
-import { iamErrorOf } from './iam-errors';
+import { iamErrorOf, isStale } from './iam-errors';
 import { useIamErrorText, useLastShown } from './iam-ui';
 import type { InviteRow, MemberRow } from './members-model';
 
@@ -113,6 +113,8 @@ function ConfirmDialog({
 }
 
 interface RowDialogProps<R> {
+  /** Sends the person through the email-code sign-in again, back to this page. */
+  onReauth: () => void;
   row: R | null;
   onClose: () => void;
   /** After the change: reload the list. */
@@ -121,7 +123,13 @@ interface RowDialogProps<R> {
 }
 
 /** "Deactivate Anita Sharma?": ends their sessions here and blocks sign-in until reactivated. */
-export function DeactivateDialog({ row, onClose, onDone, finalFocus }: RowDialogProps<MemberRow>) {
+export function DeactivateDialog({
+  row,
+  onClose,
+  onDone,
+  onReauth,
+  finalFocus,
+}: RowDialogProps<MemberRow>) {
   const t = useTranslations('iam.confirm.deactivate');
   const errorText = useIamErrorText();
   const deactivate = useDeactivateMember(NOT_CACHED);
@@ -137,7 +145,10 @@ export function DeactivateDialog({ row, onClose, onDone, finalFocus }: RowDialog
       onDone();
       onClose();
     } catch (failure) {
-      setError(errorText(iamErrorOf(failure)));
+      const outcome = iamErrorOf(failure);
+      if (isStale(failure)) onDone();
+      if (outcome === 'recentSignIn') onReauth();
+      setError(errorText(outcome));
       throw failure;
     }
   }
@@ -194,7 +205,7 @@ export function ResetTwoFactorDialog({
         setRedirecting(true);
         window.location.assign(reauthPath(locale, schoolCode, `/${locale}/users-roles`));
       } else {
-        if (outcome === 'twoFactorOff') onDone();
+        if (isStale(failure)) onDone();
         setError(errorText(outcome));
       }
       throw failure;
@@ -227,6 +238,7 @@ export function RevokeInvitationDialog({
   row,
   onClose,
   onDone,
+  onReauth,
   finalFocus,
 }: RowDialogProps<InviteRow>) {
   const t = useTranslations('iam.confirm.revoke');
@@ -244,7 +256,10 @@ export function RevokeInvitationDialog({
       onDone();
       onClose();
     } catch (failure) {
-      setError(errorText(iamErrorOf(failure)));
+      const outcome = iamErrorOf(failure);
+      if (isStale(failure)) onDone();
+      if (outcome === 'recentSignIn') onReauth();
+      setError(errorText(outcome));
       throw failure;
     }
   }

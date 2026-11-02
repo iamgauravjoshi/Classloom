@@ -16,6 +16,7 @@ import {
   membersPageSchema,
 } from '@classloom/contracts';
 import { StatusPill, type StatusTone } from '@classloom/ui/components/status-pill';
+import { Alert, AlertDescription } from '@classloom/ui/components/ui/alert';
 import { Avatar, AvatarFallback } from '@classloom/ui/components/ui/avatar';
 import { Badge } from '@classloom/ui/components/ui/badge';
 import { Button } from '@classloom/ui/components/ui/button';
@@ -31,10 +32,13 @@ import {
 import { Spinner } from '@classloom/ui/components/ui/spinner';
 import { toast } from '@classloom/ui/components/ui/toast';
 import { IconSearch } from '@tabler/icons-react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { keepPreviousData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { useRouter } from '@/i18n/navigation';
+
+import { reauthPath } from '../account/recent-sign-in';
 import { BUTTON_CLASS, CONTROL_CLASS } from '../auth/auth-ui';
 import { useDebouncedValue } from '../school-registration/use-debounced-value';
 import {
@@ -106,6 +110,8 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
   const dates = useSecurityDates();
   const errorText = useIamErrorText();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const locale = useLocale();
   const canManage = viewer.permissions.includes('iam.manage');
 
   const [search, setSearch] = useState('');
@@ -130,6 +136,8 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.nextCursor,
     enabled: showMembers,
+    // A new filter keeps the rows on screen until its own arrive.
+    placeholderData: keepPreviousData,
   });
   const invitations = useListInvitations({
     query: {
@@ -151,7 +159,9 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
   }, [members.data, invitations.data, showMembers, showInvites, query.search, query.roleId]);
 
   const ready = (!showMembers || members.data) && (!showInvites || invitations.data);
-  const failed = (showMembers && members.isError) || (showInvites && invitations.isError);
+  const failed =
+    (showMembers && members.isError && !members.data) ||
+    (showInvites && invitations.isError && !invitations.data);
   const filtering = Boolean(query.search || query.roleId || status !== ALL);
 
   const assignable = useMemo(
@@ -179,7 +189,14 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
     void queryClient.invalidateQueries({ queryKey: getListMembersQueryKey() });
     void queryClient.invalidateQueries({ queryKey: getListInvitationsQueryKey() });
     void queryClient.invalidateQueries({ queryKey: getListRolesQueryKey() });
-  }, [queryClient]);
+    // The person may have changed their own roles: the page re-reads the session (what the
+    // viewer may see and do) on the server.
+    router.refresh();
+  }, [queryClient, router]);
+
+  const reauth = useCallback(() => {
+    window.location.assign(reauthPath(locale, viewer.schoolCode, `/${locale}/users-roles`));
+  }, [locale, viewer.schoolCode]);
 
   async function onAction(action: RowAction, row: Row, trigger: HTMLElement | null) {
     returnFocus.current = trigger;
@@ -202,7 +219,9 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
         setDialog({ kind: 'revoke', row });
       }
     } catch (failure) {
-      toast.add({ title: errorText(iamErrorOf(failure)), type: 'error' });
+      const outcome = iamErrorOf(failure);
+      if (outcome === 'recentSignIn') reauth();
+      toast.add({ title: errorText(outcome), type: 'error' });
       reload();
     }
   }
@@ -276,7 +295,11 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
       description={t('description')}
       action={
         canManage ? (
-          <InviteDialog roles={roles.data ? assignable : undefined} rolesFailed={roles.isError} />
+          <InviteDialog
+            roles={roles.data ? assignable : undefined}
+            rolesFailed={roles.isError}
+            onReauth={reauth}
+          />
         ) : undefined
       }
     >
@@ -440,22 +463,37 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
                 {members.isFetchingNextPage ? t('loadingMore') : t('loadMore')}
               </Button>
             ) : null}
+            {showMembers && members.isFetchNextPageError ? (
+              <Alert variant="destructive" className="flex flex-col items-start gap-3">
+                <AlertDescription>{t('loadMoreFailed')}</AlertDescription>
+                <Button
+                  variant="outline"
+                  className={BUTTON_CLASS}
+                  onClick={() => void members.fetchNextPage()}
+                >
+                  {t('retry')}
+                </Button>
+              </Alert>
+            ) : null}
           </>
         )}
       </div>
 
       <ChangeRolesDialog
         member={dialog?.kind === 'roles' ? dialog.row : null}
-        roles={roles.data ?? []}
+        roles={roles.data}
+        rolesFailed={roles.isError}
         assignableIds={assignableIds}
         onClose={closeDialog}
         onDone={reload}
+        onReauth={reauth}
         finalFocus={finalFocus}
       />
       <DeactivateDialog
         row={dialog?.kind === 'deactivate' ? dialog.row : null}
         onClose={closeDialog}
         onDone={reload}
+        onReauth={reauth}
         finalFocus={finalFocus}
       />
       <ResetTwoFactorDialog
@@ -463,12 +501,14 @@ export function MembersSection({ viewer }: { viewer: Viewer }) {
         schoolCode={viewer.schoolCode}
         onClose={closeDialog}
         onDone={reload}
+        onReauth={reauth}
         finalFocus={finalFocus}
       />
       <RevokeInvitationDialog
         row={dialog?.kind === 'revoke' ? dialog.row : null}
         onClose={closeDialog}
         onDone={reload}
+        onReauth={reauth}
         finalFocus={finalFocus}
       />
     </SectionCard>

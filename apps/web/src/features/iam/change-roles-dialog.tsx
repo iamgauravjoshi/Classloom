@@ -18,7 +18,7 @@ import { useState } from 'react';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import type { FinalFocus } from './confirm-dialogs';
-import { iamErrorOf } from './iam-errors';
+import { iamErrorOf, isStale } from './iam-errors';
 import { RoleChecklist, useIamErrorText, useLastShown } from './iam-ui';
 import type { MemberRow } from './members-model';
 
@@ -26,8 +26,10 @@ const NOT_CACHED = { mutation: { gcTime: 0 } } as const;
 
 interface ChangeRolesDialogProps {
   member: MemberRow | null;
-  /** Every role of the school. */
-  roles: readonly Role[];
+  /** Every role of the school; not there until they have loaded. */
+  roles: readonly Role[] | undefined;
+  rolesFailed: boolean;
+  onReauth: () => void;
   /** The ids of the roles the viewer may give. */
   assignableIds: ReadonlySet<string>;
   onClose: () => void;
@@ -39,9 +41,11 @@ interface ChangeRolesDialogProps {
 export function ChangeRolesDialog({
   member,
   roles,
+  rolesFailed,
   assignableIds,
   onClose,
   onDone,
+  onReauth,
   finalFocus,
 }: ChangeRolesDialogProps) {
   const target = useLastShown(member);
@@ -53,6 +57,8 @@ export function ChangeRolesDialog({
             key={target.membershipId}
             member={target}
             roles={roles}
+            rolesFailed={rolesFailed}
+            onReauth={onReauth}
             assignableIds={assignableIds}
             onClose={onClose}
             onDone={onDone}
@@ -66,9 +72,11 @@ export function ChangeRolesDialog({
 function RolesForm({
   member,
   roles,
+  rolesFailed,
   assignableIds,
   onClose,
   onDone,
+  onReauth,
 }: Omit<ChangeRolesDialogProps, 'finalFocus' | 'member'> & { member: MemberRow }) {
   const t = useTranslations('iam.changeRoles');
   const errorText = useIamErrorText();
@@ -80,9 +88,12 @@ function RolesForm({
 
   // What the viewer may offer, plus what the person holds that the viewer cannot change.
   const locked = new Set([...heldIds].filter((id) => !assignableIds.has(id)));
-  const offered = roles.filter((role) => assignableIds.has(role.id) || heldIds.has(role.id));
+  const offered = (roles ?? []).filter(
+    (role) => assignableIds.has(role.id) || heldIds.has(role.id),
+  );
 
   async function save() {
+    if (!roles) return;
     if (selected.size === 0) {
       setRequired(t('required'));
       return;
@@ -98,7 +109,10 @@ function RolesForm({
       onDone();
       onClose();
     } catch (failure) {
-      setError(errorText(iamErrorOf(failure)));
+      const outcome = iamErrorOf(failure);
+      if (isStale(failure)) onDone();
+      if (outcome === 'recentSignIn') onReauth();
+      setError(errorText(outcome));
     }
   }
 
@@ -117,24 +131,35 @@ function RolesForm({
         <DialogTitle className="text-h6">{t('title', { name: member.name })}</DialogTitle>
         <DialogDescription>{t('description', { name: member.name })}</DialogDescription>
       </div>
-      <RoleChecklist
-        legend={t('roles')}
-        roles={offered}
-        selected={selected}
-        locked={locked}
-        lockedNote={t('locked')}
-        error={required}
-        disabled={pending}
-        onToggle={(id, checked) => {
-          setRequired(null);
-          setSelected((current) => {
-            const next = new Set(current);
-            if (checked) next.add(id);
-            else next.delete(id);
-            return next;
-          });
-        }}
-      />
+      {rolesFailed ? (
+        <Alert variant="destructive">
+          <AlertDescription role="alert">{t('rolesLoadFailed')}</AlertDescription>
+        </Alert>
+      ) : !roles ? (
+        <p role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
+          <Spinner aria-hidden="true" />
+          {t('loading')}
+        </p>
+      ) : (
+        <RoleChecklist
+          legend={t('roles')}
+          roles={offered}
+          selected={selected}
+          locked={locked}
+          lockedNote={t('locked')}
+          error={required}
+          disabled={pending}
+          onToggle={(id, checked) => {
+            setRequired(null);
+            setSelected((current) => {
+              const next = new Set(current);
+              if (checked) next.add(id);
+              else next.delete(id);
+              return next;
+            });
+          }}
+        />
+      )}
       {error ? (
         <Alert variant="destructive">
           <AlertDescription role="alert">{error}</AlertDescription>
@@ -144,7 +169,7 @@ function RolesForm({
         <Button type="button" variant="outline" className={BUTTON_CLASS} onClick={onClose}>
           {t('cancel')}
         </Button>
-        <Button type="submit" className={BUTTON_CLASS} disabled={pending}>
+        <Button type="submit" className={BUTTON_CLASS} disabled={pending || !roles || rolesFailed}>
           {pending ? <Spinner aria-hidden="true" /> : null}
           {pending ? t('submitting') : t('submit')}
         </Button>

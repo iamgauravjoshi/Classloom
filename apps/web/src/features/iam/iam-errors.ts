@@ -38,3 +38,8 @@ export function fieldErrorPaths(error: unknown): string[] {
   if (!(error instanceof ApiError) || error.status !== 400) return [];
   return [...new Set((error.problem.errors ?? []).map((issue) => issue.path))];
 }
+
+/** A 404 or 409: the row changed or went away elsewhere, so the list is stale. */
+export function isStale(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 404 || error.status === 409);
+}

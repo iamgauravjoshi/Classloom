@@ -152,6 +152,51 @@ test.describe('members and invitations', () => {
     await joiner.dispose();
   });
 
+  test('changing your own roles refreshes what the page offers', async ({
+    page,
+    browser,
+    baseURL,
+    playwright,
+  }) => {
+    await ownerPage(page, playwright);
+    // Two custom roles with no two-step requirement: one that manages, one that only views.
+    for (const [name, permissions] of [
+      ['Manager', ['dashboard.view', 'iam.view', 'iam.manage']],
+      ['Viewer', ['dashboard.view', 'iam.view']],
+    ] as const) {
+      const created = await page.request.post(`${WEB_ORIGIN}/api/iam/roles`, {
+        data: { name, permissions, requiresTwoFactor: false },
+        headers: { origin: WEB_ORIGIN },
+      });
+      expect(created.status(), await created.text()).toBe(201);
+    }
+    const admin = newInvitee('Dev Anand');
+    const link = await inviteAs(page.request, admin, 'Manager');
+
+    // The Manager joins from a browser of their own, and takes their own Manager role away.
+    const context = await browser.newContext({ baseURL });
+    const joined = await context.request.post(`${WEB_ORIGIN}/api/invitations/accept`, {
+      data: { token: new URL(link).searchParams.get('token') },
+      headers: { origin: WEB_ORIGIN },
+    });
+    expect(joined.status(), await joined.text()).toBe(200);
+    const own = await context.newPage();
+    await own.goto('/en/users-roles');
+    await expect(own.getByRole('button', { name: 'Invite people' })).toBeVisible();
+
+    await own.getByRole('button', { name: `Actions for ${admin.name}` }).click();
+    await own.getByRole('menuitem', { name: 'Change roles' }).click();
+    const dialog = own.getByRole('dialog', { name: `Change roles for ${admin.name}` });
+    await dialog.getByRole('checkbox', { name: 'Viewer', exact: true }).click();
+    await dialog.getByRole('checkbox', { name: 'Manager', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Save roles' }).click();
+
+    // The page re-reads the session: no invite button, no row menus.
+    await expect(own.getByRole('button', { name: 'Invite people' })).toHaveCount(0);
+    await expect(own.getByRole('button', { name: /^Actions for/ })).toHaveCount(0);
+    await context.close();
+  });
+
   test('the Roles tab is a link that marks itself current', async ({ page, playwright }) => {
     await ownerPage(page, playwright);
     await page.goto('/en/users-roles?tab=roles');

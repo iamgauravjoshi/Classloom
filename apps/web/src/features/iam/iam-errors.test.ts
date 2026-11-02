@@ -2,7 +2,7 @@ import { ApiError } from '@classloom/api-client';
 import type { ProblemDetails } from '@classloom/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { fieldErrorPaths, iamErrorOf } from './iam-errors';
+import { fieldErrorPaths, iamErrorOf, isStale } from './iam-errors';
 
 const apiError = (status: number, extra: Partial<ProblemDetails> = {}) =>
   new ApiError(status, { type: 'about:blank', title: 'x', status, ...extra });
@@ -65,5 +65,15 @@ describe('fieldErrorPaths', () => {
       [],
     );
     expect(fieldErrorPaths(new Error('x'))).toEqual([]);
+  });
+});
+
+describe('isStale', () => {
+  it('is true for a 404 and a 409 only', () => {
+    expect(isStale(apiError(404))).toBe(true);
+    expect(isStale(apiError(409, { type: 'last-owner' }))).toBe(true);
+    expect(isStale(apiError(403))).toBe(false);
+    expect(isStale(apiError(429))).toBe(false);
+    expect(isStale(new Error('x'))).toBe(false);
   });
 });

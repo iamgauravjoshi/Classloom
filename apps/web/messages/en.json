@@ -664,7 +664,8 @@
       "retry": "Try again",
       "loading": "Loading",
       "reactivatedToast": "{name} was reactivated.",
-      "resentToast": "Invitation sent again to {email}."
+      "resentToast": "Invitation sent again to {email}.",
+      "loadMoreFailed": "We couldn't load more members. Check your connection and try again."
     },
     "menu": {
       "changeRoles": "Change roles",
@@ -702,7 +703,9 @@
       "submitting": "Saving",
       "cancel": "Cancel",
       "saved": "Roles updated for {name}.",
-      "required": "Choose at least one role."
+      "required": "Choose at least one role.",
+      "loading": "Loading roles",
+      "rolesLoadFailed": "We couldn't load the roles. Close this and try again."
     },
     "confirm": {
       "cancel": "Cancel",

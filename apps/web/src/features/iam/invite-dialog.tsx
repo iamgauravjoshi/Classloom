@@ -33,10 +33,11 @@ interface InviteDialogProps {
   /** The roles the viewer may give. */
   roles: readonly Role[] | undefined;
   rolesFailed: boolean;
+  onReauth: () => void;
 }
 
 /** "Invite people": email, name and roles; the person gets an email with a link to join. */
-export function InviteDialog({ roles, rolesFailed }: InviteDialogProps) {
+export function InviteDialog({ roles, rolesFailed, onReauth }: InviteDialogProps) {
   const t = useTranslations('iam.invite');
   const tMembers = useTranslations('iam.members');
   const [open, setOpen] = useState(false);
@@ -50,6 +51,7 @@ export function InviteDialog({ roles, rolesFailed }: InviteDialogProps) {
         <InviteForm
           roles={roles}
           rolesFailed={rolesFailed}
+          onReauth={onReauth}
           title={t('title')}
           onClose={() => setOpen(false)}
         />
@@ -61,6 +63,7 @@ export function InviteDialog({ roles, rolesFailed }: InviteDialogProps) {
 function InviteForm({
   roles,
   rolesFailed,
+  onReauth,
   title,
   onClose,
 }: InviteDialogProps & { title: string; onClose: () => void }) {
@@ -106,6 +109,7 @@ function InviteForm({
       onClose();
     } catch (failure) {
       const outcome = iamErrorOf(failure);
+      if (outcome === 'recentSignIn') onReauth();
       const paths = fieldErrorPaths(failure);
       if (outcome === 'alreadyMember' || outcome === 'alreadyInvited') {
         setErrors({ email: errorText(outcome) });
