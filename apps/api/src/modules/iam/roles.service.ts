@@ -305,7 +305,12 @@ export class RolesService {
     try {
       return await withTenant(this.prisma, auth.tenantId, fn);
     } catch (error) {
-      if (errorCode(error) === 'P2002') throw nameTaken();
+      if (errorCode(error) === 'P2002') {
+        const target = JSON.stringify((error as { meta?: unknown }).meta ?? '').toLowerCase();
+        // A concurrent edit of the same role's permissions collides on role_permissions' key.
+        if (target.includes('role_permissions_pkey')) throw roleChangedMeanwhile();
+        if (target.includes('roles_tenant_id_name_key')) throw nameTaken();
+      }
       if (errorCode(error) === 'P2003') throw roleInUse();
       throw error;
     }
@@ -316,6 +321,14 @@ function nameTaken(): ConflictException {
   return new ConflictException({
     message: NAME_TAKEN,
     errors: [{ path: 'name', message: NAME_TAKEN }],
+  });
+}
+
+function roleChangedMeanwhile(): ConflictException {
+  return new ConflictException({
+    type: 'role-changed',
+    title: 'This role was changed at the same time.',
+    message: 'Reload the role and try again.',
   });
 }
 

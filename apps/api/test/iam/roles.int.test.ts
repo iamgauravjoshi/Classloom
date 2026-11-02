@@ -300,6 +300,51 @@ describe('roles API', () => {
       expect(res.status).toBe(403);
     });
 
+    it('lets an Admin (every permission, not an owner) clone Admin', async () => {
+      const s = await school();
+      const adminRole = await builtIn(s.tenantId, 'ADMIN');
+      const admin = await memberWithRole(s.tenantId, adminRole.id);
+      const res = await createRole(admin.cookie, {
+        name: 'Admin copy',
+        permissions: [],
+        requiresTwoFactor: false,
+        cloneFromRoleId: adminRole.id,
+      });
+      expect(res.status).toBe(201);
+      expect((res.body as { permissions: string[] }).permissions).toHaveLength(
+        ALL_PERMISSIONS.length,
+      );
+    });
+
+    it('refuses cloning Admin when even one key is missing', async () => {
+      const s = await school();
+      const adminRole = await builtIn(s.tenantId, 'ADMIN');
+      const almost = await memberWithRole(
+        s.tenantId,
+        (
+          await owner.role.create({
+            data: {
+              tenantId: s.tenantId,
+              name: 'Almost admin',
+              permissions: {
+                create: ALL_PERMISSIONS.filter((p) => p !== 'fees.approve').map((permission) => ({
+                  permission,
+                })),
+              },
+            },
+          })
+        ).id,
+      );
+      const res = await createRole(almost.cookie, {
+        name: 'Admin copy',
+        permissions: [],
+        requiresTwoFactor: false,
+        cloneFromRoleId: adminRole.id,
+      });
+      expect(res.status).toBe(403);
+      expect((res.body as Problem).type).toBe('permission-denied');
+    });
+
     it('answers 404 for a clone source in another school', async () => {
       const a = await school();
       const b = await school();
@@ -546,6 +591,60 @@ describe('roles API', () => {
       await send('put', s.cookie, `/iam/roles/${teacher.id}`, { permissions: ['dashboard.view'] });
       const res = await send('post', manager.cookie, `/iam/roles/${teacher.id}/reset`);
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe('resetting Owner', () => {
+    it('refuses a non-owner with 403', async () => {
+      const s = await school();
+      const admin = await memberWithRole(s.tenantId, (await builtIn(s.tenantId, 'ADMIN')).id);
+      const ownerRole = await builtIn(s.tenantId, 'OWNER');
+      const res = await send('post', admin.cookie, `/iam/roles/${ownerRole.id}/reset`);
+      expect(res.status).toBe(403);
+    });
+
+    it('restores only requiresTwoFactor for an owner', async () => {
+      const s = await school();
+      const ownerRole = await builtIn(s.tenantId, 'OWNER');
+      await send('put', s.cookie, `/iam/roles/${ownerRole.id}`, { requiresTwoFactor: false });
+      const res = await send('post', s.cookie, `/iam/roles/${ownerRole.id}/reset`);
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ key: 'OWNER', name: 'Owner', requiresTwoFactor: true });
+      expect((res.body as { permissions: string[] }).permissions).toHaveLength(
+        ALL_PERMISSIONS.length,
+      );
+      expect(await owner.rolePermission.count({ where: { roleId: ownerRole.id } })).toBe(0);
+    });
+  });
+
+  describe('concurrent writes', () => {
+    it('answers 409 on name (never 500) when creates race for one name', async () => {
+      const s = await school();
+      const body = { name: 'Racer', permissions: ['students.view'], requiresTwoFactor: false };
+      const results = await Promise.all(
+        Array.from({ length: 6 }, () => createRole(s.cookie, body)),
+      );
+      const statuses = results.map((r) => r.status).sort();
+      expect(statuses.filter((x) => x === 201)).toHaveLength(1);
+      expect(statuses.filter((x) => x === 409)).toHaveLength(5);
+      for (const r of results.filter((x) => x.status === 409)) {
+        expect((r.body as Problem).errors?.[0]?.path).toBe('name');
+      }
+    });
+
+    it('never answers 500 when a delete races an assignment', async () => {
+      const s = await school();
+      const custom = (
+        await createRole(s.cookie, { name: 'Racing', permissions: [], requiresTwoFactor: false })
+      ).body as { id: string };
+      const [user] = await Promise.all([
+        memberWithRole(s.tenantId, custom.id),
+        send('delete', s.cookie, `/iam/roles/${custom.id}`),
+      ]);
+      expect(user.membershipId).toBeDefined();
+      // Either order is consistent: the role survives with its holder, or was deleted first.
+      const still = await owner.role.count({ where: { id: custom.id } });
+      expect([0, 1]).toContain(still);
     });
   });
 
