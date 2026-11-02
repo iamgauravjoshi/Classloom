@@ -5,6 +5,9 @@ import { EmailModule } from '../../core/email/email.module';
 import { AuthModule } from '../auth/auth.module';
 import { AuditService } from './audit.service';
 import { IamLimits } from './iam-limits';
+import { InvitationAcceptController } from './invitation-accept.controller';
+import { InvitationsController } from './invitations.controller';
+import { InvitationsService } from './invitations.service';
 import { MembersController } from './members.controller';
 import { MembersService } from './members.service';
 import { PermissionGuard } from './permission.guard';
@@ -17,13 +20,19 @@ import { RolesService } from './roles.service';
  */
 @Module({
   imports: [AuthModule, EmailModule],
-  controllers: [RolesController, MembersController],
+  controllers: [
+    RolesController,
+    MembersController,
+    InvitationsController,
+    InvitationAcceptController,
+  ],
   providers: [
     { provide: APP_GUARD, useClass: PermissionGuard },
     AuditService,
     IamLimits,
     RolesService,
     MembersService,
+    InvitationsService,
   ],
   exports: [AuditService, IamLimits],
 })

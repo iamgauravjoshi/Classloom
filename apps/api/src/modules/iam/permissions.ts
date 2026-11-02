@@ -82,3 +82,12 @@ export async function loadMemberAccess(
   });
   return toMemberAccess(rows);
 }
+
+/** The catalogue permissions a role hands out, every one for Owner: what escalation checks compare. */
+export function permissionsOf(role: {
+  key: string | null;
+  permissions: readonly { permission: string }[];
+}): string[] {
+  if (role.key === OWNER_ROLE_KEY) return [...ALL_PERMISSIONS];
+  return role.permissions.map((p) => p.permission).filter((p) => ALL_PERMISSIONS.includes(p));
+}

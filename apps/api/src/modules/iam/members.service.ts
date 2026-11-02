@@ -1,5 +1,4 @@
 import {
-  ALL_PERMISSIONS,
   canGrant,
   type ListMembersQuery,
   type Member,
@@ -30,6 +29,7 @@ import { clearTwoFactorState } from '../auth/two-factor-state';
 import { AuditService } from './audit.service';
 import { IamLimits } from './iam-limits';
 import { PermissionDeniedException } from './permission.guard';
+import { permissionsOf } from './permissions';
 
 export interface MemberMeta {
   ip?: string;
@@ -53,7 +53,6 @@ const MEMBER_INCLUDE = {
   },
 } as const satisfies Prisma.MembershipInclude;
 type MemberRow = Prisma.MembershipGetPayload<{ include: typeof MEMBER_INCLUDE }>;
-type HeldRole = MemberRow['roles'][number]['role'];
 
 @Injectable()
 export class MembersService {
@@ -412,11 +411,6 @@ export class MembersService {
       throw error;
     }
   }
-}
-
-function permissionsOf(role: HeldRole): string[] {
-  if (role.key === OWNER_ROLE_KEY) return [...ALL_PERMISSIONS];
-  return role.permissions.map((p) => p.permission).filter((p) => ALL_PERMISSIONS.includes(p));
 }
 
 function toMember(row: MemberRow, lastSignInAt: Date | null): Member {

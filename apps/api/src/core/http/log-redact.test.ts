@@ -2,7 +2,7 @@ import { Writable } from 'node:stream';
 
 import pino from 'pino';
 
-import { LOG_REDACT_PATHS } from './log-redact';
+import { LOG_REDACT_PATHS, redactRequest } from './log-redact';
 
 describe('LOG_REDACT_PATHS', () => {
   it('keeps the session token out of request and response headers', () => {
@@ -21,5 +21,34 @@ describe('LOG_REDACT_PATHS', () => {
     expect(lines).toHaveLength(1);
     expect(lines[0]).not.toMatch(/secret/);
     expect(lines[0]).toContain('[Redacted]');
+  });
+});
+
+describe('redactRequest', () => {
+  it('keeps link tokens out of the logged URL and query', () => {
+    const lines: string[] = [];
+    const stream = new Writable({
+      write(chunk: Buffer, _enc, done) {
+        lines.push(chunk.toString());
+        done();
+      },
+    });
+    const logger = pino({ redact: LOG_REDACT_PATHS, serializers: { req: redactRequest } }, stream);
+    logger.info({
+      req: {
+        method: 'GET',
+        url: '/invitations/preview?a=1&token=secret-token&b=2',
+        query: { a: '1', token: 'secret-token' },
+      },
+    });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).not.toMatch(/secret/);
+    expect(lines[0]).toContain('/invitations/preview?a=1&token=[Redacted]&b=2');
+    expect(lines[0]).toContain('"a":"1"');
+  });
+
+  it('leaves other requests alone', () => {
+    const req = { method: 'GET', url: '/schools/code-availability?code=GIS' };
+    expect(redactRequest(req)).toEqual(req);
   });
 });

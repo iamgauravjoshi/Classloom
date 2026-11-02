@@ -13,7 +13,7 @@ import { findActiveMembership, findMemberAccess } from './member-lookup';
 import type { SignInMeta } from './password-sign-in.service';
 import { CredentialsChangedError, SessionService } from './session.service';
 import { TwoFactorService } from './two-factor.service';
-import { TwoFactorChallengeService } from './two-factor-challenge.service';
+import { type FirstFactorMethod, TwoFactorChallengeService } from './two-factor-challenge.service';
 
 /** Failed new-device emails hold no secret; kept a day like the other security emails. */
 const KEEP_FAILED_EMAIL_SECONDS = 86_400;
@@ -43,13 +43,13 @@ export class TwoFactorInvalidException extends UnauthorizedException {
   }
 }
 
-/** What a first factor (password or emailed code) proved. */
+/** What a first factor (password, emailed code or accepted invitation) proved. */
 export interface FirstFactorResult {
   user: User;
   tenant: { id: string; code: string; name: string; status: TenantStatus };
   membership: { id: string };
   remember: boolean;
-  method: 'PASSWORD' | 'EMAIL_CODE';
+  method: FirstFactorMethod;
 }
 
 export interface DeviceSignInMeta extends SignInMeta {
@@ -67,7 +67,7 @@ export type FirstFactorOutcome =
   ({ kind: 'session' } & SessionResult) | { kind: 'challenge'; body: TwoFactorChallenge };
 
 /**
- * The one place both first factors hand over to: decides between a session and the two-step
+ * The one place every first factor hands over to: decides between a session and the two-step
  * challenge, creates the session, records the device and sends the new-device email.
  */
 @Injectable()

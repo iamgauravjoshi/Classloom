@@ -30,8 +30,8 @@ export interface AuditInput {
   /** Changed fields only. */
   before?: Prisma.InputJsonValue | null;
   after?: Prisma.InputJsonValue | null;
-  /** Null for the system and the CLI. */
-  actor: RequestAuth | null;
+  /** Null for the system and the CLI; the joining person themselves for `member.joined`. */
+  actor: Pick<RequestAuth, 'userId'> | null;
   meta: { ip?: string; userAgent?: string };
 }
 

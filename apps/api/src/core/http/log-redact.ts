@@ -6,4 +6,19 @@ export const LOG_REDACT_PATHS = [
   'req.headers.authorization',
   'req.headers.cookie',
   'res.headers["set-cookie"]',
+  'req.query.token',
 ];
+
+const TOKEN_PARAM = /([?&]token=)[^&#]*/g;
+
+/**
+ * pino-http request serializer (it receives the standard serialized request): a link token in
+ * the query string (`GET /invitations/preview?token=…`) is a credential, so it never reaches the
+ * logged URL. `req.query.token` is covered by `LOG_REDACT_PATHS`.
+ */
+export function redactRequest<T extends { url?: string }>(req: T): T {
+  if (typeof req.url !== 'string' || !req.url.includes('token=')) return req;
+  // The standard serializer's object has a non-enumerable `raw`; assign onto it, don't spread.
+  req.url = req.url.replace(TOKEN_PARAM, '$1[Redacted]');
+  return req;
+}

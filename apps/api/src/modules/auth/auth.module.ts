@@ -66,6 +66,7 @@ import { TwoFactorSignInService } from './two-factor-sign-in.service';
     PasswordService,
     SignInPauseService,
     TwoFactorService,
+    TwoFactorSignInService,
   ],
 })
 export class AuthModule implements NestModule {

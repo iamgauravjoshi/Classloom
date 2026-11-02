@@ -3,6 +3,9 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { RedisService } from '../../core/redis/redis.service';
 import { randomToken, sha256 } from './crypto';
 
+/** How the first factor was proved: a password, an emailed code, or an invitation link. */
+export type FirstFactorMethod = 'PASSWORD' | 'EMAIL_CODE' | 'INVITE';
+
 export const CHALLENGE_TTL_SECONDS = 300;
 export const CHALLENGE_ATTEMPTS = 5;
 
@@ -12,7 +15,7 @@ export interface ChallengeData {
   tenantId: string;
   membershipId: string;
   remember: boolean;
-  method: 'PASSWORD' | 'EMAIL_CODE';
+  method: FirstFactorMethod;
   /** ISO string of `password_changed_at` when the first factor was checked. */
   passwordChangedAt: string | null;
 }

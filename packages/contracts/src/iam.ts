@@ -355,6 +355,10 @@ export const invitationSchema = z.object({
 });
 export type Invitation = z.infer<typeof invitationSchema>;
 
+/** `GET /iam/invitations`: the school's open invitations, newest first. */
+export const invitationsResponseSchema = z.object({ invitations: z.array(invitationSchema) });
+export type InvitationsResponse = z.infer<typeof invitationsResponseSchema>;
+
 export const createInvitationRequestSchema = z.object({
   email: emailField,
   name: personNameField,

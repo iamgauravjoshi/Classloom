@@ -8,7 +8,7 @@ import { ConfigModule } from './core/config/config.module';
 import type { Env } from './core/config/env.schema';
 import { EmailModule } from './core/email/email.module';
 import { HealthModule } from './core/health/health.module';
-import { LOG_REDACT_PATHS } from './core/http/log-redact';
+import { LOG_REDACT_PATHS, redactRequest } from './core/http/log-redact';
 import { ProblemFilter } from './core/http/problem.filter';
 import { RedisThrottlerStorage } from './core/http/redis-throttler.storage';
 import {
@@ -45,6 +45,7 @@ export class AppModule {
           pinoHttp: {
             level: LOG_LEVEL[env.NODE_ENV],
             redact: LOG_REDACT_PATHS,
+            serializers: { req: redactRequest },
           },
         }),
         TenancyCoreModule,
