@@ -777,4 +777,38 @@ describe('roles API', () => {
       expect(res.status).toBe(201);
     });
   });
+
+  describe('turning off a stronger role’s two-step requirement', () => {
+    it('needs every permission the role holds; turning it on stays open', async () => {
+      const s = await school();
+      const admin = await builtIn(s.tenantId, 'ADMIN');
+      const manager = await managerWith(s.tenantId, []);
+      const off = await send('put', manager.cookie, `/iam/roles/${admin.id}`, {
+        requiresTwoFactor: false,
+      });
+      expect(off.status).toBe(403);
+      expect((off.body as { type?: string }).type).toBe('permission-denied');
+      expect(
+        (await owner.role.findUniqueOrThrow({ where: { id: admin.id } })).requiresTwoFactor,
+      ).toBe(true);
+
+      // An Admin holds everything a Teacher holds, so may switch the Teacher's requirement both ways.
+      const teacher = await builtIn(s.tenantId, 'TEACHER');
+      const adminMember = await memberWithRole(s.tenantId, admin.id);
+      for (const requiresTwoFactor of [true, false]) {
+        const res = await send('put', adminMember.cookie, `/iam/roles/${teacher.id}`, {
+          requiresTwoFactor,
+        });
+        expect(res.status).toBe(200);
+      }
+      // The narrow manager may still turn a requirement on.
+      const custom = await owner.role.create({
+        data: { tenantId: s.tenantId, name: `Custom ${randomUUID().slice(0, 8)}` },
+      });
+      const on = await send('put', manager.cookie, `/iam/roles/${custom.id}`, {
+        requiresTwoFactor: true,
+      });
+      expect(on.status).toBe(200);
+    });
+  });
 });

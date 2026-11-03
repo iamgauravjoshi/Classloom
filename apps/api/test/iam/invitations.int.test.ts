@@ -19,6 +19,7 @@ import { createApp } from '../../src/main';
 import { encryptSecret } from '../../src/modules/auth/secret-box';
 import { SessionService } from '../../src/modules/auth/session.service';
 import { generateTotpSecret } from '../../src/modules/auth/totp';
+import { TwoFactorSignInService } from '../../src/modules/auth/two-factor-sign-in.service';
 import { addMember, seedSchool } from '../auth/helpers';
 import { ownerPrisma, startTestInfra, type TestInfra } from '../setup-containers';
 
@@ -413,15 +414,23 @@ describe('invitations and joining', () => {
     it('answers one 410 for unknown, malformed, expired, revoked and used tokens', async () => {
       const s = await school();
       const role = await builtIn(s.tenantId, 'TEACHER');
-      const expired = await invite(s, { email: nextEmail(), name: 'Expired One', roleIds: [role.id] });
+      const expired = await invite(s, {
+        email: nextEmail(),
+        name: 'Expired One',
+        roleIds: [role.id],
+      });
       await owner.invitation.update({
         where: { id: expired.invitation.id },
         data: { expiresAt: new Date(Date.now() - 1000) },
       });
-      const revoked = await invite(s, { email: nextEmail(), name: 'Revoked One', roleIds: [role.id] });
-      expect((await post(s.cookie, `/iam/invitations/${revoked.invitation.id}/revoke`)).status).toBe(
-        204,
-      );
+      const revoked = await invite(s, {
+        email: nextEmail(),
+        name: 'Revoked One',
+        roleIds: [role.id],
+      });
+      expect(
+        (await post(s.cookie, `/iam/invitations/${revoked.invitation.id}/revoke`)).status,
+      ).toBe(204);
       const used = await invite(s, { email: nextEmail(), name: 'Used One', roleIds: [role.id] });
       expect((await accept(used.token)).status).toBe(200);
 
@@ -508,9 +517,9 @@ describe('invitations and joining', () => {
       const results = await Promise.all([accept(token), accept(token)]);
       expect(results.map((r) => r.status).sort()).toEqual([200, 410]);
       expect(await owner.user.count({ where: { email } })).toBe(1);
-      expect(await owner.membership.count({ where: { tenantId: s.tenantId, user: { email } } })).toBe(
-        1,
-      );
+      expect(
+        await owner.membership.count({ where: { tenantId: s.tenantId, user: { email } } }),
+      ).toBe(1);
     });
 
     it('joins an existing user from another school with no new account; their two-step applies', async () => {
@@ -584,9 +593,9 @@ describe('invitations and joining', () => {
       expect(membership.status).toBe('ACTIVE');
       expect(membership.deactivatedAt).toBeNull();
       expect(membership.roles.map((r) => r.roleId)).toEqual([librarian.id]);
-      expect(await owner.membership.count({ where: { tenantId: s.tenantId, userId: old.userId } })).toBe(
-        1,
-      );
+      expect(
+        await owner.membership.count({ where: { tenantId: s.tenantId, userId: old.userId } }),
+      ).toBe(1);
     });
 
     it('reactivates a revoked seat holding Owner with only the invited roles', async () => {
@@ -613,7 +622,11 @@ describe('invitations and joining', () => {
       const s = await school();
       const role = await builtIn(s.tenantId, 'TEACHER');
       const email = nextEmail();
-      const { invitation, token } = await invite(s, { email, name: 'Became Member', roleIds: [role.id] });
+      const { invitation, token } = await invite(s, {
+        email,
+        name: 'Became Member',
+        roleIds: [role.id],
+      });
       await member(s.tenantId, { email });
       const res = await accept(token);
       expect(res.status).toBe(409);
@@ -626,11 +639,19 @@ describe('invitations and joining', () => {
     it('answers 410 for revoked, expired and unknown tokens, and for a school not active', async () => {
       const s = await school();
       const role = await builtIn(s.tenantId, 'TEACHER');
-      const revoked = await invite(s, { email: nextEmail(), name: 'Revoked Join', roleIds: [role.id] });
-      expect((await post(s.cookie, `/iam/invitations/${revoked.invitation.id}/revoke`)).status).toBe(
-        204,
-      );
-      const expired = await invite(s, { email: nextEmail(), name: 'Expired Join', roleIds: [role.id] });
+      const revoked = await invite(s, {
+        email: nextEmail(),
+        name: 'Revoked Join',
+        roleIds: [role.id],
+      });
+      expect(
+        (await post(s.cookie, `/iam/invitations/${revoked.invitation.id}/revoke`)).status,
+      ).toBe(204);
+      const expired = await invite(s, {
+        email: nextEmail(),
+        name: 'Expired Join',
+        roleIds: [role.id],
+      });
       await owner.invitation.update({
         where: { id: expired.invitation.id },
         data: { expiresAt: new Date(Date.now() - 1000) },
@@ -642,7 +663,11 @@ describe('invitations and joining', () => {
       const suspended = await school();
       const sRole = await builtIn(suspended.tenantId, 'TEACHER');
       const email = nextEmail();
-      const pending = await invite(suspended, { email, name: 'Suspended Join', roleIds: [sRole.id] });
+      const pending = await invite(suspended, {
+        email,
+        name: 'Suspended Join',
+        roleIds: [sRole.id],
+      });
       await owner.tenant.update({
         where: { id: suspended.tenantId },
         data: { status: 'SUSPENDED', suspendedAt: new Date() },
@@ -659,7 +684,11 @@ describe('invitations and joining', () => {
         data: { tenantId: s.tenantId, name: `Coach ${randomUUID().slice(0, 6)}` },
       });
       const email = nextEmail();
-      const partly = await invite(s, { email, name: 'Partly Gone', roleIds: [teacher.id, custom.id] });
+      const partly = await invite(s, {
+        email,
+        name: 'Partly Gone',
+        roleIds: [teacher.id, custom.id],
+      });
       const alone = await owner.role.create({
         data: { tenantId: s.tenantId, name: `Helper ${randomUUID().slice(0, 6)}` },
       });
@@ -766,9 +795,7 @@ describe('invitations and joining', () => {
         where: { targetId: invitation.id, action: 'member.invite_revoked' },
       });
       expect(audit).toHaveLength(1);
-      const list = invitationsResponseSchema.parse(
-        (await get(s.cookie, '/iam/invitations')).body,
-      );
+      const list = invitationsResponseSchema.parse((await get(s.cookie, '/iam/invitations')).body);
       expect(list.invitations).toHaveLength(0);
       // Resending a revoked invitation is not possible.
       expect((await post(s.cookie, `/iam/invitations/${invitation.id}/resend`)).status).toBe(410);
@@ -819,6 +846,95 @@ describe('invitations and joining', () => {
           if (dumped) expect(dumped.includes(Buffer.from(raw))).toBe(false);
         }
       }
+    });
+  });
+
+  describe('final fixes', () => {
+    it('never echoes the token in a problem body and answers no-store', async () => {
+      const secret = `leak-${randomUUID()}`;
+      const res = await preview(secret);
+      expect(res.status).toBe(410);
+      expect(JSON.stringify(res.body)).not.toContain(secret);
+      expect((res.body as { instance?: string }).instance).toBe(
+        '/invitations/preview?token=[Redacted]',
+      );
+      expect(res.headers['cache-control']).toBe('no-store');
+      const accepted = await accept(secret);
+      expect(accepted.status).toBe(410);
+      expect(accepted.headers['cache-control']).toBe('no-store');
+    });
+
+    it('answers 409 invitation-joined when the join commits but sign-in fails', async () => {
+      const s = await school();
+      const role = await builtIn(s.tenantId, 'TEACHER');
+      const email = nextEmail();
+      const { invitation, token } = await invite(s, {
+        email,
+        name: 'Half Joined',
+        roleIds: [role.id],
+      });
+      const signIn = vi
+        .spyOn(app.get(TwoFactorSignInService, { strict: false }), 'completeFirstFactor')
+        .mockRejectedValueOnce(new Error('Redis is down'));
+      const res = await accept(token);
+      signIn.mockRestore();
+
+      expect(res.status).toBe(409);
+      expect(res.body).toMatchObject({ type: 'invitation-joined', schoolCode: s.code });
+      expect(cookieOf(res, COOKIE)).toBeUndefined();
+      const user = await owner.user.findUniqueOrThrow({ where: { email } });
+      const membership = await owner.membership.findUniqueOrThrow({
+        where: { tenantId_userId: { tenantId: s.tenantId, userId: user.id } },
+      });
+      expect(membership.status).toBe('ACTIVE');
+      const row = await owner.invitation.findUniqueOrThrow({ where: { id: invitation.id } });
+      expect(row.acceptedAt).not.toBeNull();
+    });
+
+    it('lets only an owner invite a deactivated owner back, at create and at accept', async () => {
+      const s = await school();
+      const teacher = await builtIn(s.tenantId, 'TEACHER');
+      const ownerRole = await builtIn(s.tenantId, 'OWNER');
+      const gone = await member(s.tenantId, { roleKey: 'OWNER' });
+      await owner.membership.update({
+        where: { id: gone.membershipId },
+        data: { status: 'DEACTIVATED', deactivatedAt: new Date() },
+      });
+
+      const admin = await member(s.tenantId, { roleKey: 'ADMIN' });
+      const second = await member(s.tenantId, { roleKey: 'OWNER' });
+      // Both roles require two-step sign-in; with it on, the setup guard stays out of the way.
+      await owner.user.updateMany({
+        where: { id: { in: [admin.userId, second.userId] } },
+        data: { totpEnabledAt: new Date() },
+      });
+      const denied = await post(admin.cookie, '/iam/invitations', {
+        email: gone.email,
+        name: 'Former Owner',
+        roleIds: [teacher.id],
+      });
+      expect(denied.status).toBe(403);
+      expect(denied.body).toMatchObject({ type: 'permission-denied' });
+
+      // A second owner invites, then loses Owner before the person accepts.
+      const { invitation, token } = await invite(
+        { cookie: second.cookie, name: s.name },
+        { email: gone.email, name: 'Former Owner', roleIds: [teacher.id] },
+      );
+      await owner.membershipRole.deleteMany({
+        where: { membershipId: second.membershipId, roleId: ownerRole.id },
+      });
+      const refused = await accept(token);
+      expect(refused.status).toBe(403);
+      expect(refused.body).toMatchObject({ type: 'permission-denied' });
+      const row = await owner.invitation.findUniqueOrThrow({ where: { id: invitation.id } });
+      expect(row.acceptedAt).toBeNull();
+      const seat = await owner.membership.findUniqueOrThrow({
+        where: { id: gone.membershipId },
+        include: { roles: true },
+      });
+      expect(seat.status).toBe('DEACTIVATED');
+      expect(seat.roles.map((r) => r.roleId)).toEqual([ownerRole.id]);
     });
   });
 });

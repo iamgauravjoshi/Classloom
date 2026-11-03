@@ -17,18 +17,45 @@ async function ownerPage(page: Page, playwright: PlaywrightWorkerArgs['playwrigh
   return school;
 }
 
+/**
+ * Closes the success toast. It stays about 5 s at the bottom right, which is where the editor's
+ * Create / Save button lands once scrolled into view: left open, it intercepts the next click and
+ * Playwright retries until it fades (that, not the grid, made the first test take ~25 s on Firefox).
+ */
+async function closeToast(page: Page, text: string) {
+  const close = page
+    .locator('[data-slot="toast"]')
+    .filter({ hasText: text })
+    .getByRole('button', { name: 'Close toast' });
+  // It may already have gone on a fast run; a click that loses that race is harmless.
+  if (await close.isVisible()) await close.click({ timeout: 2_000 }).catch(() => undefined);
+  await expect(close).toBeHidden();
+}
+
+/** A custom role made through the API, for the tests that start from one. */
+async function seedRole(page: Page, name: string) {
+  const res = await page.request.post(`${WEB_ORIGIN}/api/iam/roles`, {
+    data: {
+      name,
+      description: 'Greets visitors.',
+      permissions: ['fees.view', 'fees.approve'],
+      requiresTwoFactor: true,
+    },
+    headers: { origin: WEB_ORIGIN },
+  });
+  expect(res.status(), await res.text()).toBe(201);
+}
+
 const card = (page: Page, name: string) =>
   page
     .getByRole('listitem')
     .filter({ has: page.getByRole('heading', { level: 3, name, exact: true }) });
 
 test.describe('roles', () => {
-  test('creates, clones, edits and deletes a custom role with the grid', async ({
+  test('creates a custom role with the grid, and refuses a taken name', async ({
     page,
     playwright,
   }) => {
-    // A long walk through the grid: Firefox takes 25 s of the 30 s default.
-    test.slow();
     await ownerPage(page, playwright);
     await page.goto('/en/users-roles?tab=roles');
     await expect(page.getByRole('heading', { level: 3, name: 'Owner', exact: true })).toBeVisible();
@@ -67,6 +94,7 @@ test.describe('roles', () => {
     await expect(card(page, 'Front desk').getByText('Custom')).toBeVisible();
     await expect(card(page, 'Front desk').getByText('Requires two-step')).toBeVisible();
     await expect(card(page, 'Front desk').getByText(/0 members/)).toBeVisible();
+    await closeToast(page, 'Front desk was created.');
 
     // A second role with the same name is refused on the name.
     await page.getByRole('link', { name: 'Create role' }).click();
@@ -74,8 +102,11 @@ test.describe('roles', () => {
     await page.getByRole('button', { name: 'Create role', exact: true }).click();
     await expect(page.getByText('A role with this name already exists.')).toBeVisible();
     await expect(page.getByLabel('Name', { exact: true })).toBeFocused();
+  });
 
-    // Clone: pre-filled from the role.
+  test('clones a role, pre-filled from it', async ({ page, playwright }) => {
+    await ownerPage(page, playwright);
+    await seedRole(page, 'Front desk');
     await page.goto('/en/users-roles?tab=roles');
     await page.getByRole('link', { name: 'Clone Front desk' }).click();
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Front desk copy');
@@ -84,9 +115,14 @@ test.describe('roles', () => {
     await expect(page.getByRole('switch', { name: 'Require two-step sign-in' })).toBeChecked();
     await page.getByLabel('Name', { exact: true }).fill('Front desk night');
     await page.getByRole('button', { name: 'Create role', exact: true }).click();
-    await expect(card(page, 'Front desk night')).toBeVisible();
+    await expect(page.getByText('Front desk night was created.')).toBeVisible();
+    await expect(card(page, 'Front desk night').getByText('Requires two-step')).toBeVisible();
+  });
 
-    // Edit.
+  test('edits a custom role, then deletes it from the list', async ({ page, playwright }) => {
+    await ownerPage(page, playwright);
+    await seedRole(page, 'Front desk night');
+    await page.goto('/en/users-roles?tab=roles');
     await page.getByRole('link', { name: 'Edit Front desk night' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Edit role' })).toBeVisible();
     await page.getByLabel('Name', { exact: true }).fill('Night desk');
@@ -94,6 +130,7 @@ test.describe('roles', () => {
     await page.getByRole('button', { name: 'Save role' }).click();
     await expect(page.getByText('Night desk was saved.')).toBeVisible();
     await expect(card(page, 'Night desk')).toBeVisible();
+    await closeToast(page, 'Night desk was saved.');
 
     // Delete, from the list: cancel first, then confirm.
     await page.getByRole('button', { name: 'Delete Night desk' }).click();
@@ -120,12 +157,14 @@ test.describe('roles', () => {
     await page.getByRole('button', { name: 'Save role' }).click();
     await expect(page.getByText('Teacher was saved.')).toBeVisible();
     await expect(card(page, 'Teacher').getByText(/14 of \d+ permissions/)).toBeVisible();
+    await closeToast(page, 'Teacher was saved.');
 
     await page.getByRole('button', { name: 'Reset to default: Teacher' }).click();
     const reset = page.getByRole('dialog', { name: 'Reset Teacher to default?' });
     await reset.getByRole('button', { name: 'Reset to default' }).click();
     await expect(page.getByText('Teacher was reset to default.')).toBeVisible();
     await expect(card(page, 'Teacher').getByText(/13 of \d+ permissions/)).toBeVisible();
+    await closeToast(page, 'Teacher was reset to default.');
 
     // A custom role somebody holds cannot be deleted.
     const created = await page.request.post(`${WEB_ORIGIN}/api/iam/roles`, {

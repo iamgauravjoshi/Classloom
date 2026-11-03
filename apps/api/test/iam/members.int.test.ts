@@ -566,7 +566,7 @@ describe('members API', () => {
       ).toBe('ACTIVE');
     });
 
-    it('refuses to deactivate the last owner (409 last-owner)', async () => {
+    it('answers a non-owner 403 before any last-owner 409, so it reveals nothing', async () => {
       const s = await school();
       // A REVOKED owner is a migration artefact and does not count.
       const revoked = await member(s.tenantId, { roleKey: 'OWNER' });
@@ -576,8 +576,9 @@ describe('members API', () => {
       });
       const manager = await managerWith(s.tenantId);
       const res = await send('post', manager.cookie, `/iam/members/${s.membershipId}/deactivate`);
-      expect(res.status).toBe(409);
-      expect((res.body as Problem).type).toBe('last-owner');
+      // s is the last ACTIVE owner, yet the non-owner learns only that it may not act.
+      expect(res.status).toBe(403);
+      expect((res.body as Problem).type).toBe('permission-denied');
       expect(
         (await owner.membership.findUniqueOrThrow({ where: { id: s.membershipId } })).status,
       ).toBe('ACTIVE');
@@ -736,8 +737,17 @@ describe('members API', () => {
     });
   });
 
+  /** Exactly one 2xx; the other answer is one of `losers`. */
+  const expectOneWinner = (statuses: number[], losers: number[]) => {
+    const won = statuses.filter((c) => c >= 200 && c < 300);
+    expect(won).toHaveLength(1);
+    const lost = statuses.filter((c) => c < 200 || c >= 300);
+    expect(lost).toHaveLength(1);
+    expect(losers).toContain(lost[0]);
+  };
+
   describe('fix round 1', () => {
-    it('serialises parallel demotions of the last two owners (exactly one 409)', async () => {
+    it('serialises parallel demotions of the last two owners (exactly one succeeds)', async () => {
       for (let round = 0; round < 3; round += 1) {
         const s = await school();
         const second = await member(s.tenantId, { roleKey: 'OWNER' });
@@ -750,7 +760,9 @@ describe('members API', () => {
             roleIds: [teacher.id],
           }),
         ]);
-        expect([a.status, b.status].sort()).toEqual([200, 409]);
+        // Whichever goes second either finds the other the last owner (409) or, re-checked under
+        // the lock, finds its own actor no longer an owner (403).
+        expectOneWinner([a.status, b.status], [409, 403]);
         const owners = await owner.membership.count({
           where: {
             tenantId: s.tenantId,
@@ -758,7 +770,7 @@ describe('members API', () => {
             roles: { some: { role: { key: 'OWNER' } } },
           },
         });
-        expect(owners).toBe(1);
+        expect(owners).toBeGreaterThanOrEqual(1);
       }
     });
 
@@ -773,7 +785,9 @@ describe('members API', () => {
           }),
           send('post', second.cookie, `/iam/members/${s.membershipId}/deactivate`),
         ]);
-        expect([a.status, b.status].filter((c) => c === 409)).toHaveLength(1);
+        // The loser gets 409 last-owner, or its actor was deactivated meanwhile: 401 when the
+        // session middleware already sees that, 403 when the re-check under the lock does.
+        expectOneWinner([a.status, b.status], [409, 401, 403]);
         const owners = await owner.membership.count({
           where: {
             tenantId: s.tenantId,
@@ -781,7 +795,7 @@ describe('members API', () => {
             roles: { some: { role: { key: 'OWNER' } } },
           },
         });
-        expect(owners).toBe(1);
+        expect(owners).toBeGreaterThanOrEqual(1);
       }
     });
 
@@ -833,6 +847,54 @@ describe('members API', () => {
     it('rejects a roleId that is not a UUID (400)', async () => {
       const s = await school();
       expect((await get(s.cookie, '/iam/members?roleId=nope')).status).toBe(400);
+    });
+  });
+
+  describe('acting on a stronger person', () => {
+    it('refuses a narrow iam.manage holder on an Admin (deactivate, reset two-step)', async () => {
+      const s = await school();
+      const manager = await managerWith(s.tenantId); // iam.* only
+      const admin = await member(s.tenantId, { roleKey: 'ADMIN' });
+      await enableTwoFactor(admin.userId);
+
+      const deactivate = await send(
+        'post',
+        manager.cookie,
+        `/iam/members/${admin.membershipId}/deactivate`,
+      );
+      expect(deactivate.status).toBe(403);
+      expect((deactivate.body as Problem).type).toBe('permission-denied');
+      expect(
+        (await owner.membership.findUniqueOrThrow({ where: { id: admin.membershipId } })).status,
+      ).toBe('ACTIVE');
+
+      const reset = await send(
+        'post',
+        manager.cookie,
+        `/iam/members/${admin.membershipId}/reset-two-factor`,
+      );
+      expect(reset.status).toBe(403);
+      expect((reset.body as Problem).type).toBe('permission-denied');
+      expect(
+        (await owner.user.findUniqueOrThrow({ where: { id: admin.userId } })).totpSecretEnc,
+      ).not.toBeNull();
+      expect(await auditRows(s.tenantId, admin.membershipId)).toHaveLength(0);
+    });
+
+    it('lets an Admin deactivate a Teacher and reset their two-step', async () => {
+      const s = await school();
+      const admin = await member(s.tenantId, { roleKey: 'ADMIN' });
+      await enableTwoFactor(admin.userId);
+      const t = await member(s.tenantId);
+      await enableTwoFactor(t.userId);
+      expect(
+        (await send('post', admin.cookie, `/iam/members/${t.membershipId}/reset-two-factor`))
+          .status,
+      ).toBe(204);
+      expect(
+        (await send('post', admin.cookie, `/iam/members/${t.membershipId}/deactivate`)).status,
+      ).toBe(200);
+      await expectMail(t.email);
     });
   });
 });
