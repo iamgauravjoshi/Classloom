@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 
 import { inviteAs, newInvitee } from './support/invitations';
+import { solidPng } from './support/png';
 import {
   createVerifiedSchool,
   signInWithCode,
@@ -28,9 +29,7 @@ async function expectNoViolations(page: Page) {
   await page.waitForFunction(() =>
     document
       .getAnimations()
-      .every(
-        (a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity,
-      ),
+      .every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
   );
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -148,6 +147,56 @@ for (const theme of ['light', 'dark'] as const) {
         await page.goto('/en/users-roles?tab=roles');
         await page.getByRole('link', { name: 'Edit Owner' }).click();
         await expect(page.getByRole('switch', { name: 'Require two-step sign-in' })).toBeVisible();
+        await expectNoViolations(page);
+      });
+    });
+
+    test.describe('school profile settings', () => {
+      // The page edits the school, so it gets a school of its own.
+      test.use({ storageState: { cookies: [], origins: [] } });
+
+      test('/en/settings/school-profile has no WCAG 2.1 AA violations, without and with a logo', async ({
+        page,
+        playwright,
+      }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+
+        // No logo yet: the empty preview and the Upload button.
+        await page.goto('/en/settings/school-profile');
+        await expect(page.getByRole('heading', { level: 1, name: 'School profile' })).toBeVisible();
+        await expect(page.getByText('No logo yet')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Upload logo' })).toBeVisible();
+        await expect(page.getByLabel('School name')).toHaveValue(own.schoolName);
+        await expectNoViolations(page);
+
+        // A refused file shows its message beside the field.
+        await page.getByLabel('Choose a logo image').setInputFiles({
+          name: 'logo.gif',
+          mimeType: 'image/gif',
+          buffer: Buffer.from('GIF89a'),
+        });
+        await expect(page.getByText('Upload a PNG, JPEG or WebP image.')).toBeVisible();
+        // Field errors after a save with invalid values.
+        await page.getByLabel('UDISE+ code').fill('123');
+        await page.getByLabel('PIN code').fill('012345');
+        await page.getByRole('button', { name: 'Save changes' }).click();
+        await expect(page.getByText('Enter the 11-digit UDISE+ code.')).toBeVisible();
+        await expect(page.getByText('Enter a 6-digit PIN code.')).toBeVisible();
+        await expectNoViolations(page);
+
+        // With a logo: the preview, Replace and Remove, and the logo in the sidebar.
+        const uploaded = await page.request.put(`${WEB_ORIGIN}/api/school/logo`, {
+          multipart: { file: { name: 'logo.png', mimeType: 'image/png', buffer: solidPng() } },
+          headers: { origin: WEB_ORIGIN },
+        });
+        expect(uploaded.status(), await uploaded.text()).toBe(200);
+        await page.goto('/en/settings/school-profile');
+        await expect(page.getByRole('img', { name: 'School logo' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Replace' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
         await expectNoViolations(page);
       });
     });

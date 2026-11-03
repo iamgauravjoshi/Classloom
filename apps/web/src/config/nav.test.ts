@@ -1,7 +1,9 @@
-import { ALL_PERMISSIONS } from '@classloom/contracts';
+import { ALL_PERMISSIONS, BUILT_IN_ROLE_DEFAULTS } from '@classloom/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { navConfig, type NavItem } from './nav';
+import { filterNav } from '@/lib/nav-filter';
+
+import { comingSoonSections, navConfig, type NavItem } from './nav';
 
 const flatten = (items: NavItem[]): NavItem[] =>
   items.flatMap((item) => [item, ...flatten(item.children ?? [])]);
@@ -28,8 +30,46 @@ describe('navConfig', () => {
       '/subjects': 'subjects.view',
       '/timetable': 'timetable.view',
       '/fees': 'fees.view',
-      '/school-profile': 'settings.view',
+      '/settings/school-profile': 'settings.view',
+      '/settings/academic-years': 'settings.view',
+      '/settings/campuses': 'settings.view',
       '/users-roles': 'iam.view',
     });
+  });
+});
+
+describe('the Settings group', () => {
+  const settingsOf = (permissions: readonly string[]) =>
+    filterNav(navConfig, new Set(permissions)).find((group) => group.key === 'settings');
+
+  it('is hidden from a Teacher, who has no settings.view', () => {
+    const teacher = BUILT_IN_ROLE_DEFAULTS.TEACHER.permissions;
+    if (teacher === 'ALL') throw new Error('A Teacher is not given every permission');
+    expect(teacher).not.toContain('settings.view');
+    expect(settingsOf(teacher)).toBeUndefined();
+  });
+
+  it('shows all three settings pages with settings.view alone', () => {
+    expect(settingsOf(['settings.view'])?.items.map((item) => item.href)).toEqual([
+      '/settings/school-profile',
+      '/settings/academic-years',
+      '/settings/campuses',
+    ]);
+  });
+});
+
+describe('comingSoonSections', () => {
+  it('lists the single-segment module pages, not the dashboard or the settings pages', () => {
+    expect(comingSoonSections).toEqual([
+      'students',
+      'admissions',
+      'parents',
+      'staff',
+      'classes',
+      'subjects',
+      'timetable',
+      'fees',
+      'users-roles',
+    ]);
   });
 });
