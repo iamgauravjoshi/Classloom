@@ -106,15 +106,22 @@ export function toggleModule(
   const next = new Set(selected);
   for (const key of entry.keys) {
     if (!grantable.has(key)) continue;
-    if (checked) next.add(key);
-    else next.delete(key);
+    if (checked) {
+      next.add(key);
+      continue;
+    }
+    // `view` stays while a `manage` the viewer cannot take away stays (as in `toggleKey`).
+    const manage = `${module}.manage`;
+    if (key.endsWith('.view') && next.has(manage) && !grantable.has(manage)) continue;
+    next.delete(key);
   }
   return next;
 }
 
 /** A preset's permissions, cut to what the viewer can grant. */
 export function applyPreset(preset: PresetKey, grantable: ReadonlySet<string>): string[] {
-  return ROLE_PRESETS[preset].filter((key) => grantable.has(key));
+  const held = ROLE_PRESETS[preset].filter((key) => grantable.has(key));
+  return withImpliedView(held).filter((key) => grantable.has(key));
 }
 
 /** "42 of 64": Owner holds every permission whatever the API lists for it. */

@@ -145,6 +145,15 @@ test.describe('roles', () => {
     const dialog = page.getByRole('dialog', { name: 'Delete Helper?' });
     await dialog.getByRole('button', { name: 'Delete role' }).click();
     await expect(dialog.getByText(/still assigned/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+    // From the editor page too: the refusal stays in the dialog, and the form is not reloaded.
+    await page.getByRole('link', { name: 'Edit Helper' }).click();
+    await page.getByLabel('Description').fill('Unsaved note');
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Delete role' }).click();
+    await expect(dialog.getByText(/still assigned/)).toBeVisible();
+    await expect(page.getByLabel('Description')).toHaveValue('Unsaved note');
   });
 
   test('Owner is read-only but for the two-step switch, which only an owner has', async ({
@@ -155,7 +164,10 @@ test.describe('roles', () => {
     await page.goto('/en/users-roles?tab=roles');
     await page.getByRole('link', { name: 'Edit Owner' }).click();
     await expect(page.getByLabel('Name', { exact: true })).toHaveAttribute('readonly', '');
-    await expect(page.getByRole('checkbox', { name: 'Students: Delete' })).toBeDisabled();
+    await expect(page.getByRole('checkbox', { name: 'Students: Delete' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     await expect(page.getByRole('checkbox', { name: 'Students: Delete' })).toBeChecked();
     await expect(page.getByRole('button', { name: 'Read only' })).toHaveCount(0);
     const twoStep = page.getByRole('switch', { name: 'Require two-step sign-in' });

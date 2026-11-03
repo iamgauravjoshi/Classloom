@@ -38,13 +38,15 @@ interface BoxProps {
 function GridBox({ label, checked, indeterminate, locked, readOnly, noteId, onChange }: BoxProps) {
   const t = useTranslations('iam.grid');
   if (readOnly) {
+    // Not `disabled`: keyboard users can still reach each box and read its state.
     return (
       <Checkbox
-        className={BOX_CLASS}
+        className={cn(BOX_CLASS, 'cursor-not-allowed opacity-50')}
         aria-label={label}
+        aria-disabled="true"
         checked={checked}
         indeterminate={indeterminate}
-        disabled
+        readOnly
       />
     );
   }

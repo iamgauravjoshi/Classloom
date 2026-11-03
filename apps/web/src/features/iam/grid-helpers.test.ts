@@ -131,7 +131,21 @@ describe('toggleModule', () => {
   });
 });
 
+describe('toggleModule, with a manage the viewer cannot take away', () => {
+  it('keeps view while that manage stays', () => {
+    const start = new Set(['classes.view', 'classes.manage']);
+    const off = toggleModule(catalogue, start, 'classes', false, new Set(['classes.view']));
+    expect([...off].sort()).toEqual(['classes.manage', 'classes.view']);
+  });
+});
+
 describe('applyPreset', () => {
+  it('adds the view a manage implies, where the viewer can grant it', () => {
+    const keys = applyPreset('manager', new Set(['classes.manage', 'classes.view']));
+    expect(keys.sort()).toEqual(['classes.manage', 'classes.view']);
+    expect(applyPreset('manager', new Set(['classes.manage']))).toEqual(['classes.manage']);
+  });
+
   it('gives the preset when the viewer can grant all of it', () => {
     expect(applyPreset('readOnly', everything)).toEqual(
       ALL_PERMISSIONS.filter((p) => p.endsWith('.view')),

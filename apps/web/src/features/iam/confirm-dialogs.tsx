@@ -320,8 +320,10 @@ function RoleConfirm({
       onDone('changed');
       onClose();
     } catch (failure) {
-      if (isStale(failure)) onDone('stale');
-      setError(errorText(iamErrorOf(failure)));
+      const outcome = iamErrorOf(failure);
+      // A role still in use is a refusal to show, not a stale view: nothing reloads under the dialog.
+      if (isStale(failure) && outcome !== 'roleInUse') onDone('stale');
+      setError(errorText(outcome));
       throw failure;
     }
   }
