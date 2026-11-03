@@ -33,6 +33,7 @@ type Phase =
   | { step: 'invitation' }
   | { step: 'gone' }
   | { step: 'alreadyMember' }
+  | { step: 'joined'; schoolCode: string | null }
   | { step: 'two-factor'; challenge: string; expiresAt: number }
   | { step: 'welcome' };
 
@@ -97,7 +98,9 @@ export function JoinFlow({ signedInEmail }: JoinFlowProps) {
       const outcome = acceptOutcomeOf(error);
       if (outcome.kind === 'gone') setPhase({ step: 'gone' });
       else if (outcome.kind === 'alreadyMember') setPhase({ step: 'alreadyMember' });
-      else setFailure(outcome.key);
+      else if (outcome.kind === 'joined') {
+        setPhase({ step: 'joined', schoolCode: outcome.schoolCode });
+      } else setFailure(outcome.key);
     }
   }
 
@@ -188,6 +191,25 @@ export function JoinFlow({ signedInEmail }: JoinFlowProps) {
           className={cn(buttonVariants(), BUTTON_CLASS, 'w-full')}
         >
           {t('join.alreadyMember.signIn')}
+        </Link>
+      </AuthCard>
+    );
+  }
+
+  if (phase.step === 'joined') {
+    // The link is spent and the seat is theirs, but no session came of it: sign in.
+    const code = phase.schoolCode ?? invitation.school.code;
+    return (
+      <AuthCard
+        {...card}
+        title={t('join.joined.title', { school: invitation.school.name })}
+        description={t('join.joined.body')}
+      >
+        <Link
+          href={`/sign-in?school=${encodeURIComponent(code)}`}
+          className={cn(buttonVariants(), BUTTON_CLASS, 'w-full')}
+        >
+          {t('join.joined.signIn')}
         </Link>
       </AuthCard>
     );

@@ -30,6 +30,20 @@ describe('acceptOutcomeOf', () => {
     });
   });
 
+  it('maps 409 invitation-joined to joined, with the school code', () => {
+    const error = new ApiError(409, {
+      type: 'invitation-joined',
+      title: 't',
+      status: 409,
+      schoolCode: 'GIS',
+    });
+    expect(acceptOutcomeOf(error)).toEqual({ kind: 'joined', schoolCode: 'GIS' });
+    expect(acceptOutcomeOf(problem(409, 'invitation-joined'))).toEqual({
+      kind: 'joined',
+      schoolCode: null,
+    });
+  });
+
   it('treats another 409 as a generic failure', () => {
     expect(acceptOutcomeOf(problem(409, '/problems/other'))).toEqual({
       kind: 'error',

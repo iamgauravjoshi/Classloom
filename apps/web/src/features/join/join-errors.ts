@@ -22,14 +22,24 @@ export function previewErrorKey(error: unknown): 'gone' | JoinErrorKey {
 }
 
 export type AcceptOutcome =
-  { kind: 'gone' } | { kind: 'alreadyMember' } | { kind: 'error'; key: JoinErrorKey };
+  | { kind: 'gone' }
+  | { kind: 'alreadyMember' }
+  | { kind: 'joined'; schoolCode: string | null }
+  | { kind: 'error'; key: JoinErrorKey };
 
-/** Accept: 410 as above; 409 `already-member` means the person already belongs to the school. */
+/**
+ * Accept: 410 as above; 409 `already-member` means the person already belongs to the school;
+ * 409 `invitation-joined` means they joined (the link is spent) but were not signed in, so a
+ * retry would only answer 410: they sign in instead.
+ */
 export function acceptOutcomeOf(error: unknown): AcceptOutcome {
   if (error instanceof ApiError) {
     if (error.status === 410) return { kind: 'gone' };
     if (error.status === 409 && error.problem.type.endsWith('already-member')) {
       return { kind: 'alreadyMember' };
+    }
+    if (error.status === 409 && error.problem.type.endsWith('invitation-joined')) {
+      return { kind: 'joined', schoolCode: error.problem.schoolCode ?? null };
     }
   }
   return { kind: 'error', key: commonKey(error) };

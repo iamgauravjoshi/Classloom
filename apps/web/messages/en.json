@@ -591,6 +591,11 @@
         "body": "Sign in to carry on.",
         "signIn": "Go to sign-in"
       },
+      "joined": {
+        "title": "You joined {school}.",
+        "body": "Sign in to continue.",
+        "signIn": "Go to sign-in"
+      },
       "welcome": {
         "title": "Welcome to {school}",
         "body": "You're signed in. You can set a password now, or keep signing in with an emailed code.",
