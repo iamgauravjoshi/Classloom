@@ -11,6 +11,7 @@ import {
 } from '@classloom/contracts';
 import { type HttpException, Injectable, NotFoundException } from '@nestjs/common';
 
+import { dbViolation, uniqueViolationProblem } from '../../core/prisma/constraint-problem';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
 import type { Prisma } from '../../generated/prisma/client';
@@ -321,49 +322,17 @@ async function lockYears(tx: Prisma.TransactionClient, tenantId: string): Promis
 }
 
 /** The unique indexes of `academic_years` this service maps, by name (see the migration). */
-const UNIQUE_PROBLEMS: [string, () => HttpException][] = [
+const UNIQUE_PROBLEMS = [
   ['academic_years_one_planned', () => new AcademicYearPlannedExistsException()],
   ['academic_years_label_key', () => new AcademicYearLabelTakenException()],
-];
+] as const;
 
 /**
  * The problem for a database error from writing a year, or null when it is not one of ours.
- * `23P01` (the `academic_years_no_overlap` exclusion) is an overlap. A `23505` is matched by
- * constraint name: first from `meta.target`, `meta.constraint` or the driver adapter's
- * `constraint.index`, then from the error message.
+ * `23P01` (the `academic_years_no_overlap` exclusion) is an overlap; a `23505` is matched by
+ * constraint name (`uniqueViolationProblem`).
  */
 export function yearWriteProblem(error: unknown): HttpException | null {
-  if (typeof error !== 'object' || error === null) return null;
-  const e = error as { code?: unknown; message?: unknown; meta?: Record<string, unknown> };
-  const cause = (
-    e.meta?.driverAdapterError as
-      | {
-          cause?: {
-            originalCode?: unknown;
-            originalMessage?: unknown;
-            constraint?: { index?: unknown };
-          };
-        }
-      | undefined
-  )?.cause;
-  const message = typeof e.message === 'string' ? e.message : '';
-  const sqlState =
-    typeof cause?.originalCode === 'string'
-      ? cause.originalCode
-      : e.code === 'P2002'
-        ? '23505'
-        : /Code: `(\w+)`/.exec(message)?.[1];
-
-  if (sqlState === '23P01') return new AcademicYearOverlapException();
-  if (sqlState !== '23505') return null;
-
-  const named = [e.meta?.target, e.meta?.constraint, cause?.constraint?.index]
-    .map((v) => JSON.stringify(v ?? '').toLowerCase())
-    .join(' ');
-  const text = `${message} ${typeof cause?.originalMessage === 'string' ? cause.originalMessage : ''}`;
-  for (const source of [named, text.toLowerCase()]) {
-    const match = UNIQUE_PROBLEMS.find(([name]) => source.includes(name));
-    if (match) return match[1]();
-  }
-  return null;
+  if (dbViolation(error)?.sqlState === '23P01') return new AcademicYearOverlapException();
+  return uniqueViolationProblem(error, UNIQUE_PROBLEMS);
 }
