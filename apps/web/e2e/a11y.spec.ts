@@ -21,6 +21,10 @@ const PAGES = [
 
 async function expectNoViolations(page: Page) {
   // Dialogs fade in; contrast measured mid-fade blends text with the page behind it (seen on WebKit).
+  // Two frames first, so a transition started by the last tap or focus is already listed.
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
   await page.waitForFunction(() =>
     document
       .getAnimations()

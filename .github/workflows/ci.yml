@@ -48,7 +48,7 @@ jobs:
   e2e:
     name: Cross-device E2E and accessibility
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
