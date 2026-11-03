@@ -51,7 +51,10 @@ export function ChangeRolesDialog({
   const target = useLastShown(member);
   return (
     <Dialog open={member !== null} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent finalFocus={finalFocus} className="gap-5 sm:max-w-md">
+      <DialogContent
+        finalFocus={finalFocus}
+        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto sm:max-w-md"
+      >
         {target ? (
           <RolesForm
             key={target.membershipId}

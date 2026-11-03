@@ -47,7 +47,7 @@ export function InviteDialog({ roles, rolesFailed, onReauth }: InviteDialogProps
         <IconUserPlus aria-hidden="true" />
         {tMembers('invite')}
       </DialogTrigger>
-      <DialogContent className="gap-5 sm:max-w-md">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto sm:max-w-md">
         <InviteForm
           roles={roles}
           rolesFailed={rolesFailed}

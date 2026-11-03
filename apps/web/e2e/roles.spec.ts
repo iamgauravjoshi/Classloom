@@ -27,6 +27,8 @@ test.describe('roles', () => {
     page,
     playwright,
   }) => {
+    // A long walk through the grid: Firefox takes 25 s of the 30 s default.
+    test.slow();
     await ownerPage(page, playwright);
     await page.goto('/en/users-roles?tab=roles');
     await expect(page.getByRole('heading', { level: 3, name: 'Owner', exact: true })).toBeVisible();
