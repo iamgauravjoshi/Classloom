@@ -7,6 +7,7 @@ import {
   parseDisplayDate,
   stateAfterTermEdit,
   termsAfterConfirm,
+  termsKept,
   validateYearForm,
   type YearFormState,
 } from './year-form-helpers';
@@ -55,6 +56,44 @@ describe('initialYearFormState', () => {
       name: 'Monsoon',
       startsOn: '01/08/2026',
       endsOn: '30/11/2026',
+    });
+  });
+});
+
+describe('a saved year', () => {
+  const custom = [
+    { name: 'Term 1', startsOn: '2026-04-01', endsOn: '2026-10-15' },
+    { name: 'Term 2', startsOn: '2026-10-16', endsOn: '2027-03-31' },
+  ];
+
+  it('asks before replacing a custom term split when a date changes', () => {
+    const saved = initialYearFormState({
+      startsOn: '2026-04-01',
+      endsOn: '2027-03-31',
+      terms: custom,
+    });
+    expect(saved.termsEdited).toBe(true);
+    const { state, needsConfirm } = formStateAfterDateChange(saved, { endsOn: '31/05/2027' });
+    expect(needsConfirm).toBe(true);
+    expect(state.terms[0]?.endsOn).toBe('15/10/2026');
+  });
+
+  it('regenerates a default split, even with renamed terms', () => {
+    const saved = initialYearFormState({
+      startsOn: '2026-04-01',
+      endsOn: '2027-03-31',
+      terms: [
+        { name: 'Summer', startsOn: '2026-04-01', endsOn: '2026-09-30' },
+        { name: 'Winter', startsOn: '2026-10-01', endsOn: '2027-03-31' },
+      ],
+    });
+    expect(saved.termsEdited).toBe(false);
+    const { state, needsConfirm } = formStateAfterDateChange(saved, { endsOn: '31/05/2027' });
+    expect(needsConfirm).toBe(false);
+    expect(state.terms[1]).toEqual({
+      name: 'Winter',
+      startsOn: '01/11/2026',
+      endsOn: '31/05/2027',
     });
   });
 });
@@ -192,6 +231,19 @@ describe('validateYearForm', () => {
     expect(
       validateYearForm({ ...aprilToMarch(), label: 'x'.repeat(21), labelEdited: true }),
     ).toMatchObject({ ok: false, errors: { label: 'label' } });
+  });
+
+  it('refuses a count the rows do not match while the replace question is open', () => {
+    const edited: YearFormState = { ...aprilToMarch(), termsEdited: true };
+    const { state, needsConfirm } = formStateAfterDateChange(edited, { termCount: 3 });
+    expect(needsConfirm).toBe(true);
+    expect(state.terms).toHaveLength(2);
+    expect(validateYearForm(state)).toMatchObject({
+      ok: false,
+      errors: { termCount: 'unanswered' },
+    });
+    // Keeping the terms puts the count back, and the year can be saved.
+    expect(validateYearForm(termsKept(state)).ok).toBe(true);
   });
 
   it('puts the tiling problem on the failing term row', () => {

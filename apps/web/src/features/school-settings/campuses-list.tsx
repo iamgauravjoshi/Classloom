@@ -28,6 +28,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
+import { useLastShown } from '../iam/iam-ui';
 import { CampusForm } from './campus-form';
 import { schoolErrorMessage } from './school-errors';
 import { ConfirmDialog } from './years-list';
@@ -67,6 +68,9 @@ export function CampusesList({ campuses, canEdit }: { campuses: Campus[]; canEdi
   const [deactivating, setDeactivating] = useState<Campus | null>(null);
   const [deactivateError, setDeactivateError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
+  // While a dialog fades out it keeps the wording it opened with.
+  const shownForm = useLastShown(form);
+  const shownDeactivating = useLastShown(deactivating);
 
   const sorted = [...campuses].sort(
     (a, b) =>
@@ -227,15 +231,15 @@ export function CampusesList({ campuses, canEdit }: { campuses: Campus[]; canEdi
         <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto sm:max-w-xl">
           <div className="flex flex-col gap-2 pr-8">
             <DialogTitle className="text-h6">
-              {form?.campus
-                ? t('form.editTitle', { name: form.campus.name })
+              {shownForm?.campus
+                ? t('form.editTitle', { name: shownForm.campus.name })
                 : t('form.createTitle')}
             </DialogTitle>
             <DialogDescription>{t('form.description')}</DialogDescription>
           </div>
-          {form ? (
+          {shownForm ? (
             <CampusForm
-              campus={form.campus}
+              campus={shownForm.campus}
               onSaved={() => setForm(null)}
               onCancel={() => setForm(null)}
             />
@@ -245,7 +249,7 @@ export function CampusesList({ campuses, canEdit }: { campuses: Campus[]; canEdi
 
       <ConfirmDialog
         open={deactivating !== null}
-        title={t('deactivateDialog.title', { name: deactivating?.name ?? '' })}
+        title={t('deactivateDialog.title', { name: shownDeactivating?.name ?? '' })}
         body={<p>{t('deactivateDialog.body')}</p>}
         action={t('deactivateDialog.action')}
         pendingLabel={t('deactivateDialog.pending')}

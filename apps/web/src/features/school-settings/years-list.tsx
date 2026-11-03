@@ -30,6 +30,7 @@ import { useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
+import { useLastShown } from '../iam/iam-ui';
 import { AcademicYearForm, type AcademicYearFormInitial } from './academic-year-form';
 import { schoolErrorMessage } from './school-errors';
 import { formatYmd } from './year-form-helpers';
@@ -144,6 +145,9 @@ export function YearsList({ years, canEdit }: { years: AcademicYear[]; canEdit: 
     year: AcademicYear;
   } | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  // While a dialog fades out it keeps the wording it opened with.
+  const shownForm = useLastShown(form);
+  const shownConfirm = useLastShown(confirming);
 
   const current = years.find((year) => year.status === 'CURRENT');
   const planned = years.find((year) => year.status === 'PLANNED');
@@ -196,15 +200,15 @@ export function YearsList({ years, canEdit }: { years: AcademicYear[]; canEdit: 
   ) : null;
 
   const formTitle =
-    form?.kind === 'edit'
-      ? t('form.editTitle', { label: form.label })
-      : form?.kind === 'next'
+    shownForm?.kind === 'edit'
+      ? t('form.editTitle', { label: shownForm.label })
+      : shownForm?.kind === 'next'
         ? t('form.nextTitle')
         : t('form.createTitle');
 
-  const confirmYear = confirming?.year;
+  const confirmYear = shownConfirm?.year;
   const confirmBody =
-    confirming?.kind === 'makeCurrent' && confirmYear ? (
+    shownConfirm?.kind === 'makeCurrent' && confirmYear ? (
       <>
         {confirmYear.startsOn > today ? (
           <p>
@@ -331,9 +335,9 @@ export function YearsList({ years, canEdit }: { years: AcademicYear[]; canEdit: 
             <DialogTitle className="text-h6">{formTitle}</DialogTitle>
             <DialogDescription>{t('form.description')}</DialogDescription>
           </div>
-          {form ? (
+          {shownForm ? (
             <AcademicYearForm
-              initial={form.initial}
+              initial={shownForm.initial}
               onSaved={() => setForm(null)}
               onCancel={() => setForm(null)}
             />
@@ -344,23 +348,23 @@ export function YearsList({ years, canEdit }: { years: AcademicYear[]; canEdit: 
       <ConfirmDialog
         open={confirming !== null}
         title={
-          confirming?.kind === 'makeCurrent'
+          shownConfirm?.kind === 'makeCurrent'
             ? t('makeCurrentDialog.title', { label: confirmYear?.label ?? '' })
             : t('deleteDialog.title', { label: confirmYear?.label ?? '' })
         }
         body={confirmBody}
         action={
-          confirming?.kind === 'makeCurrent'
+          shownConfirm?.kind === 'makeCurrent'
             ? t('makeCurrentDialog.action')
             : t('deleteDialog.action')
         }
         pendingLabel={
-          confirming?.kind === 'makeCurrent'
+          shownConfirm?.kind === 'makeCurrent'
             ? t('makeCurrentDialog.pending')
             : t('deleteDialog.pending')
         }
         cancelLabel={t('cancel')}
-        destructive={confirming?.kind === 'delete'}
+        destructive={shownConfirm?.kind === 'delete'}
         pending={makeCurrent.isPending || remove.isPending}
         errorText={confirmError}
         onConfirm={() => void confirm()}

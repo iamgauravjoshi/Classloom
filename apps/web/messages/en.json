@@ -1085,7 +1085,8 @@
           "start": "The first term must start on the year's start date.",
           "gap": "This term must start the day after the previous term ends.",
           "termOrder": "This term must end on or after the day it starts.",
-          "end": "The last term must end on the year's end date."
+          "end": "The last term must end on the year's end date.",
+          "unanswered": "Replace or keep your term dates first."
         },
         "create": "Create year",
         "save": "Save changes",

@@ -210,6 +210,8 @@ export function AcademicYearForm({
                   name={fieldId('termCount')}
                   value={count}
                   checked={state.termCount === count}
+                  aria-invalid={Boolean(errors.termCount)}
+                  aria-describedby={errors.termCount ? fieldId('termCount-error') : undefined}
                   onChange={() => change({ termCount: count })}
                   className="accent-primary size-4"
                 />
@@ -217,6 +219,9 @@ export function AcademicYearForm({
               </label>
             ))}
           </div>
+          <FieldError id={fieldId('termCount-error')}>
+            {errors.termCount ? t('errors.unanswered') : null}
+          </FieldError>
         </FieldSet>
       </div>
 

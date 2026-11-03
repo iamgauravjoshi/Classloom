@@ -88,6 +88,19 @@ function resized(terms: TermRow[], count: 2 | 3): TermRow[] {
   return rows;
 }
 
+/** Whether saved terms have the default dates for their year and count (names don't matter). */
+function isDefaultSplit(startsOn: string, endsOn: string, terms: TermDates[]): boolean {
+  if (terms.length !== 2 && terms.length !== 3) return false;
+  try {
+    const defaults = defaultTerms(startsOn, endsOn, terms.length);
+    return defaults.every(
+      (term, i) => term.startsOn === terms[i]?.startsOn && term.endsOn === terms[i]?.endsOn,
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** The form's first state: a year's own values, or default terms for the given dates. */
 export function initialYearFormState(initial: {
   startsOn: string;
@@ -108,7 +121,13 @@ export function initialYearFormState(initial: {
     label,
     labelEdited: label !== automatic,
   };
-  if (initial.terms && initial.terms.length > 0) return base;
+  if (initial.terms && initial.terms.length > 0) {
+    // A saved split that isn't the default counts as edited: changing the dates asks first.
+    return {
+      ...base,
+      termsEdited: !isDefaultSplit(initial.startsOn, initial.endsOn, initial.terms),
+    };
+  }
   return { ...base, terms: generatedTerms(base) ?? resized([], 2) };
 }
 
@@ -150,6 +169,8 @@ export type TermProblem = 'date' | 'name' | 'start' | 'gap' | 'order' | 'end';
 
 export interface YearFormErrors {
   startsOn?: DateProblem;
+  /** The count was changed but the rows were not replaced yet (the replace question is open). */
+  termCount?: 'unanswered';
   endsOn?: DateProblem;
   label?: 'label';
   terms?: Record<number, { name?: TermProblem; startsOn?: TermProblem; endsOn?: TermProblem }>;
@@ -173,6 +194,8 @@ export function validateYearForm(
   if (!end) errors.endsOn = 'date';
   else if (start && end <= start) errors.endsOn = 'order';
   else if (start && !yearLengthOk(start, end)) errors.endsOn = 'length';
+
+  if (state.termCount !== state.terms.length) errors.termCount = 'unanswered';
 
   const label = state.label.trim();
   if (state.labelEdited && (label.length === 0 || label.length > 20)) errors.label = 'label';
