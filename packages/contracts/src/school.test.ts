@@ -4,6 +4,8 @@ import {
   CLASS_LEVELS,
   createAcademicYearRequestSchema,
   createCampusRequestSchema,
+  updateAcademicYearRequestSchema,
+  updateCampusRequestSchema,
   updateSchoolProfileRequestSchema,
 } from './school';
 
@@ -103,6 +105,26 @@ describe('createCampusRequestSchema', () => {
     expect(r.addressLine1).toBeNull();
     expect(r.pinCode).toBeNull();
     expect(createCampusRequestSchema.safeParse({ name: 'x', pinCode: '012345' }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe('absent keys on update schemas', () => {
+  it('updateCampusRequestSchema leaves absent keys out and clears with an empty string', () => {
+    expect(updateCampusRequestSchema.parse({ name: 'North' })).toEqual({ name: 'North' });
+    expect(updateCampusRequestSchema.parse({})).toEqual({});
+    expect(updateCampusRequestSchema.parse({ pinCode: '' })).toEqual({ pinCode: null });
+  });
+  it('updateAcademicYearRequestSchema leaves an absent label out and requires terms', () => {
+    const terms = [
+      { name: 'Term 1', startsOn: '2026-04-01', endsOn: '2026-09-30' },
+      { name: 'Term 2', startsOn: '2026-10-01', endsOn: '2027-03-31' },
+    ];
+    const body = { startsOn: '2026-04-01', endsOn: '2027-03-31', terms };
+    const r = updateAcademicYearRequestSchema.parse(body);
+    expect('label' in r).toBe(false);
+    expect(updateAcademicYearRequestSchema.safeParse({ ...body, terms: undefined }).success).toBe(
       false,
     );
   });

@@ -47,6 +47,34 @@ describe('defaultTerms', () => {
   });
 });
 
+describe('defaultTerms with a mid-month start', () => {
+  it('keeps the start day for 2 terms', () => {
+    const terms = defaultTerms('2026-04-15', '2027-04-14', 2);
+    expect(terms).toEqual([
+      T('Term 1', '2026-04-15', '2026-10-14'),
+      T('Term 2', '2026-10-15', '2027-04-14'),
+    ]);
+    expect(checkTerms({ startsOn: '2026-04-15', endsOn: '2027-04-14' }, terms)).toEqual({
+      ok: true,
+    });
+  });
+  it('keeps the start day for 3 terms', () => {
+    const terms = defaultTerms('2026-04-15', '2027-04-14', 3);
+    expect(terms).toEqual([
+      T('Term 1', '2026-04-15', '2026-08-14'),
+      T('Term 2', '2026-08-15', '2026-12-14'),
+      T('Term 3', '2026-12-15', '2027-04-14'),
+    ]);
+    expect(checkTerms({ startsOn: '2026-04-15', endsOn: '2027-04-14' }, terms)).toEqual({
+      ok: true,
+    });
+  });
+  it('throws for an inverted or too-short year', () => {
+    expect(() => defaultTerms('2027-03-31', '2026-04-01', 2)).toThrow(RangeError);
+    expect(() => defaultTerms('2026-04-01', '2026-05-31', 3)).toThrow(RangeError);
+  });
+});
+
 describe('checkTerms', () => {
   const y = { startsOn: '2026-04-01', endsOn: '2027-03-31' };
   it('rejects 1 or 4 terms', () => {
@@ -110,6 +138,22 @@ describe('yearLengthOk', () => {
 });
 
 describe('nextYearDates', () => {
+  it('keeps the length of a mid-month year', () => {
+    expect(nextYearDates({ startsOn: '2026-04-15', endsOn: '2027-04-14' })).toEqual({
+      startsOn: '2027-04-15',
+      endsOn: '2028-04-14',
+    });
+  });
+  it('handles years ending in February, leap or not', () => {
+    expect(nextYearDates({ startsOn: '2023-03-01', endsOn: '2024-02-29' })).toEqual({
+      startsOn: '2024-03-01',
+      endsOn: '2025-02-28',
+    });
+    expect(nextYearDates({ startsOn: '2027-03-01', endsOn: '2028-02-29' })).toEqual({
+      startsOn: '2028-03-01',
+      endsOn: '2029-02-28',
+    });
+  });
   it('rolls April–March forward', () => {
     expect(nextYearDates({ startsOn: '2026-04-01', endsOn: '2027-03-31' })).toEqual({
       startsOn: '2027-04-01',

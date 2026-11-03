@@ -28,39 +28,48 @@ const addDays = (s: string, n: number) => fromUtc(utc(s) + n * DAY_MS);
 /** Months since year 0, so month arithmetic is a plain integer. */
 const monthIndex = ({ y, m }: Ymd) => y * 12 + (m - 1);
 
-/** Last day of the month at `index` (see monthIndex). */
-function lastDayOfMonth(index: number): string {
-  const y = Math.floor(index / 12);
-  const m = (index % 12) + 1;
-  return fromUtc(Date.UTC(y, m, 0));
+/** `start` plus `n` months, keeping its day of month (clamped to the month's length). */
+function addMonths(start: string, n: number): string {
+  const p = parse(start);
+  const idx = monthIndex(p) + n;
+  const y = Math.floor(idx / 12);
+  const m = (idx % 12) + 1;
+  const dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return fmt(y, m, Math.min(p.d, dim));
 }
 
-/** First day of the month at `index`. */
-const firstDayOfMonth = (index: number) => fmt(Math.floor(index / 12), (index % 12) + 1, 1);
+/** Whole months from `startsOn` up to the day after `endsOn` (a partial month is dropped). */
+function monthSpan(startsOn: string, endsOn: string): number {
+  const s = parse(startsOn);
+  const e = parse(addDays(endsOn, 1));
+  return monthIndex(e) - monthIndex(s) - (e.d < s.d ? 1 : 0);
+}
 
 export type TermDates = { name: string; startsOn: string; endsOn: string };
 
 /**
- * Splits the year's months as evenly as possible; earlier terms take the extra month.
- * Term 1 starts on `startsOn` and the last term ends on `endsOn`, whatever the day of month.
+ * Splits the year's whole months as evenly as possible; earlier terms take the extra month.
+ * Boundaries keep the start's day of month (15 Apr – 14 Apr gives 15 Apr – 14 Oct, 15 Oct – 14 Apr).
+ * Term 1 starts on `startsOn` and the last term ends on `endsOn`.
+ * Throws a RangeError when the year is shorter than `count` months.
  */
 export function defaultTerms(startsOn: string, endsOn: string, count: 2 | 3): TermDates[] {
-  const start = parse(startsOn);
-  const first = monthIndex(start);
-  const total = monthIndex(parse(endsOn)) - first + 1;
+  const total = monthSpan(startsOn, endsOn);
+  if (endsOn < startsOn || total < count) {
+    throw new RangeError('The year is too short to split into terms');
+  }
   const base = Math.floor(total / count);
   const extra = total % count;
   const terms: TermDates[] = [];
-  let cursor = first;
+  let cursor = 0;
   for (let i = 0; i < count; i++) {
-    const months = base + (i < extra ? 1 : 0);
+    cursor += base + (i < extra ? 1 : 0);
     const last = i === count - 1;
     terms.push({
       name: `Term ${i + 1}`,
-      startsOn: i === 0 ? startsOn : firstDayOfMonth(cursor),
-      endsOn: last ? endsOn : lastDayOfMonth(cursor + months - 1),
+      startsOn: i === 0 ? startsOn : addDays(terms[i - 1]!.endsOn, 1),
+      endsOn: last ? endsOn : addDays(addMonths(startsOn, cursor), -1),
     });
-    cursor += months;
   }
   return terms;
 }
@@ -108,13 +117,6 @@ export function nextYearDates(current: { startsOn: string; endsOn: string }): {
   endsOn: string;
 } {
   const startsOn = addDays(current.endsOn, 1);
-  const s = parse(startsOn);
-  const months = monthIndex(parse(current.endsOn)) - monthIndex(parse(current.startsOn)) + 1;
-  // The new year ends the day before the same day-of-month, `months` months later.
-  const target = monthIndex(s) + months;
-  const y = Math.floor(target / 12);
-  const m = (target % 12) + 1;
-  const dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const nextStart = fmt(y, m, Math.min(s.d, dim));
-  return { startsOn, endsOn: addDays(nextStart, -1) };
+  const months = monthSpan(current.startsOn, current.endsOn);
+  return { startsOn, endsOn: addDays(addMonths(startsOn, months), -1) };
 }
