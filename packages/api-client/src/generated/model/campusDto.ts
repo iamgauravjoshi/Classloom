@@ -10,12 +10,18 @@ import type { CampusDtoState } from './campusDtoState';
 export interface CampusDto {
   id: string;
   name: string;
-  addressLine1: string[];
-  addressLine2: string[];
-  district: string[];
-  pinCode: string[];
-  phone: string[];
-  email: string[];
+  /** @nullable */
+  addressLine1: string | null;
+  /** @nullable */
+  addressLine2: string | null;
+  /** @nullable */
+  district: string | null;
+  /** @nullable */
+  pinCode: string | null;
+  /** @nullable */
+  phone: string | null;
+  /** @nullable */
+  email: string | null;
   city: string;
   state: CampusDtoState;
   isPrimary: boolean;

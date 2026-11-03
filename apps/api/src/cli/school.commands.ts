@@ -139,6 +139,7 @@ export function registerSchoolCommands(
             code: code.toUpperCase(),
             done: steps.done,
             skipped: steps.skipped,
+            reasons: steps.reasons,
             by: operatorName(),
           }),
         );
@@ -151,13 +152,14 @@ export function registerSchoolCommands(
 async function demoSetup(
   ctx: INestApplicationContext,
   tenantId: string,
-): Promise<{ done: Step[]; skipped: Step[] }> {
+): Promise<{ done: Step[]; skipped: Step[]; reasons: Partial<Record<Step, string>> }> {
   const profiles = ctx.get(ProfileService);
   const years = ctx.get(AcademicYearsService);
   const campuses = ctx.get(CampusesService);
   const actor = { tenantId, userId: null };
   const done: Step[] = [];
   const skipped: Step[] = [];
+  const reasons: Partial<Record<Step, string>> = {};
   const mark = (step: Step, changed: boolean) => (changed ? done : skipped).push(step);
 
   // Profile: fill only the empty fields, keeping whatever the school entered.
@@ -202,6 +204,13 @@ async function demoSetup(
     );
   }
   mark('academicYear', existing.length === 0);
+  if (existing.length > 0) {
+    const list = existing.map((y) => `${y.label} (${y.status})`).join(', ');
+    reasons.academicYear = existing.some((y) => y.status === 'CURRENT')
+      ? `The school already has a current year: ${list}`
+      : `The school already has years (${list}) but none is current; demo setup never changes ` +
+        'an existing calendar, so make one current in Settings';
+  }
 
   // Campuses: the primary campus's address and PIN where missing, plus a second campus.
   const { campuses: all } = await campuses.list(actor, true);
@@ -217,7 +226,7 @@ async function demoSetup(
   if (all.length === 1) await campuses.create(actor, SECOND_CAMPUS, CLI_META);
   mark('campuses', Object.keys(address).length > 0 || all.length === 1);
 
-  return { done, skipped };
+  return { done, skipped, reasons };
 }
 
 /** Who ran the command; `os.userInfo()` throws when the uid has no passwd entry. */

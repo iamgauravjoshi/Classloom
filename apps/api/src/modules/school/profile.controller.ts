@@ -23,7 +23,9 @@ import { RequirePermission } from '../iam/require-permission.decorator';
 import { ProfileService } from './profile.service';
 
 class SchoolProfileDto extends withNullableProperties(createZodDto(schoolProfileSchema)) {}
-class UpdateSchoolProfileRequestDto extends createZodDto(updateSchoolProfileRequestSchema) {}
+class UpdateSchoolProfileRequestDto extends withNullableProperties(
+  createZodDto(updateSchoolProfileRequestSchema),
+) {}
 
 const meta = (req: Request) => ({ ip: req.ip, userAgent: req.headers['user-agent'] });
 

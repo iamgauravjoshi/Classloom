@@ -251,6 +251,7 @@ describe('onboarding checklist API', () => {
         action: 'demo-setup',
         done: [],
         skipped: ['profile', 'logo', 'academicYear', 'campuses'],
+        reasons: { academicYear: expect.stringMatching(/CURRENT/) as unknown },
       });
       const after = await owner.schoolProfile.findUniqueOrThrow({
         where: { tenantId: s.tenantId },
@@ -258,6 +259,29 @@ describe('onboarding checklist API', () => {
       expect(after.logoFileId).toBe(before.logoFileId);
       expect(await owner.academicYear.count({ where: { tenantId: s.tenantId } })).toBe(1);
       expect(await owner.campus.count({ where: { tenantId: s.tenantId } })).toBe(2);
+    });
+
+    it('says why it skips the year when the school has only a planned one', async () => {
+      const s = await school();
+      await owner.academicYear.create({
+        data: {
+          tenantId: s.tenantId,
+          label: '2030–31',
+          startsOn: new Date('2030-04-01'),
+          endsOn: new Date('2031-03-31'),
+          status: 'PLANNED',
+        },
+      });
+      const lines = await run('school:demo-setup', s.code);
+      const result = JSON.parse(lines.at(-1)!) as {
+        skipped: string[];
+        reasons: Record<string, string>;
+      };
+      expect(result.skipped).toEqual(['academicYear']);
+      expect(result.reasons.academicYear).toMatch(/2030–31 \(PLANNED\).*none is current/);
+      expect(checklist(await get(s.owner)).items.find((i) => i.key === 'academicYear')!.done).toBe(
+        false,
+      );
     });
 
     it('refuses an unknown school', async () => {

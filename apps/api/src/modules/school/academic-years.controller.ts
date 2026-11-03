@@ -35,15 +35,22 @@ import {
 import type { Request } from 'express';
 import { createZodDto } from 'nestjs-zod';
 
+import { withNullableProperties } from '../../core/http/nullable-openapi';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuth } from '../auth/request-auth';
 import { RequirePermission } from '../iam/require-permission.decorator';
 import { AcademicYearsService } from './academic-years.service';
 
-class AcademicYearDto extends createZodDto(academicYearSchema) {}
-class AcademicYearsResponseDto extends createZodDto(academicYearsResponseSchema) {}
-class CreateAcademicYearRequestDto extends createZodDto(createAcademicYearRequestSchema) {}
-class UpdateAcademicYearRequestDto extends createZodDto(updateAcademicYearRequestSchema) {}
+class AcademicYearDto extends withNullableProperties(createZodDto(academicYearSchema)) {}
+class AcademicYearsResponseDto extends withNullableProperties(
+  createZodDto(academicYearsResponseSchema),
+) {}
+class CreateAcademicYearRequestDto extends withNullableProperties(
+  createZodDto(createAcademicYearRequestSchema),
+) {}
+class UpdateAcademicYearRequestDto extends withNullableProperties(
+  createZodDto(updateAcademicYearRequestSchema),
+) {}
 
 const meta = (req: Request) => ({ ip: req.ip, userAgent: req.headers['user-agent'] });
 

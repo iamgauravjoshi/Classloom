@@ -4722,16 +4722,16 @@
             ]
           },
           "udiseCode": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "affiliationNumber": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "schoolType": {
             "anyOf": [
@@ -4861,22 +4861,22 @@
             ]
           },
           "phone": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "email": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "website": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "addressLine1": {
             "anyOf": [
@@ -4964,10 +4964,10 @@
             ]
           },
           "pinCode": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -5402,22 +5402,22 @@
             ]
           },
           "pinCode": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "phone": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "email": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "city": {
             "type": "string",
@@ -5480,40 +5480,40 @@
             "type": "string"
           },
           "addressLine1": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "addressLine2": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "district": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "pinCode": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "phone": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "email": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "city": {
             "type": "string"
@@ -5623,22 +5623,22 @@
             ]
           },
           "pinCode": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "phone": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "email": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "city": {
             "type": "string",

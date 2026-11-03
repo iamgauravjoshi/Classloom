@@ -16,9 +16,12 @@ export interface CreateCampusRequestDto {
   addressLine1?: string | null;
   addressLine2?: string | null;
   district?: string | null;
-  pinCode?: string[];
-  phone?: string[];
-  email?: string[];
+  /** @nullable */
+  pinCode?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
   /**
    * @minLength 1
    * @maxLength 60

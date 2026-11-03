@@ -18,8 +18,10 @@ export interface UpdateSchoolProfileRequestDto {
   legalName?: string | null;
   shortName?: string | null;
   establishedYear?: number | null;
-  udiseCode?: string[];
-  affiliationNumber?: string[];
+  /** @nullable */
+  udiseCode?: string | null;
+  /** @nullable */
+  affiliationNumber?: string | null;
   schoolType?: '' | 'CO_ED' | 'BOYS' | 'GIRLS' | null;
   residential?: '' | 'DAY' | 'BOARDING' | 'DAY_AND_BOARDING' | null;
   medium?: string | null;
@@ -59,13 +61,17 @@ export interface UpdateSchoolProfileRequestDto {
     | 'XI'
     | 'XII'
     | null;
-  phone?: string[];
-  email?: string[];
-  website?: string[];
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  website?: string | null;
   addressLine1?: string | null;
   addressLine2?: string | null;
   city?: string | null;
   district?: string | null;
   state: UpdateSchoolProfileRequestDtoState;
-  pinCode?: string[];
+  /** @nullable */
+  pinCode?: string | null;
 }

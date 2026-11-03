@@ -34,16 +34,21 @@ import type { Request } from 'express';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
+import { withNullableProperties } from '../../core/http/nullable-openapi';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuth } from '../auth/request-auth';
 import { PermissionDeniedException } from '../iam/permission.guard';
 import { RequirePermission } from '../iam/require-permission.decorator';
 import { CampusesService } from './campuses.service';
 
-class CampusDto extends createZodDto(campusSchema) {}
-class CampusesResponseDto extends createZodDto(campusesResponseSchema) {}
-class CreateCampusRequestDto extends createZodDto(createCampusRequestSchema) {}
-class UpdateCampusRequestDto extends createZodDto(updateCampusRequestSchema) {}
+class CampusDto extends withNullableProperties(createZodDto(campusSchema)) {}
+class CampusesResponseDto extends withNullableProperties(createZodDto(campusesResponseSchema)) {}
+class CreateCampusRequestDto extends withNullableProperties(
+  createZodDto(createCampusRequestSchema),
+) {}
+class UpdateCampusRequestDto extends withNullableProperties(
+  createZodDto(updateCampusRequestSchema),
+) {}
 class ListCampusesQueryDto extends createZodDto(
   z.object({ status: z.enum(['active', 'all']).default('active') }),
 ) {}
