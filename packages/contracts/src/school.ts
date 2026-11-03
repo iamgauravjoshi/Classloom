@@ -313,6 +313,8 @@ export const campusSchema = z.object({
   pinCode: z.string().nullable(),
   phone: z.string().nullable(),
   email: z.string().nullable(),
+  city: z.string(),
+  state: stateCodeSchema,
   isPrimary: z.boolean(),
   isActive: z.boolean(),
 });
@@ -326,10 +328,13 @@ export const createCampusRequestSchema = z.object({
   pinCode: pinField,
   phone: phoneField,
   email: nullableEmail,
+  /** Defaults to the school's city and state when left out. */
+  city: z.string().trim().min(1).max(60).optional(),
+  state: stateCodeSchema.optional(),
 });
 export type CreateCampusRequest = z.infer<typeof createCampusRequestSchema>;
 
-/** A partial edit: fields left out are unchanged, '' clears one. */
+/** A partial edit: fields left out are unchanged, '' clears an optional one (not the city). */
 export const updateCampusRequestSchema = createCampusRequestSchema.partial();
 export type UpdateCampusRequest = z.infer<typeof updateCampusRequestSchema>;
 

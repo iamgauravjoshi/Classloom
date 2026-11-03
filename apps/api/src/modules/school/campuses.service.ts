@@ -37,6 +37,8 @@ const EDITABLE_KEYS = [
   'pinCode',
   'phone',
   'email',
+  'city',
+  'state',
 ] as const;
 
 type CampusRow = Prisma.CampusGetPayload<object>;
@@ -51,6 +53,8 @@ function toCampus(row: CampusRow): Campus {
     pinCode: row.pinCode,
     phone: row.phone,
     email: row.email,
+    city: row.city,
+    state: row.state,
     isPrimary: row.isPrimary,
     isActive: row.status === 'ACTIVE',
   };
@@ -81,8 +85,8 @@ export class CampusesService {
   }
 
   /**
-   * Adds an active, non-primary campus. It takes the school's city and state (required columns
-   * the form does not ask for). Refused from the 21st campus, counting inactive ones.
+   * Adds an active, non-primary campus. A city or state left out is the school's (from
+   * `tenants`). Refused from the 21st campus, counting inactive ones.
    */
   create(auth: Actor, input: CreateCampusRequest, meta: SchoolMeta): Promise<Campus> {
     return this.write(auth, async (tx) => {
@@ -96,8 +100,8 @@ export class CampusesService {
         data: {
           tenantId: auth.tenantId,
           ...input,
-          city: school.city,
-          state: school.state,
+          city: input.city ?? school.city,
+          state: input.state ?? school.state,
         },
       });
       const campus = toCampus(row);

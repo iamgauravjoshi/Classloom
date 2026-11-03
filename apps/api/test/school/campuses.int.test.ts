@@ -164,6 +164,34 @@ describe('campuses API', () => {
       expect(events[0]!.actorUserId).toBe(s.admin.userId);
     });
 
+    it('stores and returns the city and state sent', async () => {
+      const s = await school();
+      const c = await create(s.admin.cookie, {
+        name: 'Haridwar Campus',
+        city: 'Haridwar',
+        state: 'UK',
+      });
+      expect(c).toMatchObject({ city: 'Haridwar', state: 'UK' });
+      expect(await owner.campus.findUniqueOrThrow({ where: { id: c.id } })).toMatchObject({
+        city: 'Haridwar',
+        state: 'UK',
+      });
+      const [event] = await audits(s.tenantId);
+      expect(event!.after).toMatchObject({ city: 'Haridwar', state: 'UK' });
+    });
+
+    it("defaults the city and state to the school's when left out", async () => {
+      const s = await school();
+      await owner.tenant.update({
+        where: { id: s.tenantId },
+        data: { city: 'Lucknow', state: 'UP' },
+      });
+      const c = await create(s.admin.cookie, { name: 'North Campus' });
+      expect(c).toMatchObject({ city: 'Lucknow', state: 'UP' });
+      const half = await create(s.admin.cookie, { name: 'South Campus', city: 'Kanpur' });
+      expect(half).toMatchObject({ city: 'Kanpur', state: 'UP' });
+    });
+
     it('needs settings.manage', async () => {
       const s = await school();
       const res = await post(BASE, s.principal.cookie).send({ name: 'North Campus' });
@@ -233,6 +261,27 @@ describe('campuses API', () => {
         'phone',
         'pinCode',
       ]);
+    });
+
+    it('changes the city with one campus.updated row holding only the city', async () => {
+      const s = await school();
+      const c = await create(s.admin.cookie, { name: 'North Campus' });
+      const res = await patch(`${BASE}/${c.id}`, s.admin.cookie).send({ city: ' Haridwar ' });
+      expect(res.status).toBe(200);
+      expect(campus(res)).toMatchObject({ city: 'Haridwar', state: 'UK' });
+      const updated = (await audits(s.tenantId)).filter((e) => e.action === 'campus.updated');
+      expect(updated).toHaveLength(1);
+      expect(updated[0]!.before).toEqual({ city: 'Dehradun' });
+      expect(updated[0]!.after).toEqual({ city: 'Haridwar' });
+    });
+
+    it('refuses an empty city or an unknown state with 400', async () => {
+      const s = await school();
+      const c = await create(s.admin.cookie, { name: 'North Campus' });
+      expect((await patch(`${BASE}/${c.id}`, s.admin.cookie).send({ city: '' })).status).toBe(400);
+      expect((await patch(`${BASE}/${c.id}`, s.admin.cookie).send({ state: 'ZZ' })).status).toBe(
+        400,
+      );
     });
 
     it('clears a field sent as an empty string', async () => {

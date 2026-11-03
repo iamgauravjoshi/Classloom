@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  campusSchema,
   CLASS_LEVELS,
   createAcademicYearRequestSchema,
   createCampusRequestSchema,
@@ -107,6 +108,50 @@ describe('createCampusRequestSchema', () => {
     expect(createCampusRequestSchema.safeParse({ name: 'x', pinCode: '012345' }).success).toBe(
       false,
     );
+  });
+
+  it('takes an optional city (trimmed, 1-60) and state code', () => {
+    const r = createCampusRequestSchema.parse({
+      name: 'Haridwar',
+      city: ' Haridwar ',
+      state: 'UK',
+    });
+    expect(r).toMatchObject({ city: 'Haridwar', state: 'UK' });
+    const bare = createCampusRequestSchema.parse({ name: 'North' });
+    expect('city' in bare).toBe(false);
+    expect('state' in bare).toBe(false);
+    for (const bad of [{ city: '' }, { city: '  ' }, { city: 'x'.repeat(61) }, { state: 'XX' }]) {
+      expect(createCampusRequestSchema.safeParse({ name: 'North', ...bad }).success).toBe(false);
+    }
+    expect(createCampusRequestSchema.safeParse({ name: 'N1', city: 'x'.repeat(60) }).success).toBe(
+      true,
+    );
+  });
+
+  it('lets an update change only the city or the state', () => {
+    expect(updateCampusRequestSchema.parse({ city: 'Haridwar' })).toEqual({ city: 'Haridwar' });
+    expect(updateCampusRequestSchema.parse({ state: 'UP' })).toEqual({ state: 'UP' });
+    expect(updateCampusRequestSchema.safeParse({ city: '' }).success).toBe(false);
+  });
+
+  it('campusSchema returns the city and state', () => {
+    const base = {
+      id: 'c1',
+      name: 'North',
+      addressLine1: null,
+      addressLine2: null,
+      district: null,
+      pinCode: null,
+      phone: null,
+      email: null,
+      isPrimary: false,
+      isActive: true,
+    };
+    expect(campusSchema.safeParse(base).success).toBe(false);
+    expect(campusSchema.parse({ ...base, city: 'Haridwar', state: 'UK' })).toMatchObject({
+      city: 'Haridwar',
+      state: 'UK',
+    });
   });
 });
 
