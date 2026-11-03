@@ -10,6 +10,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Inject,
@@ -46,6 +47,8 @@ class InvitationTokenDto extends createZodDto(acceptInvitationRequestSchema) {}
 class InvitationPreviewDto extends createZodDto(invitationPreviewSchema) {}
 class TwoFactorChallengeDto extends createZodDto(twoFactorChallengeSchema) {}
 
+/** The token and what it reveals (school, masked email, a new session) are never cached. */
+const NO_STORE = 'no-store';
 const GONE = 'The invitation is unknown, expired, used or revoked, or the school is not active';
 
 /** The join page's two calls. Public, and throttled per address like sign-in. */
@@ -61,6 +64,7 @@ export class InvitationAcceptController {
   ) {}
 
   @Get('preview')
+  @Header('Cache-Control', NO_STORE)
   @ApiOperation({
     operationId: 'previewInvitation',
     summary: 'What an invitation link is for (school, masked email, name, roles); spends nothing',
@@ -74,6 +78,7 @@ export class InvitationAcceptController {
   }
 
   @Post('accept')
+  @Header('Cache-Control', NO_STORE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     operationId: 'acceptInvitation',
@@ -84,7 +89,10 @@ export class InvitationAcceptController {
     type: TwoFactorChallengeDto,
     description: 'Two-step sign-in is on: send the app code to /auth/two-factor/verify',
   })
-  @ApiConflictResponse({ description: 'Already an active member (type already-member)' })
+  @ApiConflictResponse({
+    description:
+      'Already an active member (type already-member), or joined but not signed in (type invitation-joined, with schoolCode)',
+  })
   @ApiGoneResponse({ description: GONE })
   @ApiTooManyRequestsResponse({ description: 'Too many attempts from this address' })
   async accept(

@@ -11,6 +11,11 @@ export const LOG_REDACT_PATHS = [
 
 const TOKEN_PARAM = /([?&]token=)[^&#]*/g;
 
+/** The URL with every `token` query value replaced by `[Redacted]`: for logs and problem `instance`. */
+export function redactUrl(url: string): string {
+  return url.includes('token=') ? url.replace(TOKEN_PARAM, '$1[Redacted]') : url;
+}
+
 /**
  * pino-http request serializer (it receives the standard serialized request): a link token in
  * the query string (`GET /invitations/preview?token=…`) is a credential, so it never reaches the
@@ -19,6 +24,6 @@ const TOKEN_PARAM = /([?&]token=)[^&#]*/g;
 export function redactRequest<T extends { url?: string }>(req: T): T {
   if (typeof req.url !== 'string' || !req.url.includes('token=')) return req;
   // The standard serializer's object has a non-enumerable `raw`; assign onto it, don't spread.
-  req.url = req.url.replace(TOKEN_PARAM, '$1[Redacted]');
+  req.url = redactUrl(req.url);
   return req;
 }

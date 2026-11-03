@@ -29,7 +29,7 @@ import { clearTwoFactorState } from '../auth/two-factor-state';
 import { AuditService } from './audit.service';
 import { IamLimits } from './iam-limits';
 import { PermissionDeniedException } from './permission.guard';
-import { permissionsOf } from './permissions';
+import { isActiveOwner, permissionsOf } from './permissions';
 
 export interface MemberMeta {
   ip?: string;
@@ -144,9 +144,7 @@ export class MembersService {
 
       const changed = [...added, ...removed];
       // Only an owner hands out or takes away Owner; any other role needs every permission held.
-      if (changed.some((r) => r.key === OWNER_ROLE_KEY) && !auth.isOwner) {
-        throw new PermissionDeniedException();
-      }
+      if (changed.some((r) => r.key === OWNER_ROLE_KEY)) await assertStillOwner(tx, auth);
       if (!canGrant(auth.permissions, changed.flatMap(permissionsOf))) {
         throw new PermissionDeniedException();
       }
@@ -195,8 +193,10 @@ export class MembersService {
       }
       if (target.status === 'DEACTIVATED') return target;
       const holdsOwner = target.roles.some((r) => r.role.key === OWNER_ROLE_KEY);
+      // The 403s come before the last-owner 409, so a non-owner learns nothing about owners.
+      if (holdsOwner) await assertStillOwner(tx, auth);
+      assertHoldsAllOf(auth, target);
       if (holdsOwner) await this.assertNotLastOwner(tx, auth.tenantId, target.id);
-      if (holdsOwner && !auth.isOwner) throw new PermissionDeniedException();
 
       await tx.membership.update({
         where: { id: target.id },
@@ -224,13 +224,10 @@ export class MembersService {
       const target = await this.loadLocked(tx, auth.tenantId, membershipId);
       if (target.status === 'ACTIVE') return target;
       // Reactivating restores their roles, so it follows the same no-escalation rule.
-      const held = target.roles.map((r) => r.role);
-      if (held.some((r) => r.key === OWNER_ROLE_KEY) && !auth.isOwner) {
-        throw new PermissionDeniedException();
+      if (target.roles.some((r) => r.role.key === OWNER_ROLE_KEY)) {
+        await assertStillOwner(tx, auth);
       }
-      if (!canGrant(auth.permissions, held.flatMap(permissionsOf))) {
-        throw new PermissionDeniedException();
-      }
+      assertHoldsAllOf(auth, target);
       await tx.membership.update({
         where: { id: target.id },
         data: { status: 'ACTIVE', deactivatedAt: null },
@@ -265,9 +262,9 @@ export class MembersService {
           'Use My account › Security to change your own two-step sign-in.',
         );
       }
-      if (row.roles.some((r) => r.role.key === OWNER_ROLE_KEY) && !auth.isOwner) {
-        throw new PermissionDeniedException();
-      }
+      if (row.roles.some((r) => r.role.key === OWNER_ROLE_KEY)) await assertStillOwner(tx, auth);
+      // A reset weakens the person's sign-in: only someone holding all they hold may do it.
+      assertHoldsAllOf(auth, row);
       // The reset ends sessions at every school, so it must not reach another school's owner.
       const [elsewhere] = await tx.$queryRaw<{ owner: boolean }[]>`
         SELECT user_is_owner_elsewhere(${row.userId}::uuid, ${auth.tenantId}::uuid) AS owner`;
@@ -410,6 +407,28 @@ export class MembersService {
       if (code === 'P2003') throw unknownRoles();
       throw error;
     }
+  }
+}
+
+/**
+ * 403 unless the actor is still an ACTIVE owner, re-read inside the locked transaction: a request
+ * from someone demoted or deactivated meanwhile must not grant, take or act on Owner (spec §16).
+ */
+async function assertStillOwner(tx: Prisma.TransactionClient, auth: RequestAuth): Promise<void> {
+  if (!auth.isOwner || !(await isActiveOwner(tx, auth.tenantId, auth.userId))) {
+    throw new PermissionDeniedException();
+  }
+}
+
+/** 403 unless the actor holds every permission the member's roles hold (acting on a stronger person). */
+function assertHoldsAllOf(auth: RequestAuth, target: MemberRow): void {
+  if (
+    !canGrant(
+      auth.permissions,
+      target.roles.flatMap((r) => permissionsOf(r.role)),
+    )
+  ) {
+    throw new PermissionDeniedException();
   }
 }
 

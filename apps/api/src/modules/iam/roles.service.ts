@@ -237,6 +237,15 @@ export class RolesService {
     );
     // A permission the actor lacks can be neither handed out nor taken away.
     if (!canGrant(auth.permissions, [...added, ...removed])) throw new PermissionDeniedException();
+    // Turning two-step off weakens everyone holding the role: only someone who holds all the
+    // role's permissions may do it (spec §16). Turning it on stays open to any editor.
+    if (
+      before.requiresTwoFactor === true &&
+      after.requiresTwoFactor === false &&
+      !canGrant(auth.permissions, permissionsOf(role))
+    ) {
+      throw new PermissionDeniedException();
+    }
 
     if (after.name !== undefined) await this.assertNameFree(tx, after.name, role.id);
     await tx.role.update({

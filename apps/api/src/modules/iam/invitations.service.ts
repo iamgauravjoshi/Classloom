@@ -12,8 +12,8 @@ import {
   GoneException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 
 import { ENV } from '../../core/config/config.module';
@@ -36,7 +36,7 @@ import { AuditService } from './audit.service';
 import { IamLimits } from './iam-limits';
 import type { MemberMeta } from './members.service';
 import { PermissionDeniedException } from './permission.guard';
-import { permissionsOf } from './permissions';
+import { isActiveOwner, permissionsOf } from './permissions';
 
 export const INVITATION_DAYS = 7;
 const INVITATION_MS = INVITATION_DAYS * 86_400_000;
@@ -52,6 +52,21 @@ export class InvitationGoneException extends GoneException {
     super({
       title: INVITATION_GONE_TITLE,
       message: 'Ask the school to send a new invitation.',
+    });
+  }
+}
+
+/**
+ * 409 `invitation-joined`: the person joined (membership ACTIVE, token spent) but was not signed
+ * in. Carries the school code for the sign-in link.
+ */
+export class InvitationJoinedException extends ConflictException {
+  constructor(schoolCode: string) {
+    super({
+      type: 'invitation-joined',
+      title: 'You joined the school. Sign in to continue.',
+      message: 'You joined the school. Sign in to continue.',
+      schoolCode,
     });
   }
 }
@@ -82,6 +97,8 @@ interface OpenInvitation {
 /** Staff invitations (spec §8): issued by admins, accepted from the emailed link. */
 @Injectable()
 export class InvitationsService {
+  private readonly logger = new Logger(InvitationsService.name);
+
   constructor(
     @Inject(ENV) private readonly env: Env,
     private readonly prisma: PrismaService,
@@ -146,8 +163,9 @@ export class InvitationsService {
       await lockEmail(tx, auth.tenantId, body.email);
       const roles = await tx.role.findMany({ where: { id: { in: roleIds } }, select: ROLE_SELECT });
       if (roles.length !== roleIds.length) throw unknownRoles();
-      assertCanGrant(auth, roles);
+      await assertCanGrant(tx, auth, roles);
       await assertNotMember(tx, auth.tenantId, body.email);
+      await assertMayReplaceOwnerSeat(tx, auth, body.email);
       await assertNotInvited(tx, auth.tenantId, body.email, now);
       // Counted only for an invitation that will be sent.
       await this.limits.countInvitation(auth.tenantId);
@@ -196,8 +214,9 @@ export class InvitationsService {
       });
       if (roles.length === 0) throw new InvitationGoneException();
       // Re-issuing hands the roles out again, so the same rules apply as when inviting.
-      assertCanGrant(auth, roles);
+      await assertCanGrant(tx, auth, roles);
       await assertNotMember(tx, auth.tenantId, row.email);
+      await assertMayReplaceOwnerSeat(tx, auth, row.email);
       await assertNotInvited(tx, auth.tenantId, row.email, now, row.id);
       await this.limits.countResend(row.id);
 
@@ -280,14 +299,13 @@ export class InvitationsService {
         meta,
       );
     } catch (error) {
-      // The password changed between joining and the session: the join stands; sign in again.
-      if (error instanceof CredentialsChangedError) {
-        throw new UnauthorizedException({
-          title: 'You joined the school. Sign in to continue.',
-          message: 'You joined the school. Sign in to continue.',
-        });
+      // The join is committed and the token spent, but no session came of it (the password
+      // changed meanwhile, Redis or the session insert failed): a retry would only answer 410,
+      // so say what is true. The person joined; signing in is what is left.
+      if (!(error instanceof CredentialsChangedError)) {
+        this.logger.warn(`Joined by invitation but not signed in: ${String(error)}`);
       }
-      throw error;
+      throw new InvitationJoinedException(tenant.code);
     }
   }
 
@@ -338,9 +356,22 @@ export class InvitationsService {
         FOR UPDATE`;
       const existing = await tx.membership.findUnique({
         where: { tenantId_userId: { tenantId, userId: user.id } },
-        select: { id: true, status: true, roles: { select: { roleId: true } } },
+        select: {
+          id: true,
+          status: true,
+          roles: { select: { roleId: true, role: { select: { key: true } } } },
+        },
       });
       if (existing?.status === 'ACTIVE') throw alreadyMember();
+      // The seat was deactivated after the invitation went out, or the inviter lost Owner since:
+      // replacing a deactivated owner's roles still needs an owner behind the invitation.
+      if (
+        existing?.status === 'DEACTIVATED' &&
+        existing.roles.some((r) => r.role.key === OWNER_ROLE_KEY) &&
+        !(await isActiveOwner(tx, tenantId, invitation.invitedBy))
+      ) {
+        throw new PermissionDeniedException();
+      }
       let membershipId: string;
       if (existing) {
         // DEACTIVATED or REVOKED: back to ACTIVE with exactly the invited roles. A REVOKED seat
@@ -481,12 +512,46 @@ async function lockInvitation(tx: Prisma.TransactionClient, id: string): Promise
   return findInvitation(tx, id);
 }
 
-/** Owner only from an owner; any other role only within the inviter's own permissions. */
-function assertCanGrant(auth: RequestAuth, roles: InvitedRole[]): void {
-  if (roles.some((r) => r.key === OWNER_ROLE_KEY) && !auth.isOwner) {
+/**
+ * Owner only from an owner (re-read now, not from the request's start); any other role only
+ * within the inviter's own permissions.
+ */
+async function assertCanGrant(
+  tx: Prisma.TransactionClient,
+  auth: RequestAuth,
+  roles: InvitedRole[],
+): Promise<void> {
+  if (
+    roles.some((r) => r.key === OWNER_ROLE_KEY) &&
+    !(auth.isOwner && (await isActiveOwner(tx, auth.tenantId, auth.userId)))
+  ) {
     throw new PermissionDeniedException();
   }
   if (!canGrant(auth.permissions, roles.flatMap(permissionsOf))) {
+    throw new PermissionDeniedException();
+  }
+}
+
+/**
+ * Joining replaces a DEACTIVATED seat's roles, so inviting a deactivated owner back would take
+ * Owner away from them: only an owner may send that invitation (spec §16). 403 otherwise.
+ */
+async function assertMayReplaceOwnerSeat(
+  tx: Prisma.TransactionClient,
+  auth: RequestAuth,
+  email: string,
+): Promise<void> {
+  const user = await tx.user.findUnique({ where: { email }, select: { id: true } });
+  if (!user) return;
+  const seat = await tx.membership.count({
+    where: {
+      tenantId: auth.tenantId,
+      userId: user.id,
+      status: 'DEACTIVATED',
+      roles: { some: { role: { key: OWNER_ROLE_KEY } } },
+    },
+  });
+  if (seat > 0 && !(auth.isOwner && (await isActiveOwner(tx, auth.tenantId, auth.userId)))) {
     throw new PermissionDeniedException();
   }
 }

@@ -2,7 +2,17 @@ import { Writable } from 'node:stream';
 
 import pino from 'pino';
 
-import { LOG_REDACT_PATHS, redactRequest } from './log-redact';
+import { LOG_REDACT_PATHS, redactRequest, redactUrl } from './log-redact';
+
+describe('redactUrl', () => {
+  it('replaces every token value and leaves other URLs alone', () => {
+    expect(redactUrl('/invitations/preview?token=abc')).toBe(
+      '/invitations/preview?token=[Redacted]',
+    );
+    expect(redactUrl('/x?a=1&token=abc#f')).toBe('/x?a=1&token=[Redacted]#f');
+    expect(redactUrl('/schools?code=GIS')).toBe('/schools?code=GIS');
+  });
+});
 
 describe('LOG_REDACT_PATHS', () => {
   it('keeps the session token out of request and response headers', () => {

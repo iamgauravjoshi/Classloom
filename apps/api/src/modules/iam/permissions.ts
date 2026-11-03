@@ -91,3 +91,24 @@ export function permissionsOf(role: {
   if (role.key === OWNER_ROLE_KEY) return [...ALL_PERMISSIONS];
   return role.permissions.map((p) => p.permission).filter((p) => ALL_PERMISSIONS.includes(p));
 }
+
+/**
+ * True when `userId` holds Owner on an ACTIVE membership of `tenantId`, read now. Call it inside
+ * the transaction that changes Owner, after the rows are locked, so a request from someone who has
+ * just lost Owner cannot still grant or take it (the request's `auth.isOwner` is from its start).
+ */
+export async function isActiveOwner(
+  tx: Pick<Prisma.TransactionClient, 'membership'>,
+  tenantId: string,
+  userId: string,
+): Promise<boolean> {
+  const count = await tx.membership.count({
+    where: {
+      tenantId,
+      userId,
+      status: 'ACTIVE',
+      roles: { some: { role: { key: OWNER_ROLE_KEY } } },
+    },
+  });
+  return count > 0;
+}

@@ -13,6 +13,7 @@ import { ZodValidationException } from 'nestjs-zod';
 import type { ZodError } from 'zod';
 
 import type { Env } from '../config/env.schema';
+import { redactUrl } from './log-redact';
 
 type ProblemBody = ProblemDetails & { stack?: string };
 
@@ -30,7 +31,8 @@ export class ProblemFilter implements ExceptionFilter {
     const res = http.getResponse<Response>();
     const req = http.getRequest<Request>();
     const body = this.toProblem(exception);
-    body.instance = req.url;
+    // A link token in the query string is a credential: never echo it back.
+    body.instance = redactUrl(req.url);
     res.status(body.status).setHeader('content-type', 'application/problem+json');
     if (body.retryAfter !== undefined) res.setHeader('Retry-After', String(body.retryAfter));
     res.send(JSON.stringify(body));
@@ -76,18 +78,20 @@ export class ProblemFilter implements ExceptionFilter {
 
 /**
  * Fields a service attached to an HttpException body: `errors[]`, a `suggestion`, and the
- * problem `type`, `title`, `retryAfter` seconds and `attemptsLeft` for errors the client acts on.
+ * problem `type`, `title`, `retryAfter` seconds, `attemptsLeft` and `schoolCode` for errors the
+ * client acts on.
  */
 function extrasOf(
   response: string | object,
 ): Partial<
-  Pick<ProblemDetails, 'errors' | 'suggestion' | 'type' | 'title' | 'retryAfter' | 'attemptsLeft'>
+  Pick<
+    ProblemDetails,
+    'errors' | 'suggestion' | 'type' | 'title' | 'retryAfter' | 'attemptsLeft' | 'schoolCode'
+  >
 > {
   if (typeof response === 'string') return {};
-  const { errors, suggestion, type, title, retryAfter, attemptsLeft } = response as Record<
-    string,
-    unknown
-  >;
+  const { errors, suggestion, type, title, retryAfter, attemptsLeft, schoolCode } =
+    response as Record<string, unknown>;
   return {
     ...(Array.isArray(errors) ? { errors: errors as ProblemDetails['errors'] } : {}),
     ...(typeof suggestion === 'string' ? { suggestion } : {}),
@@ -95,6 +99,7 @@ function extrasOf(
     ...(typeof title === 'string' ? { title } : {}),
     ...(typeof retryAfter === 'number' ? { retryAfter } : {}),
     ...(typeof attemptsLeft === 'number' ? { attemptsLeft } : {}),
+    ...(typeof schoolCode === 'string' ? { schoolCode } : {}),
   };
 }
 

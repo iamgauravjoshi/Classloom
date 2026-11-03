@@ -1907,7 +1907,7 @@
             }
           },
           "409": {
-            "description": "Already an active member (type already-member)"
+            "description": "Already an active member (type already-member), or joined but not signed in (type invitation-joined, with schoolCode)"
           },
           "410": {
             "description": "The invitation is unknown, expired, used or revoked, or the school is not active"
