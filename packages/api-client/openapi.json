@@ -27,7 +27,7 @@
             }
           }
         },
-        "summary": "Database and Redis connectivity",
+        "summary": "Database, Redis and storage connectivity",
         "tags": [
           "health"
         ]
@@ -1921,6 +1921,818 @@
           "iam"
         ]
       }
+    },
+    "/school/profile": {
+      "get": {
+        "operationId": "getSchoolProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolProfileDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The school's profile with its name, board, code and versioned logo URL",
+        "tags": [
+          "school"
+        ]
+      },
+      "put": {
+        "operationId": "updateSchoolProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSchoolProfileRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolProfileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid (errors[] by path)"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Replace the editable profile fields; empty strings become null",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/logo": {
+      "put": {
+        "operationId": "uploadSchoolLogo",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolProfileDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "422": {
+            "description": "Not an acceptable image (type logo-invalid, reason type|size|dimensions|decode)"
+          },
+          "429": {
+            "description": "More than 10 uploads in an hour"
+          },
+          "503": {
+            "description": "Storage unreachable (type storage-unavailable)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Replace the school's logo (PNG, JPEG or WebP up to 2 MB); 10 uploads per hour",
+        "tags": [
+          "school"
+        ]
+      },
+      "delete": {
+        "operationId": "removeSchoolLogo",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "The school has no logo now."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Remove the school's logo",
+        "tags": [
+          "school"
+        ]
+      },
+      "get": {
+        "operationId": "getSchoolLogo",
+        "parameters": [
+          {
+            "name": "v",
+            "required": false,
+            "in": "query",
+            "description": "The logo file id from logoUrl",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The PNG",
+            "content": {
+              "image/png": {}
+            }
+          },
+          "304": {
+            "description": "Not modified (If-None-Match matched the ETag)"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "404": {
+            "description": "The school has no logo"
+          },
+          "503": {
+            "description": "Storage unreachable (type storage-unavailable)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The school's logo as PNG; `v` (the file id) makes the URL cacheable for a year",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/academic-years": {
+      "get": {
+        "operationId": "listAcademicYears",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcademicYearsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The school's academic years, newest first, with their terms",
+        "tags": [
+          "school"
+        ]
+      },
+      "post": {
+        "operationId": "createAcademicYear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAcademicYearRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcademicYearDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid, or the year is not 180-400 days"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "409": {
+            "description": "academic-year-overlap, academic-year-planned-exists or academic-year-label-taken"
+          },
+          "422": {
+            "description": "The terms don't tile the year (type academic-terms-invalid, errors[] path)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Create a year with its terms (or termCount default terms): CURRENT if the school has none, else PLANNED",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/academic-years/{id}": {
+      "patch": {
+        "operationId": "updateAcademicYear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAcademicYearRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcademicYearDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid, or the year is not 180-400 days"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such year in this school"
+          },
+          "409": {
+            "description": "academic-year-locked, academic-year-overlap or academic-year-label-taken"
+          },
+          "422": {
+            "description": "The terms don't tile the year (type academic-terms-invalid, errors[] path)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Change the label, the dates and the terms (sent in full); refused for a closed year",
+        "tags": [
+          "school"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteAcademicYear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The year and its terms were deleted."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such year in this school"
+          },
+          "409": {
+            "description": "The year is not planned (type academic-year-locked)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Delete the planned year",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/academic-years/{id}/make-current": {
+      "post": {
+        "operationId": "makeAcademicYearCurrent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcademicYearDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such year in this school"
+          },
+          "409": {
+            "description": "The year is not planned (type academic-year-locked)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Make the planned year current; the previous current year is closed",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/campuses": {
+      "get": {
+        "operationId": "listCampuses",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "active",
+              "type": "string",
+              "enum": [
+                "active",
+                "all"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampusesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "status is not active or all"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "status=all needs settings.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The active campuses, primary first then by name; ?status=all (needs settings.view) adds inactive ones",
+        "tags": [
+          "school"
+        ]
+      },
+      "post": {
+        "operationId": "createCampus",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCampusRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "409": {
+            "description": "campus-name-taken or campus-limit"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Add a campus; at most 20 per school, counting inactive ones",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/campuses/{id}": {
+      "patch": {
+        "operationId": "updateCampus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCampusRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such campus in this school"
+          },
+          "409": {
+            "description": "campus-name-taken"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Edit the name, address and contact; fields left out are kept, \"\" clears one",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/campuses/{id}/make-primary": {
+      "post": {
+        "operationId": "makeCampusPrimary",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such campus in this school"
+          },
+          "409": {
+            "description": "The campus is inactive (type campus-inactive)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Move the primary flag to this campus, which must be active",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/campuses/{id}/deactivate": {
+      "post": {
+        "operationId": "deactivateCampus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such campus in this school"
+          },
+          "409": {
+            "description": "campus-primary or campus-last-active"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Deactivate a campus; refused for the primary campus and the last active one",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/campuses/{id}/reactivate": {
+      "post": {
+        "operationId": "reactivateCampus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such campus in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Reactivate an inactive campus",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/onboarding": {
+      "get": {
+        "operationId": "getOnboarding",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The setup checklist; visible is false without settings.manage, when all is done or dismissed",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/onboarding/start": {
+      "post": {
+        "operationId": "startOnboarding",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "startedAt is set."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Record that the setup wizard was opened (only the first time is kept)",
+        "tags": [
+          "school"
+        ]
+      }
+    },
+    "/school/onboarding/dismiss": {
+      "post": {
+        "operationId": "dismissOnboarding",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "dismissedAt is set."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Hide the setup checklist for the whole school (only the first time is kept)",
+        "tags": [
+          "school"
+        ]
+      }
     }
   },
   "info": {
@@ -1966,11 +2778,19 @@
                   "up",
                   "down"
                 ]
+              },
+              "storage": {
+                "type": "string",
+                "enum": [
+                  "up",
+                  "down"
+                ]
               }
             },
             "required": [
               "database",
-              "redis"
+              "redis",
+              "storage"
             ]
           }
         },
@@ -3578,6 +4398,1356 @@
         },
         "required": [
           "token"
+        ]
+      },
+      "SchoolProfileDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "board": {
+            "type": "string",
+            "enum": [
+              "CBSE",
+              "ICSE",
+              "STATE",
+              "IB",
+              "CAMBRIDGE",
+              "OTHER"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "legalName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shortName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "establishedYear": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "udiseCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "affiliationNumber": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "schoolType": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "CO_ED",
+                  "BOYS",
+                  "GIRLS"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residential": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DAY",
+                  "BOARDING",
+                  "DAY_AND_BOARDING"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "medium": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lowestClass": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "NURSERY",
+                  "LKG",
+                  "UKG",
+                  "I",
+                  "II",
+                  "III",
+                  "IV",
+                  "V",
+                  "VI",
+                  "VII",
+                  "VIII",
+                  "IX",
+                  "X",
+                  "XI",
+                  "XII"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "highestClass": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "NURSERY",
+                  "LKG",
+                  "UKG",
+                  "I",
+                  "II",
+                  "III",
+                  "IV",
+                  "V",
+                  "VI",
+                  "VII",
+                  "VIII",
+                  "IX",
+                  "X",
+                  "XI",
+                  "XII"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "addressLine1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "addressLine2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "district": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AN",
+              "AP",
+              "AR",
+              "AS",
+              "BR",
+              "CG",
+              "CH",
+              "DH",
+              "DL",
+              "GA",
+              "GJ",
+              "HP",
+              "HR",
+              "JH",
+              "JK",
+              "KA",
+              "KL",
+              "LA",
+              "LD",
+              "MH",
+              "ML",
+              "MN",
+              "MP",
+              "MZ",
+              "NL",
+              "OD",
+              "PB",
+              "PY",
+              "RJ",
+              "SK",
+              "TN",
+              "TR",
+              "TG",
+              "UK",
+              "UP",
+              "WB"
+            ]
+          },
+          "pinCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "logoUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "board",
+          "code",
+          "legalName",
+          "shortName",
+          "establishedYear",
+          "udiseCode",
+          "affiliationNumber",
+          "schoolType",
+          "residential",
+          "medium",
+          "lowestClass",
+          "highestClass",
+          "phone",
+          "email",
+          "website",
+          "addressLine1",
+          "addressLine2",
+          "city",
+          "district",
+          "state",
+          "pinCode",
+          "logoUrl"
+        ]
+      },
+      "UpdateSchoolProfileRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "board": {
+            "type": "string",
+            "enum": [
+              "CBSE",
+              "ICSE",
+              "STATE",
+              "IB",
+              "CAMBRIDGE",
+              "OTHER"
+            ]
+          },
+          "legalName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 150
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shortName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 12
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "establishedYear": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1800,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "udiseCode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "affiliationNumber": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "schoolType": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": ""
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "CO_ED",
+                      "BOYS",
+                      "GIRLS"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residential": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": ""
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "DAY",
+                      "BOARDING",
+                      "DAY_AND_BOARDING"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "medium": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lowestClass": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": ""
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "NURSERY",
+                      "LKG",
+                      "UKG",
+                      "I",
+                      "II",
+                      "III",
+                      "IV",
+                      "V",
+                      "VI",
+                      "VII",
+                      "VIII",
+                      "IX",
+                      "X",
+                      "XI",
+                      "XII"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "highestClass": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": ""
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "NURSERY",
+                      "LKG",
+                      "UKG",
+                      "I",
+                      "II",
+                      "III",
+                      "IV",
+                      "V",
+                      "VI",
+                      "VII",
+                      "VIII",
+                      "IX",
+                      "X",
+                      "XI",
+                      "XII"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phone": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "email": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "website": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addressLine1": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "addressLine2": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AN",
+              "AP",
+              "AR",
+              "AS",
+              "BR",
+              "CG",
+              "CH",
+              "DH",
+              "DL",
+              "GA",
+              "GJ",
+              "HP",
+              "HR",
+              "JH",
+              "JK",
+              "KA",
+              "KL",
+              "LA",
+              "LD",
+              "MH",
+              "ML",
+              "MN",
+              "MP",
+              "MZ",
+              "NL",
+              "OD",
+              "PB",
+              "PY",
+              "RJ",
+              "SK",
+              "TN",
+              "TR",
+              "TG",
+              "UK",
+              "UP",
+              "WB"
+            ]
+          },
+          "pinCode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "board",
+          "state"
+        ]
+      },
+      "AcademicYearsResponseDto": {
+        "type": "object",
+        "properties": {
+          "years": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "startsOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "endsOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "PLANNED",
+                    "CURRENT",
+                    "CLOSED"
+                  ]
+                },
+                "terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "seq": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "startsOn": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "endsOn": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "seq",
+                      "name",
+                      "startsOn",
+                      "endsOn"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "startsOn",
+                "endsOn",
+                "status",
+                "terms"
+              ]
+            }
+          }
+        },
+        "required": [
+          "years"
+        ]
+      },
+      "CreateAcademicYearRequestDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "startsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "terms": {
+            "minItems": 2,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "startsOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "endsOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                }
+              },
+              "required": [
+                "name",
+                "startsOn",
+                "endsOn"
+              ]
+            }
+          },
+          "termCount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "const": 2
+              },
+              {
+                "type": "number",
+                "const": 3
+              }
+            ]
+          }
+        },
+        "required": [
+          "startsOn",
+          "endsOn"
+        ]
+      },
+      "AcademicYearDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "startsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PLANNED",
+              "CURRENT",
+              "CLOSED"
+            ]
+          },
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "seq": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "name": {
+                  "type": "string"
+                },
+                "startsOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "endsOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                }
+              },
+              "required": [
+                "id",
+                "seq",
+                "name",
+                "startsOn",
+                "endsOn"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "startsOn",
+          "endsOn",
+          "status",
+          "terms"
+        ]
+      },
+      "UpdateAcademicYearRequestDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "startsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "terms": {
+            "minItems": 2,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "startsOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "endsOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                }
+              },
+              "required": [
+                "name",
+                "startsOn",
+                "endsOn"
+              ]
+            }
+          }
+        },
+        "required": [
+          "startsOn",
+          "endsOn",
+          "terms"
+        ]
+      },
+      "CampusesResponseDto": {
+        "type": "object",
+        "properties": {
+          "campuses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "addressLine1": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "addressLine2": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "district": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "pinCode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "phone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "city": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "AN",
+                    "AP",
+                    "AR",
+                    "AS",
+                    "BR",
+                    "CG",
+                    "CH",
+                    "DH",
+                    "DL",
+                    "GA",
+                    "GJ",
+                    "HP",
+                    "HR",
+                    "JH",
+                    "JK",
+                    "KA",
+                    "KL",
+                    "LA",
+                    "LD",
+                    "MH",
+                    "ML",
+                    "MN",
+                    "MP",
+                    "MZ",
+                    "NL",
+                    "OD",
+                    "PB",
+                    "PY",
+                    "RJ",
+                    "SK",
+                    "TN",
+                    "TR",
+                    "TG",
+                    "UK",
+                    "UP",
+                    "WB"
+                  ]
+                },
+                "isPrimary": {
+                  "type": "boolean"
+                },
+                "isActive": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "addressLine1",
+                "addressLine2",
+                "district",
+                "pinCode",
+                "phone",
+                "email",
+                "city",
+                "state",
+                "isPrimary",
+                "isActive"
+              ]
+            }
+          }
+        },
+        "required": [
+          "campuses"
+        ]
+      },
+      "CreateCampusRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "addressLine1": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "addressLine2": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pinCode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "phone": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "email": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AN",
+              "AP",
+              "AR",
+              "AS",
+              "BR",
+              "CG",
+              "CH",
+              "DH",
+              "DL",
+              "GA",
+              "GJ",
+              "HP",
+              "HR",
+              "JH",
+              "JK",
+              "KA",
+              "KL",
+              "LA",
+              "LD",
+              "MH",
+              "ML",
+              "MN",
+              "MP",
+              "MZ",
+              "NL",
+              "OD",
+              "PB",
+              "PY",
+              "RJ",
+              "SK",
+              "TN",
+              "TR",
+              "TG",
+              "UK",
+              "UP",
+              "WB"
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CampusDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addressLine2": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "district": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pinCode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "phone": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "email": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AN",
+              "AP",
+              "AR",
+              "AS",
+              "BR",
+              "CG",
+              "CH",
+              "DH",
+              "DL",
+              "GA",
+              "GJ",
+              "HP",
+              "HR",
+              "JH",
+              "JK",
+              "KA",
+              "KL",
+              "LA",
+              "LD",
+              "MH",
+              "ML",
+              "MN",
+              "MP",
+              "MZ",
+              "NL",
+              "OD",
+              "PB",
+              "PY",
+              "RJ",
+              "SK",
+              "TN",
+              "TR",
+              "TG",
+              "UK",
+              "UP",
+              "WB"
+            ]
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "addressLine1",
+          "addressLine2",
+          "district",
+          "pinCode",
+          "phone",
+          "email",
+          "city",
+          "state",
+          "isPrimary",
+          "isActive"
+        ]
+      },
+      "UpdateCampusRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "addressLine1": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "addressLine2": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pinCode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "phone": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "email": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AN",
+              "AP",
+              "AR",
+              "AS",
+              "BR",
+              "CG",
+              "CH",
+              "DH",
+              "DL",
+              "GA",
+              "GJ",
+              "HP",
+              "HR",
+              "JH",
+              "JK",
+              "KA",
+              "KL",
+              "LA",
+              "LD",
+              "MH",
+              "ML",
+              "MN",
+              "MP",
+              "MZ",
+              "NL",
+              "OD",
+              "PB",
+              "PY",
+              "RJ",
+              "SK",
+              "TN",
+              "TR",
+              "TG",
+              "UK",
+              "UP",
+              "WB"
+            ]
+          }
+        }
+      },
+      "OnboardingResponseDto": {
+        "type": "object",
+        "properties": {
+          "visible": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "profile",
+                    "logo",
+                    "academicYear",
+                    "campuses"
+                  ]
+                },
+                "done": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "key",
+                "done"
+              ]
+            }
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dismissedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "visible",
+          "items",
+          "startedAt",
+          "dismissedAt"
         ]
       }
     }

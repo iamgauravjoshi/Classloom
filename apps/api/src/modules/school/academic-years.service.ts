@@ -26,7 +26,8 @@ import {
   AcademicYearPlannedExistsException,
 } from './school-problems';
 
-type Actor = Pick<RequestAuth, 'tenantId' | 'userId'>;
+/** The member making the change, or the platform CLI (no user). */
+type Actor = Pick<RequestAuth, 'tenantId'> & { userId: string | null };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

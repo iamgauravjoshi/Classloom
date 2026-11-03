@@ -21,7 +21,8 @@ import {
   CampusPrimaryException,
 } from './school-problems';
 
-type Actor = Pick<RequestAuth, 'tenantId' | 'userId'>;
+/** The member making the change, or the platform CLI (no user). */
+type Actor = Pick<RequestAuth, 'tenantId'> & { userId: string | null };
 
 /** At most 20 campuses per school, counting inactive ones (onboarding spec section 7). */
 export const MAX_CAMPUSES = 20;

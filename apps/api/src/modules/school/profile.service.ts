@@ -24,7 +24,8 @@ export interface SchoolMeta {
   userAgent?: string;
 }
 
-type Actor = Pick<RequestAuth, 'tenantId' | 'userId'>;
+/** The member making the change, or the platform CLI (no user). */
+type Actor = Pick<RequestAuth, 'tenantId'> & { userId: string | null };
 
 /** The fields `PUT /school/profile` replaces, in the response's order. */
 const EDITABLE_KEYS = [

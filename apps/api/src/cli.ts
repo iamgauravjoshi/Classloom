@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { CommanderError } from 'commander';
 
 import { CliModule } from './cli/cli.module';
+import { registerSchoolCommands } from './cli/school.commands';
 import { buildCli } from './cli/schools.commands';
 import { registerUserCommands } from './cli/users.commands';
 import { parseEnv } from './core/config/env.schema';
@@ -25,6 +26,7 @@ async function main(): Promise<void> {
     const out = (line: string): void => console.log(line);
     const program = buildCli(app, out);
     registerUserCommands(program, app, out);
+    registerSchoolCommands(program, app, out);
     await program.parseAsync(process.argv);
   } catch (error) {
     if (!(error instanceof CommanderError)) {

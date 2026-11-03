@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
 import type { Prisma } from '../../generated/prisma/client';
-import type { RequestAuth } from '../auth/request-auth';
 
 export const MAX_AUDIT_USER_AGENT_LENGTH = 512;
 
@@ -47,7 +46,7 @@ export interface AuditInput {
   before?: Prisma.InputJsonValue | null;
   after?: Prisma.InputJsonValue | null;
   /** Null for the system and the CLI; the joining person themselves for `member.joined`. */
-  actor: Pick<RequestAuth, 'userId'> | null;
+  actor: { userId: string | null } | null;
   meta: { ip?: string; userAgent?: string };
 }
 

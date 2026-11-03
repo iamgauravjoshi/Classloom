@@ -8,6 +8,8 @@ export interface ApiRequestConfig {
   data?: unknown;
   headers?: HeadersInit;
   signal?: AbortSignal;
+  /** `blob` for binary responses (the school logo); JSON otherwise. */
+  responseType?: 'blob';
 }
 
 /** Any non-2xx API response; `problem` is the RFC 7807 body (synthesised when the body is not JSON). */
@@ -75,17 +77,23 @@ async function readProblem(res: Response): Promise<ProblemDetails> {
 
 const isAbort = (error: unknown) => error instanceof DOMException && error.name === 'AbortError';
 
-/** Orval mutator: `fetch` against the Classloom API with cookies, JSON bodies and problem+json errors. */
+/**
+ * Orval mutator: `fetch` against the Classloom API with cookies, JSON or multipart bodies and
+ * problem+json errors.
+ */
 export async function apiFetch<T>(config: ApiRequestConfig): Promise<T> {
   const headers = new Headers(config.headers);
   const hasBody = config.data !== undefined;
-  if (hasBody) headers.set('content-type', 'application/json');
+  const isForm = config.data instanceof FormData;
+  // fetch sets a multipart content type with its boundary; a preset one would lack it.
+  if (isForm) headers.delete('content-type');
+  else if (hasBody) headers.set('content-type', 'application/json');
   let res: Response;
   try {
     res = await fetch(buildUrl(config.url, config.params), {
       method: config.method.toUpperCase(),
       headers,
-      body: hasBody ? JSON.stringify(config.data) : undefined,
+      body: isForm ? (config.data as FormData) : hasBody ? JSON.stringify(config.data) : undefined,
       credentials: 'same-origin',
       signal: config.signal,
     });
@@ -96,6 +104,7 @@ export async function apiFetch<T>(config: ApiRequestConfig): Promise<T> {
   }
   if (!res.ok) throw new ApiError(res.status, await readProblem(res));
   if (res.status === 204) return undefined as T;
+  if (config.responseType === 'blob') return (await res.blob()) as T;
   // A 2xx may carry no body at all (the forgot-password 202), which `res.json()` rejects.
   const text = await res.text();
   return (text === '' ? undefined : JSON.parse(text)) as T;
