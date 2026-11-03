@@ -109,6 +109,35 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(dialog.getByRole('checkbox', { name: 'Teacher', exact: true })).toBeVisible();
         await expectNoViolations(page);
       });
+
+      test('/en/users-roles roles tab and role editor have no WCAG 2.1 AA violations', async ({
+        page,
+        playwright,
+      }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+
+        await page.goto('/en/users-roles?tab=roles');
+        await expect(
+          page.getByRole('heading', { level: 3, name: 'Teacher', exact: true }),
+        ).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.goto('/en/users-roles/roles/new');
+        await expect(page.getByRole('heading', { level: 1, name: 'Create role' })).toBeVisible();
+        await expect(page.getByRole('checkbox', { name: 'Students: View' })).toBeVisible();
+        await expectNoViolations(page);
+
+        // A ticked grid, a disabled (read-only) one, and the tooltip on a cell that is not theirs.
+        await page.getByRole('button', { name: 'Manager', exact: true }).click();
+        await expectNoViolations(page);
+        await page.goto('/en/users-roles?tab=roles');
+        await page.getByRole('link', { name: 'Edit Owner' }).click();
+        await expect(page.getByRole('switch', { name: 'Require two-step sign-in' })).toBeVisible();
+        await expectNoViolations(page);
+      });
     });
 
     test.describe('signed out', () => {

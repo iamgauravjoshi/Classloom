@@ -1,18 +1,34 @@
 'use client';
 
-import { useListRoles } from '@classloom/api-client';
-import { type Role, rolesResponseSchema } from '@classloom/contracts';
+import { useListPermissions, useListRoles } from '@classloom/api-client';
+import {
+  permissionCatalogueResponseSchema,
+  type Role,
+  rolesResponseSchema,
+} from '@classloom/contracts';
 import { Checkbox } from '@classloom/ui/components/ui/checkbox';
 import { cn } from '@classloom/ui/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useCallback, useId, useState } from 'react';
 
+import type { CatalogueModule } from './grid-helpers';
 import type { IamError } from './iam-errors';
 
 /** `GET /iam/roles`, read through the contract (the generated type shows `key` loosely). */
 export function useRoles() {
   return useListRoles({
     query: { select: (data): Role[] => rolesResponseSchema.parse(data).roles },
+  });
+}
+
+/** `GET /iam/permissions`: the modules and their actions, in the order the grid draws them. */
+export function usePermissionCatalogue() {
+  return useListPermissions({
+    query: {
+      select: (data): CatalogueModule[] => permissionCatalogueResponseSchema.parse(data).modules,
+      // The catalogue changes only with a deploy.
+      staleTime: 5 * 60_000,
+    },
   });
 }
 

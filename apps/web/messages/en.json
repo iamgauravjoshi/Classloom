@@ -622,10 +622,6 @@
       "members": "Members",
       "roles": "Roles"
     },
-    "rolesTab": {
-      "title": "Roles",
-      "body": "Managing roles is coming soon. For now, you can give people the built-in roles from the Members tab."
-    },
     "members": {
       "title": "Members",
       "description": "Everyone who works at this school, and the people you've invited.",
@@ -731,6 +727,20 @@
         "action": "Revoke invitation",
         "pending": "Revoking",
         "done": "Invitation for {name} was revoked."
+      },
+      "resetRole": {
+        "title": "Reset {name} to default?",
+        "body": "Its description, permissions and two-step setting go back to what they were when the school was set up. People who hold it get the default permissions straight away.",
+        "action": "Reset to default",
+        "pending": "Resetting",
+        "done": "{name} was reset to default."
+      },
+      "deleteRole": {
+        "title": "Delete {name}?",
+        "body": "This can't be undone. You can only delete a role that nobody holds.",
+        "action": "Delete role",
+        "pending": "Deleting",
+        "done": "{name} was deleted."
       }
     },
     "errors": {
@@ -741,7 +751,119 @@
       "recentSignIn": "Taking you to sign in again.",
       "twoFactorOff": "Two-step sign-in is already off for this person.",
       "rateLimited": "Too many changes for now. Try again later.",
-      "generic": "Something went wrong. Try again."
+      "generic": "Something went wrong. Try again.",
+      "nameTaken": "A role with this name already exists.",
+      "roleInUse": "This role is still assigned. Move the people who hold it to another role first.",
+      "roleChanged": "Someone changed this role at the same time. We reloaded it; check it and try again."
+    },
+    "roles": {
+      "title": "Roles",
+      "description": "What each role lets people do at this school.",
+      "create": "Create role",
+      "loading": "Loading",
+      "loadFailed": "We couldn't load the roles. Check your connection and try again.",
+      "retry": "Try again",
+      "empty": "No roles yet.",
+      "builtIn": "Built-in",
+      "custom": "Custom",
+      "requiresTwoFactor": "Requires two-step",
+      "members": "{count, plural, one {# member} other {# members}}",
+      "permissions": "{held} of {total} permissions",
+      "actionsFor": "Actions for {name}",
+      "view": "View",
+      "clone": "Clone",
+      "edit": "Edit",
+      "reset": "Reset to default",
+      "delete": "Delete",
+      "list": "Roles"
+    },
+    "roleEditor": {
+      "createTitle": "Create role",
+      "editTitle": "Edit role",
+      "viewTitle": "Role",
+      "back": "Back to roles",
+      "loading": "Loading",
+      "loadFailed": "We couldn't load this role. Check your connection and try again.",
+      "retry": "Try again",
+      "notFound": "This role doesn't exist any more.",
+      "readOnlyNote": "You can look at this role but not change it.",
+      "ownerNote": "Owner always has every permission, and it can't be renamed or deleted. Only an owner can change whether it requires two-step sign-in.",
+      "builtInNote": "Built-in roles can't be renamed.",
+      "cloneNote": "Some permissions were left out because you can't grant them.",
+      "details": "Details",
+      "name": "Name",
+      "description": "Description",
+      "descriptionHint": "Optional. Up to 200 characters.",
+      "twoFactor": "Require two-step sign-in",
+      "twoFactorHint": "People with this role must set up two-step sign-in before they can use the app.",
+      "twoFactorOwnerOnly": "Only an owner can change this.",
+      "save": "Save role",
+      "saveNew": "Create role",
+      "saving": "Saving",
+      "cancel": "Cancel",
+      "created": "{name} was created.",
+      "saved": "{name} was saved.",
+      "changed": "Someone changed this role. We reloaded it.",
+      "nameDefaultCopy": "{name} copy",
+      "errors": {
+        "name": "Enter a name, 2 to 40 characters.",
+        "description": "Keep the description to 200 characters or fewer.",
+        "validation": "Check the role and try again.",
+        "escalation": "You can't give or take away a permission you don't have."
+      },
+      "permissionsTitle": "Permissions",
+      "clone": "Clone",
+      "reset": "Reset to default",
+      "delete": "Delete"
+    },
+    "grid": {
+      "title": "Permissions",
+      "hint": "Choose what people with this role can do in each part of the school.",
+      "caption": "Permissions by module and action",
+      "module": "Module",
+      "selectAll": "Select all",
+      "selectAllFor": "Select all {module}",
+      "actionFor": "{module}: {action}",
+      "count": "{checked} of {total}",
+      "cantGrant": "You can't grant a permission you don't have.",
+      "presets": "Presets",
+      "presetsHint": "Replaces the ticks below. You can still change them.",
+      "preset": {
+        "readOnly": "Read only",
+        "editor": "Editor",
+        "manager": "Manager",
+        "fullAccess": "Full access"
+      }
+    },
+    "permissions": {
+      "modules": {
+        "dashboard": "Dashboard",
+        "students": "Students",
+        "admissions": "Admissions",
+        "parents": "Parents",
+        "staff": "Staff",
+        "classes": "Classes & sections",
+        "subjects": "Subjects",
+        "timetable": "Timetable",
+        "attendance": "Attendance",
+        "exams": "Exams & results",
+        "fees": "Fees",
+        "library": "Library",
+        "transport": "Transport",
+        "communication": "Communication",
+        "reports": "Reports",
+        "settings": "School settings",
+        "iam": "Users & roles"
+      },
+      "actions": {
+        "view": "View",
+        "create": "Create",
+        "edit": "Edit",
+        "delete": "Delete",
+        "export": "Export",
+        "approve": "Approve",
+        "manage": "Manage"
+      }
     }
   }
 }

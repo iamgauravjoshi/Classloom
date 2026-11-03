@@ -1,11 +1,10 @@
-import { Card, CardDescription, CardHeader, CardTitle } from '@classloom/ui/components/ui/card';
-import { IconHourglass } from '@tabler/icons-react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { AccessDenied } from '@/components/access-denied';
 import { AppPageHeader } from '@/components/app-page-header';
 import { MembersSection } from '@/features/iam/members-section';
+import { RolesSection } from '@/features/iam/roles-section';
 import { UsersRolesTabs } from '@/features/iam/users-roles-tabs';
 import { canOpenSection } from '@/lib/page-access';
 import { requireServerSession } from '@/lib/server-session';
@@ -40,32 +39,21 @@ export default async function UsersRolesPage({
   const current = tab === 'roles' ? 'roles' : 'members';
   const { isOwner, permissions } = toShellSession(session);
 
+  const viewer = {
+    userId: session.user.id,
+    permissions,
+    isOwner,
+    schoolCode: session.school.code,
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <AppPageHeader title={t('title')} breadcrumbs={[{ label: t('title') }]} />
       <UsersRolesTabs current={current} />
       {current === 'members' ? (
-        <MembersSection
-          viewer={{
-            userId: session.user.id,
-            permissions,
-            isOwner,
-            schoolCode: session.school.code,
-          }}
-        />
+        <MembersSection viewer={viewer} />
       ) : (
-        // The Roles tab's content comes with the role editor.
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-h5">
-              <h2 className="flex items-center gap-2">
-                <IconHourglass aria-hidden="true" />
-                {t('rolesTab.title')}
-              </h2>
-            </CardTitle>
-            <CardDescription>{t('rolesTab.body')}</CardDescription>
-          </CardHeader>
-        </Card>
+        <RolesSection viewer={viewer} />
       )}
     </div>
   );

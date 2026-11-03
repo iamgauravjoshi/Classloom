@@ -2,9 +2,12 @@
 
 import {
   useDeactivateMember,
+  useDeleteRole,
   useResetMemberTwoFactor,
+  useResetRole,
   useRevokeInvitation,
 } from '@classloom/api-client';
+import type { Role } from '@classloom/contracts';
 import { Alert, AlertDescription } from '@classloom/ui/components/ui/alert';
 import { Button } from '@classloom/ui/components/ui/button';
 import {
@@ -29,7 +32,7 @@ const NOT_CACHED = { mutation: { gcTime: 0 } } as const;
 /** Where focus goes when a dialog closes: the row's menu button, or the list when it is gone. */
 export type FinalFocus = () => HTMLElement | null;
 
-interface ConfirmDialogProps {
+export interface ConfirmDialogProps {
   open: boolean;
   title: string;
   body: string;
@@ -45,7 +48,7 @@ interface ConfirmDialogProps {
   pending: boolean;
 }
 
-function ConfirmDialog({
+export function ConfirmDialog({
   open,
   title,
   body,
@@ -277,6 +280,93 @@ export function RevokeInvitationDialog({
       finalFocus={finalFocus}
       errorText={error}
       pending={revoke.isPending}
+    />
+  );
+}
+
+interface RoleDialogProps {
+  role: Role | null;
+  onClose: () => void;
+  /** After the change, or when the role turned out to be stale: reload what shows it. */
+  onDone: (outcome: 'changed' | 'stale') => void;
+  finalFocus: FinalFocus;
+}
+
+/** Shared by "Reset … to default?" and "Delete …?": one mutation on a role, and its refusals. */
+function RoleConfirm({
+  role,
+  onClose,
+  onDone,
+  finalFocus,
+  messages,
+  run,
+  pending,
+}: RoleDialogProps & {
+  messages: 'resetRole' | 'deleteRole';
+  run: (role: Role) => Promise<unknown>;
+  pending: boolean;
+}) {
+  const t = useTranslations(`iam.confirm.${messages}`);
+  const errorText = useIamErrorText();
+  const [error, setError] = useState<string | null>(null);
+  const target = useLastShown(role);
+
+  async function confirm() {
+    if (!target) return;
+    setError(null);
+    try {
+      await run(target);
+      toast.add({ title: t('done', { name: target.name }), type: 'success' });
+      onDone('changed');
+      onClose();
+    } catch (failure) {
+      if (isStale(failure)) onDone('stale');
+      setError(errorText(iamErrorOf(failure)));
+      throw failure;
+    }
+  }
+
+  return (
+    <ConfirmDialog
+      open={role !== null}
+      title={t('title', { name: target?.name ?? '' })}
+      body={t('body')}
+      action={t('action')}
+      pendingLabel={t('pending')}
+      onConfirm={confirm}
+      onClose={() => {
+        setError(null);
+        onClose();
+      }}
+      finalFocus={finalFocus}
+      errorText={error}
+      pending={pending}
+    />
+  );
+}
+
+/** "Reset … to default?": a built-in role gets the permissions it was set up with. */
+export function ResetRoleDialog(props: RoleDialogProps) {
+  const reset = useResetRole(NOT_CACHED);
+  return (
+    <RoleConfirm
+      {...props}
+      messages="resetRole"
+      run={(role) => reset.mutateAsync({ id: role.id })}
+      pending={reset.isPending}
+    />
+  );
+}
+
+/** "Delete …?": a custom role nobody holds. The API refuses while someone does (409). */
+export function DeleteRoleDialog(props: RoleDialogProps) {
+  const remove = useDeleteRole(NOT_CACHED);
+  return (
+    <RoleConfirm
+      {...props}
+      messages="deleteRole"
+      run={(role) => remove.mutateAsync({ id: role.id })}
+      pending={remove.isPending}
     />
   );
 }

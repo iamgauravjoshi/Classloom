@@ -7,14 +7,17 @@ export type IamError =
   | 'permissionDenied'
   | 'recentSignIn'
   | 'twoFactorOff'
+  | 'nameTaken'
+  | 'roleInUse'
+  | 'roleChanged'
   | 'rateLimited'
   | 'generic';
 
 const typeIs = (error: ApiError, name: string) => error.problem.type.endsWith(name);
 
 /**
- * The Members API's refusals: 409 `last-owner`, `already-member`, `already-invited` and
- * `two-factor-off`; 403 `permission-denied` and `recent-sign-in-required` (reset two-step); a 429
+ * The Members and Roles APIs' refusals: 409 `last-owner`, `already-member`, `already-invited`,
+ * `two-factor-off`, `role-in-use`, `role-changed` and a 409 on the `name` field (a taken role name); 403 `permission-denied` and `recent-sign-in-required` (reset two-step); a 429
  * is the 60-an-hour limit. The status is checked with the type, so a stray type names nothing.
  */
 export function iamErrorOf(error: unknown): IamError {
@@ -24,6 +27,10 @@ export function iamErrorOf(error: unknown): IamError {
     if (typeIs(error, 'already-member')) return 'alreadyMember';
     if (typeIs(error, 'already-invited')) return 'alreadyInvited';
     if (typeIs(error, 'two-factor-off')) return 'twoFactorOff';
+    if (typeIs(error, 'role-in-use')) return 'roleInUse';
+    if (typeIs(error, 'role-changed')) return 'roleChanged';
+    // The Roles API names the field: a 409 on `name` is a name another role already has.
+    if (error.problem.errors?.[0]?.path === 'name') return 'nameTaken';
   }
   if (error.status === 403) {
     if (typeIs(error, 'permission-denied')) return 'permissionDenied';

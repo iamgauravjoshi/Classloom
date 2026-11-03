@@ -77,3 +77,23 @@ describe('isStale', () => {
     expect(isStale(new Error('x'))).toBe(false);
   });
 });
+
+describe('iamErrorOf, the Roles API', () => {
+  it('reads a 409 that names the name field as a taken name', () => {
+    expect(iamErrorOf(apiError(409, { errors: [{ path: 'name', message: 'taken' }] }))).toBe(
+      'nameTaken',
+    );
+  });
+
+  it('reads the role-in-use and role-changed 409 types', () => {
+    expect(iamErrorOf(apiError(409, { type: 'role-in-use' }))).toBe('roleInUse');
+    expect(iamErrorOf(apiError(409, { type: 'role-changed' }))).toBe('roleChanged');
+  });
+
+  it('does not take another field, or another status, for a taken name', () => {
+    expect(iamErrorOf(apiError(409, { errors: [{ path: 'email', message: 'x' }] }))).toBe(
+      'generic',
+    );
+    expect(iamErrorOf(apiError(400, { errors: [{ path: 'name', message: 'x' }] }))).toBe('generic');
+  });
+});
