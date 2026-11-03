@@ -78,7 +78,7 @@ export class ProblemFilter implements ExceptionFilter {
 
 /**
  * Fields a service attached to an HttpException body: `errors[]`, a `suggestion`, and the
- * problem `type`, `title`, `retryAfter` seconds, `attemptsLeft` and `schoolCode` for errors the
+ * problem `type`, `title`, `retryAfter` seconds, `attemptsLeft`, `schoolCode` and `reason` for errors the
  * client acts on.
  */
 function extrasOf(
@@ -86,11 +86,18 @@ function extrasOf(
 ): Partial<
   Pick<
     ProblemDetails,
-    'errors' | 'suggestion' | 'type' | 'title' | 'retryAfter' | 'attemptsLeft' | 'schoolCode'
+    | 'errors'
+    | 'suggestion'
+    | 'type'
+    | 'title'
+    | 'retryAfter'
+    | 'attemptsLeft'
+    | 'schoolCode'
+    | 'reason'
   >
 > {
   if (typeof response === 'string') return {};
-  const { errors, suggestion, type, title, retryAfter, attemptsLeft, schoolCode } =
+  const { errors, suggestion, type, title, retryAfter, attemptsLeft, schoolCode, reason } =
     response as Record<string, unknown>;
   return {
     ...(Array.isArray(errors) ? { errors: errors as ProblemDetails['errors'] } : {}),
@@ -100,6 +107,7 @@ function extrasOf(
     ...(typeof retryAfter === 'number' ? { retryAfter } : {}),
     ...(typeof attemptsLeft === 'number' ? { attemptsLeft } : {}),
     ...(typeof schoolCode === 'string' ? { schoolCode } : {}),
+    ...(typeof reason === 'string' ? { reason } : {}),
   };
 }
 

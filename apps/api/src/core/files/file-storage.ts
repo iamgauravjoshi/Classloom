@@ -23,6 +23,7 @@ import type { Env } from '../config/env.schema';
 /** Object storage for tenant files. Keys are built by the API, never taken from user input. */
 export interface FileStorage {
   put(key: string, body: Buffer, contentType: string): Promise<void>;
+  /** Throws StorageObjectNotFoundError when nothing is stored under `key`. */
   get(key: string): Promise<Readable>;
   delete(key: string): Promise<void>;
   /** True when the bucket is reachable; never throws. */
@@ -36,6 +37,14 @@ export class StorageUnavailableError extends Error {
   constructor(operation: string, options?: { cause?: unknown }) {
     super(`File storage unavailable (${operation})`, options);
     this.name = 'StorageUnavailableError';
+  }
+}
+
+/** `get` found no object under the key (S3 `NoSuchKey`): the store answered, the object is gone. */
+export class StorageObjectNotFoundError extends Error {
+  constructor(key: string, options?: { cause?: unknown }) {
+    super(`No stored object at ${key}`, options);
+    this.name = 'StorageObjectNotFoundError';
   }
 }
 
@@ -105,6 +114,12 @@ export class S3FileStorage implements FileStorage, OnModuleInit, OnModuleDestroy
       if (!(Body instanceof Readable)) throw new Error('S3 returned no object body');
       return Body;
     } catch (error) {
+      if (
+        isS3Error(error, 'NoSuchKey') ||
+        (error instanceof S3ServiceException && error.$metadata.httpStatusCode === 404)
+      ) {
+        throw new StorageObjectNotFoundError(key, { cause: error });
+      }
       throw new StorageUnavailableError('get', { cause: error });
     }
   }

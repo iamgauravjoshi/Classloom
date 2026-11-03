@@ -11,6 +11,7 @@ import type { App } from 'supertest/types';
 import {
   FILE_STORAGE,
   type FileStorage,
+  StorageObjectNotFoundError,
   StorageUnavailableError,
 } from '../src/core/files/file-storage';
 import { FilesService } from '../src/core/files/files.service';
@@ -94,7 +95,13 @@ describe('core files module (RustFS)', () => {
   it('removeObject deletes the object', async () => {
     const { storageKey } = await store();
     await files.removeObject(storageKey);
-    await expect(storage.get(storageKey)).rejects.toThrow();
+    await expect(storage.get(storageKey)).rejects.toBeInstanceOf(StorageObjectNotFoundError);
+  });
+
+  it('get throws StorageObjectNotFoundError, not StorageUnavailableError, for a missing key', async () => {
+    await expect(storage.get(`tenants/${tenantId}/school_logo/missing.png`)).rejects.toBeInstanceOf(
+      StorageObjectNotFoundError,
+    );
   });
 
   describe('with the storage container stopped', () => {

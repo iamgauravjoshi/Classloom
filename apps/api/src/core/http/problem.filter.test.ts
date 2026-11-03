@@ -95,6 +95,15 @@ describe('ProblemFilter', () => {
     expect(res.body).toMatchObject({ type: 'invitation-joined', status: 409, schoolCode: 'GIS' });
   });
 
+  it('carries reason for logo-invalid', () => {
+    const { host, res } = mockHost('/school/logo');
+    new ProblemFilter('production').catch(
+      new HttpException({ type: 'logo-invalid', title: 'Bad logo.', reason: 'size' }, 422),
+      host,
+    );
+    expect(res.body).toMatchObject({ type: 'logo-invalid', status: 422, reason: 'size' });
+  });
+
   it('keeps a custom HttpException message as the detail', () => {
     const { host, res } = mockHost();
     new ProblemFilter('production').catch(new BadRequestException('Section is full'), host);
