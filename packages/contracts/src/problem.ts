@@ -23,6 +23,8 @@ export const problemDetailsSchema = z.object({
   retryAfter: z.number().int().optional(),
   /** Set on a 401 `two-factor-invalid`: tries left on this sign-in challenge. */
   attemptsLeft: z.number().int().optional(),
+  /** Set on a 409 `invitation-joined`: the school the person joined, to sign in to. */
+  schoolCode: z.string().optional(),
 });
 
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;

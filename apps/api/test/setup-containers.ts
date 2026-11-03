@@ -41,11 +41,30 @@ function urlAs(connectionUri: string, role: string): string {
 }
 
 /**
+ * Applies migrations as the owner role. `prismaConfig` points `prisma migrate deploy` at another
+ * config file, for example one whose migrations folder stops before the migration under test.
+ */
+export async function applyMigrations(migrationUrl: string, prismaConfig?: string): Promise<void> {
+  await execFileAsync(
+    'pnpm',
+    ['exec', 'prisma', 'migrate', 'deploy', ...(prismaConfig ? ['--config', prismaConfig] : [])],
+    {
+      cwd: apiDir,
+      shell: process.platform === 'win32',
+      env: { ...process.env, DATABASE_MIGRATION_URL: migrationUrl },
+    },
+  );
+}
+
+/**
  * Starts throwaway Postgres 17 and Redis 7 containers (plus Mailpit on request), creates the
  * owner and app roles, and applies migrations as the owner. `env.DATABASE_URL` connects as the
- * restricted `classloom_app` role, exactly as the API does in production.
+ * restricted `classloom_app` role, exactly as the API does in production. `prismaConfig` applies
+ * another config's migrations instead of the API's own (see `applyMigrations`).
  */
-export async function startTestInfra(options: { mailpit?: boolean } = {}): Promise<TestInfra> {
+export async function startTestInfra(
+  options: { mailpit?: boolean; prismaConfig?: string } = {},
+): Promise<TestInfra> {
   const [postgres, redis, mailpit] = await Promise.all([
     new PostgreSqlContainer('postgres:17-alpine').start(),
     new RedisContainer('redis:7-alpine').start(),
@@ -64,11 +83,7 @@ export async function startTestInfra(options: { mailpit?: boolean } = {}): Promi
   }
 
   const migrationUrl = urlAs(superuserUri, 'classloom_owner');
-  await execFileAsync('pnpm', ['exec', 'prisma', 'migrate', 'deploy'], {
-    cwd: apiDir,
-    shell: process.platform === 'win32',
-    env: { ...process.env, DATABASE_MIGRATION_URL: migrationUrl },
-  });
+  await applyMigrations(migrationUrl, options.prismaConfig);
 
   const env: Env = {
     NODE_ENV: 'test',

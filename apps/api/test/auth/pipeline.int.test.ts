@@ -1,4 +1,4 @@
-import { authSessionSchema } from '@classloom/contracts';
+import { ALL_PERMISSIONS, authSessionSchema } from '@classloom/contracts';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -77,7 +77,10 @@ describe('request pipeline', () => {
       const body = authSessionSchema.parse(res.body);
       expect(body.school.code).toBe(s.code);
       expect(body.school.code).toBe(body.school.code.toUpperCase());
-      expect(body.role).toBe('OWNER');
+      // The seeded member holds Owner, which means every permission.
+      expect(body.roles).toEqual([{ key: 'OWNER', name: 'Owner' }]);
+      expect(body.permissions).toEqual([...ALL_PERMISSIONS]);
+      expect(body.twoFactorSetupRequired).toBe(false);
       const primary = await owner.campus.findFirstOrThrow({
         where: { tenantId: s.tenantId, isPrimary: true },
       });

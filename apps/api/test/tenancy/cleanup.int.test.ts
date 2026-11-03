@@ -14,6 +14,7 @@ import {
   PendingCleanupService,
   PURGE_PENDING_JOB,
 } from '../../src/modules/tenancy/pending-cleanup.service';
+import { addMember } from '../auth/helpers';
 import { ownerPrisma, startTestInfra, type TestInfra } from '../setup-containers';
 
 const HOUR = 3_600_000;
@@ -32,7 +33,7 @@ describe('pending registration clean-up', () => {
     ageHours: number,
     userId: string,
   ) {
-    return platform.tenant.create({
+    const tenant = await platform.tenant.create({
       data: {
         code,
         name: `School ${code}`,
@@ -44,7 +45,6 @@ describe('pending registration clean-up', () => {
         status,
         createdAt: new Date(now.getTime() - ageHours * HOUR),
         campuses: { create: { name: 'Main', isPrimary: true, city: 'Dehradun', state: 'UK' } },
-        memberships: { create: { userId, role: 'OWNER' } },
         registrationTokens: {
           create: {
             tokenHash: Buffer.from(code),
@@ -53,6 +53,11 @@ describe('pending registration clean-up', () => {
         },
       },
     });
+    // As registration does: built-in roles, and Owner for the registering user. The purge must
+    // still delete the school, its roles and its membership roles in one cascade.
+    await platform.$executeRaw`SELECT seed_builtin_roles(${tenant.id}::uuid)`;
+    await addMember(platform, tenant.id, userId);
+    return tenant;
   }
 
   const user = (email: string, verified = false) =>

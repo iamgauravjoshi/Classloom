@@ -8,7 +8,12 @@ import {
 } from '@playwright/test';
 
 import { latestEmailTo, mailIds } from './support/mailpit';
-import { createVerifiedSchool, signInWithCode, WEB_ORIGIN } from './support/school';
+import {
+  createVerifiedSchool,
+  relaxOwnerTwoFactor,
+  signInWithCode,
+  WEB_ORIGIN,
+} from './support/school';
 import { enableTwoFactorFor, totpCode } from './support/totp';
 
 // Everything here signs in and out, ends sessions or changes two-step settings, so each test owns a
@@ -140,6 +145,13 @@ test('journey: turn on, app code, trust the device, password change, recovery co
 
   await page.goto(SECURITY_PATH);
   await expect(page.getByRole('heading', { level: 1, name: 'My account' })).toBeVisible();
+  // The sign-in helper already turned two-step on and off once (see `relaxOwnerTwoFactor`), so the
+  // history holds those events before this test acts: count them, to prove the UI's own actions.
+  const activity = page.getByRole('region', { name: 'Sign-in history' });
+  await expect(visible(activity.locator('tbody tr, ul > li')).first()).toBeVisible();
+  const eventCount = (label: string) => visible(activity.getByText(label, { exact: true })).count();
+  const turnedOnBefore = await eventCount('Two-step sign-in turned on');
+  const turnedOffBefore = await eventCount('Two-step sign-in turned off');
   const { dialog, secret } = await openSetup(page);
   await dialog.getByRole('button', { name: 'Next' }).click();
   await dialog.getByLabel('Authenticator code').fill(totpCode(secret));
@@ -191,14 +203,16 @@ test('journey: turn on, app code, trust the device, password change, recovery co
 
   // The history reads back what happened.
   await page.goto(SECURITY_PATH);
-  const activity = page.getByRole('region', { name: 'Sign-in history' });
-  for (const label of [
-    'Recovery code used',
-    'Two-step code accepted',
-    'Two-step sign-in turned on',
-  ]) {
+  for (const label of ['Recovery code used', 'Two-step code accepted']) {
     await expect(visible(activity.getByText(label, { exact: true })).first()).toBeVisible();
   }
+  // One more "turned on" than before: the one this test's setup dialog made.
+  await expect(
+    visible(activity.getByText('Two-step sign-in turned on', { exact: true })),
+  ).toHaveCount(turnedOnBefore + 1);
+  await expect(
+    visible(activity.getByText('Two-step sign-in turned off', { exact: true })),
+  ).toHaveCount(turnedOffBefore);
   await expect(
     page.getByRole('region', { name: 'Two-step sign-in' }).getByText('9 recovery codes left'),
   ).toBeVisible();
@@ -212,9 +226,10 @@ test('journey: turn on, app code, trust the device, password change, recovery co
   await expect(off).toBeHidden();
   await expect(twoFactor.getByText('Off', { exact: true })).toBeVisible();
   await expect(twoFactor.getByRole('button', { name: 'Turn on' })).toBeVisible();
+  // And one more "turned off" than before: this test's own.
   await expect(
-    visible(activity.getByText('Two-step sign-in turned off', { exact: true })).first(),
-  ).toBeVisible();
+    visible(activity.getByText('Two-step sign-in turned off', { exact: true })),
+  ).toHaveCount(turnedOffBefore + 1);
 });
 
 test('the two-step step also follows an emailed code, with "Don\'t ask again" unticked', async ({
@@ -290,6 +305,8 @@ test.describe('a sign-in that is too old', () => {
     await signInAndSetPassword(request, first);
     await request.dispose();
     await apiSignIn(page.request, second);
+    // Owner requires two-step by default, which would send this session to the setup page.
+    await relaxOwnerTwoFactor(page.request);
 
     await page.route('**/api/me/two-factor/setup', (route) =>
       route.fulfill({
@@ -408,9 +425,10 @@ test('"Load more" adds the next page of the sign-in history', async ({ page, pla
   const loadMore = activity.getByRole('button', { name: 'Load more' });
   await loadMore.click();
 
-  await expect.poll(() => rows.count()).toBeGreaterThan(20);
-  // 12 rounds, the first sign-in, its code request and the password change: more than two pages
-  // is not possible here, so there is nothing left to load.
+  // 29 rows in all: 12 rounds of sign-in and sign-out (24), the first sign-in with its code request,
+  // the password change and the two-step on/off from `relaxOwnerTwoFactor` (5). That is under two
+  // pages, so the second page is the last and nothing is left to load.
+  await expect.poll(() => rows.count()).toBe(29);
   await expect(loadMore).toHaveCount(0);
 });
 

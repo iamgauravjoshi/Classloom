@@ -49,6 +49,16 @@
       "warning": "If this wasn't you, reset your password now.",
       "button": "Reset password"
     },
+    "twoFactorResetByAdmin": {
+      "subject": "Your school turned off two-step sign-in",
+      "heading": "Your school turned off two-step sign-in",
+      "intro": "An admin at {school} turned off two-step sign-in for your Classloom account. Your recovery codes and trusted devices were removed, and you were signed out of every school.",
+      "schoolLabel": "School",
+      "timeLabel": "Time",
+      "time": "{date} at {time} IST",
+      "warning": "If you weren't expecting this, tell your school admin. You can turn two-step sign-in back on in Security settings.",
+      "button": "Open Security settings"
+    },
     "twoFactorChanged": {
       "timeLabel": "Time",
       "time": "{date} at {time} IST",
@@ -69,6 +79,16 @@
         "heading": "New recovery codes were created",
         "intro": "New recovery codes were created for your Classloom account. Your old recovery codes no longer work."
       }
+    },
+    "invitation": {
+      "subject": "You're invited to join {school} on Classloom",
+      "heading": "You're invited to join {school} on Classloom",
+      "intro": "{inviter} invited you to join {school} on Classloom.",
+      "schoolLabel": "School",
+      "rolesLabel": "Roles",
+      "expiry": "This invitation expires on {date}.",
+      "ignore": "If you weren't expecting this, you can ignore it.",
+      "button": "Join"
     }
   }
 }

@@ -8,15 +8,18 @@ import { passwordChangedEmail } from '../../core/email/templates/password-change
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
 import type {
-  MembershipRole,
+  Prisma,
   Session,
   SessionRevokedReason,
   TenantStatus,
 } from '../../generated/prisma/client';
+import type { MemberAccess } from '../iam/permissions';
 import { MAX_USER_AGENT_LENGTH } from './auth-events.service';
 import { randomToken, sha256 } from './crypto';
 import { KnownDeviceService } from './known-device.service';
+import { findMemberAccess } from './member-lookup';
 import { initialExpiry, isExpired, slidExpiry } from './session-expiry';
+import { needsTwoFactorSetup } from './two-factor-setup.guard';
 
 const DAY = 86_400_000;
 /** The password-changed email holds no secret; a failed job is kept a day like the other notices. */
@@ -68,6 +71,7 @@ export class SessionService {
   async create(input: CreateSessionInput): Promise<{ token: string; session: Session }> {
     const token = randomToken();
     const now = new Date();
+    const { roles } = await findMemberAccess(this.prisma, input.tenantId, input.membershipId);
     const session = await this.prisma.$transaction(async (tx) => {
       // FOR SHARE blocks `changePassword` until this commits, so its revoke then sees the new
       // session; a change that committed first shows here as a different timestamp.
@@ -78,6 +82,11 @@ export class SessionService {
           throw new CredentialsChangedError();
         }
       }
+      // Informational: every request re-evaluates it, so a later change applies at once.
+      const user = await tx.user.findUnique({
+        where: { id: input.userId },
+        select: { totpEnabledAt: true },
+      });
       const created = await tx.session.create({
         data: {
           tokenHash: tokenHash(token),
@@ -86,6 +95,7 @@ export class SessionService {
           membershipId: input.membershipId,
           remember: input.remember,
           authenticatedAt: now,
+          twoFactorSetupRequired: needsTwoFactorSetup(roles, user?.totpEnabledAt ?? null),
           lastSeenAt: now,
           ...initialExpiry(now, input.remember),
           ip: input.ip ?? null,
@@ -148,13 +158,29 @@ export class SessionService {
     userId: string,
     reason: SessionRevokedReason,
     exceptSessionId?: string,
+    tx?: Prisma.TransactionClient,
   ): Promise<void> {
-    await this.prisma.session.updateMany({
+    await (tx ?? this.prisma).session.updateMany({
       where: {
         userId,
         revokedAt: null,
         ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}),
       },
+      data: { revokedAt: new Date(), revokedReason: reason },
+    });
+  }
+
+  /**
+   * Ends every live session of one membership, i.e. one person at one school. Pass `tx` to do it
+   * in the caller's transaction, so a status change and the end of the sessions commit together.
+   */
+  async revokeAllForMembership(
+    membershipId: string,
+    reason: SessionRevokedReason,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    await (tx ?? this.prisma).session.updateMany({
+      where: { membershipId, revokedAt: null },
       data: { revokedAt: new Date(), revokedReason: reason },
     });
   }
@@ -216,9 +242,13 @@ export class SessionService {
     }
   }
 
+  /**
+   * The contract session. `access` is the member's roles and effective permissions as loaded
+   * for this request (`request.auth`) or sign-in (`signInAccess`).
+   */
   async toAuthSession(
     resolved: ResolvedSession,
-    membership: { role: MembershipRole },
+    access: Pick<MemberAccess, 'roles' | 'permissions'> & { twoFactorSetupRequired: boolean },
     user: {
       id: string;
       name: string;
@@ -244,7 +274,10 @@ export class SessionService {
       },
       school: { id: tenant.id, code: tenant.code.toUpperCase(), name: tenant.name },
       campus: { id: campus.id, name: campus.name },
-      role: membership.role,
+      roles: access.roles.map((role) => ({ key: role.key, name: role.name })),
+      // Catalogue order (MemberAccess builds the set in that order).
+      permissions: [...access.permissions],
+      twoFactorSetupRequired: access.twoFactorSetupRequired,
       remember: session.remember,
       expiresAt: session.expiresAt.toISOString(),
     };

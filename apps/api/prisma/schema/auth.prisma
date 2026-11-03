@@ -12,6 +12,7 @@ enum SessionRevokedReason {
   REPLACED
   REVOKED_BY_USER
   TWO_FACTOR_DISABLED
+  MEMBER_DEACTIVATED
 }
 
 enum AuthEventType {
@@ -40,33 +41,37 @@ enum AuthMethod {
   EMAIL_CODE
   RESET_LINK
   RECOVERY_CODE
+  INVITE
 }
 
 /// A signed-in browser. The raw token exists only in the cookie; only its SHA-256 is stored.
 model Session {
-  id              String                @id @default(uuid(7)) @db.Uuid
+  id                     String                @id @default(uuid(7)) @db.Uuid
   /// SHA-256 of a 32-byte random token.
-  tokenHash       Bytes                 @unique @map("token_hash")
-  userId          String                @map("user_id") @db.Uuid
-  tenantId        String                @map("tenant_id") @db.Uuid
-  membershipId    String                @map("membership_id") @db.Uuid
+  tokenHash              Bytes                 @unique @map("token_hash")
+  userId                 String                @map("user_id") @db.Uuid
+  tenantId               String                @map("tenant_id") @db.Uuid
+  membershipId           String                @map("membership_id") @db.Uuid
   /// "Keep me signed in".
-  remember        Boolean
+  remember               Boolean
   /// When the person proved who they are (sign-in time); used for "recent sign-in".
-  authenticatedAt DateTime              @map("authenticated_at") @db.Timestamptz(6)
+  authenticatedAt        DateTime              @map("authenticated_at") @db.Timestamptz(6)
   /// Updated at most once every 5 minutes.
-  lastSeenAt      DateTime              @map("last_seen_at") @db.Timestamptz(6)
+  lastSeenAt             DateTime              @map("last_seen_at") @db.Timestamptz(6)
   /// Not remembered only: last_seen_at + 2 hours.
-  idleExpiresAt   DateTime?             @map("idle_expires_at") @db.Timestamptz(6)
-  expiresAt       DateTime              @map("expires_at") @db.Timestamptz(6)
+  idleExpiresAt          DateTime?             @map("idle_expires_at") @db.Timestamptz(6)
+  expiresAt              DateTime              @map("expires_at") @db.Timestamptz(6)
   /// Client address at sign-in.
-  ip              String?               @db.Inet
+  ip                     String?               @db.Inet
   /// Truncated to 512 characters.
-  userAgent       String?               @map("user_agent")
-  revokedAt       DateTime?             @map("revoked_at") @db.Timestamptz(6)
-  revokedReason   SessionRevokedReason? @map("revoked_reason")
-  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userAgent              String?               @map("user_agent")
+  revokedAt              DateTime?             @map("revoked_at") @db.Timestamptz(6)
+  revokedReason          SessionRevokedReason? @map("revoked_reason")
+  /// The member holds a role that requires two-step but has none: until they set it up, the
+  /// session may only reach the two-step setup routes (IAM spec section 10).
+  twoFactorSetupRequired Boolean               @default(false) @map("two_factor_setup_required")
+  createdAt              DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)

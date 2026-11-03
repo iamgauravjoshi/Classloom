@@ -270,7 +270,7 @@
             "cookie": []
           }
         ],
-        "summary": "The signed-in user, school and role",
+        "summary": "The signed-in user, school, roles and permissions",
         "tags": [
           "auth"
         ]
@@ -1077,6 +1077,850 @@
           "me"
         ]
       }
+    },
+    "/iam/roles": {
+      "get": {
+        "operationId": "listRoles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolesResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The school's roles with their permissions",
+        "tags": [
+          "iam"
+        ]
+      },
+      "post": {
+        "operationId": "createRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The name or an unknown permission key is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage, or grants a permission you lack (type permission-denied)"
+          },
+          "404": {
+            "description": "The role to copy does not exist"
+          },
+          "409": {
+            "description": "The name is taken (errors[] path name)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Create a custom role, optionally as a copy of another; 60 changes per hour",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/permissions": {
+      "get": {
+        "operationId": "listPermissions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionCatalogueDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The permission catalogue",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/roles/{id}": {
+      "put": {
+        "operationId": "updateRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not valid, or the change is not allowed for this role"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage, changes a permission you lack, or an owner-only change (type permission-denied)"
+          },
+          "404": {
+            "description": "No such role in this school"
+          },
+          "409": {
+            "description": "The name is taken (errors[] path name)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Change a role; a built-in role keeps its name and Owner only its two-step setting",
+        "tags": [
+          "iam"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The role was deleted."
+          },
+          "400": {
+            "description": "A built-in role cannot be deleted"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such role in this school"
+          },
+          "409": {
+            "description": "Someone still holds the role (type role-in-use)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Delete a custom role nobody holds",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/roles/{id}/reset": {
+      "post": {
+        "operationId": "resetRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a built-in role"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage or the reset changes a permission you lack"
+          },
+          "404": {
+            "description": "No such role in this school"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Restore a built-in role's default permissions, description and two-step setting",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/members": {
+      "get": {
+        "operationId": "listMembers",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "DEACTIVATED",
+                "REVOKED"
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 500,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembersPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The cursor is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The school’s staff, 25 per page by name; pending invitations are listed separately",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/members/{membershipId}/roles": {
+      "put": {
+        "operationId": "setMemberRoles",
+        "parameters": [
+          {
+            "name": "membershipId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMemberRolesRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No roles, or a role that does not exist"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage, or a role involves a permission you lack or Owner without being an owner (type permission-denied)"
+          },
+          "404": {
+            "description": "No such member in this school"
+          },
+          "409": {
+            "description": "It would leave no owner (type last-owner)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Replace a member’s roles; no escalation, never the last owner; 60 changes per hour",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/members/{membershipId}/deactivate": {
+      "post": {
+        "operationId": "deactivateMember",
+        "parameters": [
+          {
+            "name": "membershipId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "You cannot deactivate yourself"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage; only an owner may deactivate an owner"
+          },
+          "404": {
+            "description": "No such member in this school"
+          },
+          "409": {
+            "description": "The last owner cannot be deactivated (type last-owner)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Block a member and end their sessions at this school",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/members/{membershipId}/reactivate": {
+      "post": {
+        "operationId": "reactivateMember",
+        "parameters": [
+          {
+            "name": "membershipId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage; only an owner may reactivate an owner"
+          },
+          "404": {
+            "description": "No such member in this school"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Let a deactivated member sign in again",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/members/{membershipId}/reset-two-factor": {
+      "post": {
+        "operationId": "resetMemberTwoFactor",
+        "parameters": [
+          {
+            "name": "membershipId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Two-step was turned off."
+          },
+          "400": {
+            "description": "Use My account › Security for your own two-step"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage, a recent sign-in (type recent-sign-in-required), or an owner to reset an owner"
+          },
+          "404": {
+            "description": "No such member in this school"
+          },
+          "409": {
+            "description": "The person has no two-step sign-in (type two-factor-off)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Turn off a member’s two-step sign-in, end their sessions at every school and email them; needs your recent sign-in",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/invitations": {
+      "get": {
+        "operationId": "listInvitations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The school’s open invitations (not accepted, revoked or expired), newest first",
+        "tags": [
+          "iam"
+        ]
+      },
+      "post": {
+        "operationId": "createInvitation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvitationRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields, or a role that does not exist"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage, or a role involves a permission you lack or Owner without being an owner (type permission-denied)"
+          },
+          "409": {
+            "description": "Already an active member (type already-member) or already invited (type already-invited)"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour, or 50 invitations in a day at this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Invite a person by email with roles you may grant; the link works for 7 days; 50 per day per school",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/invitations/{invitationId}/resend": {
+      "post": {
+        "operationId": "resendInvitation",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage, and every role in the invitation must be yours to grant"
+          },
+          "404": {
+            "description": "No such invitation in this school"
+          },
+          "409": {
+            "description": "The person is now a member (type already-member) or has another invitation"
+          },
+          "410": {
+            "description": "The invitation was accepted or revoked, or has no roles left"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour, or 3 re-sends of this invitation in a day"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Email a new link with a new 7-day expiry; the old link stops working; 3 per day",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/iam/invitations/{invitationId}/revoke": {
+      "post": {
+        "operationId": "revokeInvitation",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The invitation was withdrawn (or already was)."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs iam.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such invitation in this school"
+          },
+          "410": {
+            "description": "The invitation was already accepted"
+          },
+          "429": {
+            "description": "More than 60 changes in an hour"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Withdraw an invitation",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/invitations/preview": {
+      "get": {
+        "operationId": "previewInvitation",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 256,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationPreviewDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No token"
+          },
+          "410": {
+            "description": "The invitation is unknown, expired, used or revoked, or the school is not active"
+          },
+          "429": {
+            "description": "Too many attempts from this address"
+          }
+        },
+        "summary": "What an invitation link is for (school, masked email, name, roles); spends nothing",
+        "tags": [
+          "iam"
+        ]
+      }
+    },
+    "/invitations/accept": {
+      "post": {
+        "operationId": "acceptInvitation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Two-step sign-in is on: send the app code to /auth/two-factor/verify",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorChallengeDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already an active member (type already-member), or joined but not signed in (type invitation-joined, with schoolCode)"
+          },
+          "410": {
+            "description": "The invitation is unknown, expired, used or revoked, or the school is not active"
+          },
+          "429": {
+            "description": "Too many attempts from this address"
+          }
+        },
+        "summary": "Join the school with an invitation link and sign in (single use)",
+        "tags": [
+          "iam"
+        ]
+      }
     }
   },
   "info": {
@@ -1456,9 +2300,35 @@
               "name"
             ]
           },
-          "role": {
-            "type": "string",
-            "const": "OWNER"
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "key",
+                "name"
+              ]
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "twoFactorSetupRequired": {
+            "type": "boolean"
           },
           "remember": {
             "type": "boolean"
@@ -1473,7 +2343,9 @@
           "user",
           "school",
           "campus",
-          "role",
+          "roles",
+          "permissions",
+          "twoFactorSetupRequired",
           "remember",
           "expiresAt"
         ]
@@ -1728,7 +2600,8 @@
                         "PASSWORD",
                         "EMAIL_CODE",
                         "RESET_LINK",
-                        "RECOVERY_CODE"
+                        "RECOVERY_CODE",
+                        "INVITE"
                       ]
                     },
                     {
@@ -2015,6 +2888,696 @@
         },
         "required": [
           "newPassword"
+        ]
+      },
+      "RolesResponseDto": {
+        "type": "object",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "requiresTwoFactor": {
+                  "type": "boolean"
+                },
+                "permissions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "memberCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "id",
+                "key",
+                "name",
+                "description",
+                "requiresTwoFactor",
+                "permissions",
+                "memberCount"
+              ]
+            }
+          }
+        },
+        "required": [
+          "roles"
+        ]
+      },
+      "PermissionCatalogueDto": {
+        "type": "object",
+        "properties": {
+          "modules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "module": {
+                  "type": "string"
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "keys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "labelKey": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "module",
+                "actions",
+                "keys",
+                "labelKey"
+              ]
+            }
+          }
+        },
+        "required": [
+          "modules"
+        ]
+      },
+      "CreateRoleRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "permissions": {
+            "maxItems": 108,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "dashboard.view",
+                "students.view",
+                "students.create",
+                "students.edit",
+                "students.delete",
+                "students.export",
+                "admissions.view",
+                "admissions.create",
+                "admissions.edit",
+                "admissions.delete",
+                "admissions.approve",
+                "admissions.export",
+                "parents.view",
+                "parents.create",
+                "parents.edit",
+                "parents.delete",
+                "staff.view",
+                "staff.create",
+                "staff.edit",
+                "staff.delete",
+                "staff.export",
+                "classes.view",
+                "classes.manage",
+                "subjects.view",
+                "subjects.manage",
+                "timetable.view",
+                "timetable.manage",
+                "attendance.view",
+                "attendance.create",
+                "attendance.edit",
+                "attendance.export",
+                "exams.view",
+                "exams.create",
+                "exams.edit",
+                "exams.approve",
+                "exams.export",
+                "fees.view",
+                "fees.create",
+                "fees.edit",
+                "fees.approve",
+                "fees.export",
+                "library.view",
+                "library.manage",
+                "transport.view",
+                "transport.manage",
+                "communication.view",
+                "communication.create",
+                "communication.approve",
+                "reports.view",
+                "reports.export",
+                "settings.view",
+                "settings.manage",
+                "iam.view",
+                "iam.manage"
+              ]
+            }
+          },
+          "requiresTwoFactor": {
+            "type": "boolean"
+          },
+          "cloneFromRoleId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "permissions",
+          "requiresTwoFactor"
+        ]
+      },
+      "RoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "requiresTwoFactor": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "memberCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "description",
+          "requiresTwoFactor",
+          "permissions",
+          "memberCount"
+        ]
+      },
+      "UpdateRoleRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "permissions": {
+            "maxItems": 108,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "dashboard.view",
+                "students.view",
+                "students.create",
+                "students.edit",
+                "students.delete",
+                "students.export",
+                "admissions.view",
+                "admissions.create",
+                "admissions.edit",
+                "admissions.delete",
+                "admissions.approve",
+                "admissions.export",
+                "parents.view",
+                "parents.create",
+                "parents.edit",
+                "parents.delete",
+                "staff.view",
+                "staff.create",
+                "staff.edit",
+                "staff.delete",
+                "staff.export",
+                "classes.view",
+                "classes.manage",
+                "subjects.view",
+                "subjects.manage",
+                "timetable.view",
+                "timetable.manage",
+                "attendance.view",
+                "attendance.create",
+                "attendance.edit",
+                "attendance.export",
+                "exams.view",
+                "exams.create",
+                "exams.edit",
+                "exams.approve",
+                "exams.export",
+                "fees.view",
+                "fees.create",
+                "fees.edit",
+                "fees.approve",
+                "fees.export",
+                "library.view",
+                "library.manage",
+                "transport.view",
+                "transport.manage",
+                "communication.view",
+                "communication.create",
+                "communication.approve",
+                "reports.view",
+                "reports.export",
+                "settings.view",
+                "settings.manage",
+                "iam.view",
+                "iam.manage"
+              ]
+            }
+          },
+          "requiresTwoFactor": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MembersPageDto": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "membershipId": {
+                  "type": "string"
+                },
+                "userId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "roles": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "key": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "key",
+                      "name"
+                    ]
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "DEACTIVATED",
+                    "REVOKED"
+                  ]
+                },
+                "twoFactorEnabled": {
+                  "type": "boolean"
+                },
+                "lastSignInAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "membershipId",
+                "userId",
+                "name",
+                "email",
+                "roles",
+                "status",
+                "twoFactorEnabled",
+                "lastSignInAt"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "members",
+          "nextCursor"
+        ]
+      },
+      "SetMemberRolesRequestDto": {
+        "type": "object",
+        "properties": {
+          "roleIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "roleIds"
+        ]
+      },
+      "MemberDto": {
+        "type": "object",
+        "properties": {
+          "membershipId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "key",
+                "name"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DEACTIVATED",
+              "REVOKED"
+            ]
+          },
+          "twoFactorEnabled": {
+            "type": "boolean"
+          },
+          "lastSignInAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "membershipId",
+          "userId",
+          "name",
+          "email",
+          "roles",
+          "status",
+          "twoFactorEnabled",
+          "lastSignInAt"
+        ]
+      },
+      "InvitationsResponseDto": {
+        "type": "object",
+        "properties": {
+          "invitations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "roles": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  }
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "invitedBy": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "email",
+                "name",
+                "roles",
+                "expiresAt",
+                "invitedBy",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "invitations"
+        ]
+      },
+      "CreateInvitationRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "roleIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "email",
+          "name",
+          "roleIds"
+        ]
+      },
+      "InvitationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ]
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "invitedBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "roles",
+          "expiresAt",
+          "invitedBy",
+          "createdAt"
+        ]
+      },
+      "InvitationPreviewDto": {
+        "type": "object",
+        "properties": {
+          "school": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "name"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "school",
+          "email",
+          "name",
+          "roles"
+        ]
+      },
+      "InvitationTokenDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "token"
         ]
       }
     }

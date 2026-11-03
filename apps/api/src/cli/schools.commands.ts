@@ -41,7 +41,12 @@ export function buildCli(app: INestApplicationContext, out: (line: string) => vo
         where: status ? { status: status as TenantStatus } : {},
         orderBy: { createdAt: 'asc' },
         include: {
-          memberships: { where: { role: 'OWNER' }, include: { user: { select: { email: true } } } },
+          // The owner is the member holding the built-in Owner role (oldest first if several).
+          memberships: {
+            where: { roles: { some: { role: { key: 'OWNER' } } } },
+            orderBy: { createdAt: 'asc' },
+            include: { user: { select: { email: true } } },
+          },
         },
       });
       for (const t of tenants) {

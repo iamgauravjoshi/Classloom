@@ -44,7 +44,7 @@ describe('auth schema', () => {
   async function seedSession() {
     const [u, t] = [await user(null), await tenant()];
     const membership = await prisma.membership.create({
-      data: { tenantId: t.id, userId: u.id, role: 'OWNER' },
+      data: { tenantId: t.id, userId: u.id },
     });
     const now = new Date();
     const session = await prisma.session.create({

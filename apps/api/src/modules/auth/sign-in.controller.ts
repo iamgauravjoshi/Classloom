@@ -40,13 +40,11 @@ import {
   SIGN_IN_THROTTLER,
   skipAllBut,
 } from '../../core/http/throttler-names';
-import { deviceTokenOf, setDeviceCookie } from './device-cookie';
 import { AuthSessionDto } from './dto';
 import { EmailCodeService } from './email-code.service';
+import { deviceSignInMeta, respondToFirstFactor } from './first-factor-response';
 import { PasswordSignInService } from './password-sign-in.service';
 import { Public } from './public.decorator';
-import { readSessionToken, setSessionCookie } from './session-cookie';
-import type { DeviceSignInMeta, FirstFactorOutcome } from './two-factor-sign-in.service';
 
 class PasswordSignInRequestDto extends createZodDto(passwordSignInRequestSchema) {}
 class CodeRequestDto extends createZodDto(codeRequestSchema) {}
@@ -87,9 +85,9 @@ export class SignInController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthSession | TwoFactorChallenge> {
-    const deviceToken = deviceTokenOf(req, this.env);
-    const outcome = await this.passwordSignIn.signIn(body, this.meta(req, deviceToken));
-    return this.respond(outcome, deviceToken, res);
+    const meta = deviceSignInMeta(req, this.env);
+    const outcome = await this.passwordSignIn.signIn(body, meta);
+    return respondToFirstFactor(outcome, meta.deviceToken, res, this.env);
   }
 
   @Post('otp/request')
@@ -128,37 +126,8 @@ export class SignInController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthSession | TwoFactorChallenge> {
-    const deviceToken = deviceTokenOf(req, this.env);
-    const outcome = await this.emailCodes.verify(body, this.meta(req, deviceToken));
-    return this.respond(outcome, deviceToken, res);
-  }
-
-  private meta(req: Request, deviceToken: string): DeviceSignInMeta {
-    return {
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      currentToken: readSessionToken(req, this.env),
-      deviceToken,
-    };
-  }
-
-  /**
-   * The device cookie is set on every first-factor success; the session cookie only when a
-   * session was made. A pending two-step sign-in answers 202 with the challenge.
-   */
-  private respond(
-    outcome: FirstFactorOutcome,
-    deviceToken: string,
-    res: Response,
-  ): AuthSession | TwoFactorChallenge {
-    if (outcome.kind === 'challenge') {
-      setDeviceCookie(res, this.env, deviceToken);
-      res.status(HttpStatus.ACCEPTED);
-      return outcome.body;
-    }
-    // Session cookie first, as before this cookie existed.
-    setSessionCookie(res, this.env, outcome.token, outcome.remember);
-    setDeviceCookie(res, this.env, deviceToken);
-    return outcome.session;
+    const meta = deviceSignInMeta(req, this.env);
+    const outcome = await this.emailCodes.verify(body, meta);
+    return respondToFirstFactor(outcome, meta.deviceToken, res, this.env);
   }
 }

@@ -5,8 +5,10 @@ import { IconBook, IconSchool, IconUsers, IconUserShield } from '@tabler/icons-r
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
+import { AccessDenied } from '@/components/access-denied';
 import { AppPageHeader } from '@/components/app-page-header';
 import { ApiStatus } from '@/components/shell/api-status';
+import { canOpenSection } from '@/lib/page-access';
 import { requireServerSession } from '@/lib/server-session';
 
 export async function generateMetadata({
@@ -22,6 +24,10 @@ export default async function DashboardPage({ params }: PageProps<'/[locale]/das
   setRequestLocale(locale);
   const t = await getTranslations('dashboard');
   const session = await requireServerSession();
+  // `dashboard.view` comes from the navigation config, like every other page's permission.
+  if (!canOpenSection('dashboard', session.permissions)) {
+    return <AccessDenied title={t('title')} canOpenDashboard={false} />;
+  }
   const empty = t('notAvailable');
 
   return (

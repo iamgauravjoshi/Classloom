@@ -90,8 +90,18 @@ export class SchoolRegistrationService {
             create: { email: input.email, name: input.adminName, mobile },
             update: {},
           });
-          await tx.membership.create({
-            data: { tenantId: tenant.id, userId: user.id, role: 'OWNER' },
+          const membership = await tx.membership.create({
+            data: { tenantId: tenant.id, userId: user.id },
+          });
+          // The nine built-in roles (IAM spec section 5), then Owner for the registering user.
+          // Runs as the app role inside the new school's tenant context, so RLS confines it.
+          await tx.$executeRaw`SELECT seed_builtin_roles(${tenant.id}::uuid)`;
+          const ownerRole = await tx.role.findFirstOrThrow({
+            where: { tenantId: tenant.id, key: 'OWNER' },
+            select: { id: true },
+          });
+          await tx.membershipRole.create({
+            data: { tenantId: tenant.id, membershipId: membership.id, roleId: ownerRole.id },
           });
           await tx.registrationToken.create({
             data: { tenantId: tenant.id, tokenHash: hash, expiresAt },
@@ -148,7 +158,12 @@ export class SchoolRegistrationService {
       tenant.id,
       async (tx) =>
         (await tx.membership.count({
-          where: { tenantId: tenant.id, userId: owner.id, role: 'OWNER', status: 'ACTIVE' },
+          where: {
+            tenantId: tenant.id,
+            userId: owner.id,
+            status: 'ACTIVE',
+            roles: { some: { role: { key: 'OWNER' } } },
+          },
         })) > 0,
     );
     if (!isOwner) return;

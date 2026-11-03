@@ -86,7 +86,9 @@ export const authSessionSchema = z.object({
   }),
   school: z.object({ id: z.string(), code: z.string(), name: z.string() }),
   campus: z.object({ id: z.string(), name: z.string() }),
-  role: z.literal('OWNER'),
+  roles: z.array(z.object({ key: z.string().nullable(), name: z.string() })),
+  permissions: z.array(z.string()),
+  twoFactorSetupRequired: z.boolean(),
   remember: z.boolean(),
   expiresAt: z.iso.datetime(),
 });

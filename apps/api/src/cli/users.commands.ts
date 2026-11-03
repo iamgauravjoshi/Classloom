@@ -8,6 +8,7 @@ import type { Env } from '../core/config/env.schema';
 import { EmailService } from '../core/email/email.service';
 import { twoFactorChangedEmail } from '../core/email/templates/two-factor-changed';
 import { PlatformPrismaService } from '../core/prisma/platform-prisma.service';
+import { clearTwoFactorState } from '../modules/auth/two-factor-state';
 
 /** Failed notices hold no secret; kept a day like the API's other security emails. */
 const KEEP_FAILED_EMAIL_SECONDS = 86_400;
@@ -52,15 +53,7 @@ export function registerUserCommands(
       const by = operatorName();
       const now = new Date();
       await platform.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: user.id },
-          data: { totpSecretEnc: null, totpEnabledAt: null, totpLastStep: null },
-        });
-        await tx.recoveryCode.deleteMany({ where: { userId: user.id } });
-        await tx.knownDevice.updateMany({
-          where: { userId: user.id, trustedUntil: { not: null } },
-          data: { trustedUntil: null },
-        });
+        await clearTwoFactorState(tx, user.id);
         await tx.session.updateMany({
           where: { userId: user.id, revokedAt: null },
           data: { revokedAt: now, revokedReason: 'TWO_FACTOR_DISABLED' },

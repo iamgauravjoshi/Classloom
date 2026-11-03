@@ -52,10 +52,8 @@
     "more": "More"
   },
   "roles": {
-    "admin": "School admin",
-    "teacher": "Teacher",
-    "parent": "Parent",
-    "student": "Student"
+    "owner": "Owner",
+    "none": "No role"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -402,6 +400,7 @@
             "EMAIL_CODE": "Signed in with an email code",
             "RESET_LINK": "Signed in after a password reset",
             "RECOVERY_CODE": "Signed in with a recovery code",
+            "INVITE": "Signed in by accepting an invitation",
             "OTHER": "Signed in"
           },
           "SIGN_IN_FAILED": {
@@ -409,6 +408,7 @@
             "EMAIL_CODE": "Sign-in failed: wrong email code",
             "RESET_LINK": "Sign-in failed: the reset link didn't work",
             "RECOVERY_CODE": "Sign-in failed: wrong recovery code",
+            "INVITE": "Sign-in failed: the invitation didn't work",
             "OTHER": "Sign-in failed"
           },
           "SIGN_IN_PAUSED": "Sign-in paused after too many tries",
@@ -565,6 +565,310 @@
       "invalidBody": "Reset links work once and expire after 30 minutes.",
       "requestNew": "Request a new link",
       "backToSignIn": "Back to sign in"
+    },
+    "join": {
+      "metaTitle": "Join your school",
+      "loading": "Checking your invitation",
+      "title": "You're invited",
+      "invitation": "Join <strong>{school}</strong> as {roles}.",
+      "forPerson": "Invitation for {name} ({email}).",
+      "join": "Join",
+      "joining": "Joining",
+      "retry": "Try again",
+      "otherAccount": {
+        "title": "This invitation is for {email}",
+        "body": "You're signed in as someone else. Sign out to join {school} with this invitation.",
+        "action": "Sign out and join",
+        "working": "Signing out"
+      },
+      "gone": {
+        "title": "This link has expired or was already used",
+        "body": "Ask your school to send you a new invitation.",
+        "signIn": "Go to sign-in"
+      },
+      "alreadyMember": {
+        "title": "You're already a member of {school}",
+        "body": "Sign in to carry on.",
+        "signIn": "Go to sign-in"
+      },
+      "joined": {
+        "title": "You joined {school}.",
+        "body": "Sign in to continue.",
+        "signIn": "Go to sign-in"
+      },
+      "welcome": {
+        "title": "Welcome to {school}",
+        "body": "You're signed in. You can set a password now, or keep signing in with an emailed code.",
+        "bodyDone": "You're signed in and ready to go.",
+        "setPassword": "Set a password",
+        "continue": "Continue"
+      }
+    }
+  },
+  "accessDenied": {
+    "title": "You don't have access to this page",
+    "body": "Your role doesn't include this page. If you need it, ask a school owner or administrator.",
+    "backToDashboard": "Back to dashboard",
+    "toAccount": "Go to my account"
+  },
+  "setupTwoFactor": {
+    "metaTitle": "Set up two-step sign-in",
+    "title": "Set up two-step sign-in",
+    "reason": "Your school requires two-step sign-in for your role.",
+    "explain": "Set it up now with an authenticator app. Until it is on, you can't use the rest of Classloom.",
+    "signOut": "Sign out",
+    "signingOut": "Signing out"
+  },
+  "iam": {
+    "metaTitle": "Users & roles",
+    "title": "Users & roles",
+    "tabs": {
+      "label": "Users and roles sections",
+      "members": "Members",
+      "roles": "Roles"
+    },
+    "members": {
+      "title": "Members",
+      "description": "Everyone who works at this school, and the people you've invited.",
+      "invite": "Invite people",
+      "search": "Search members",
+      "searchPlaceholder": "Name or email",
+      "roleFilter": "Role",
+      "allRoles": "All roles",
+      "statusFilter": "Status",
+      "allStatuses": "All statuses",
+      "status": {
+        "ACTIVE": "Active",
+        "INVITED": "Invited",
+        "DEACTIVATED": "Deactivated",
+        "REVOKED": "Removed"
+      },
+      "caption": "Members and pending invitations",
+      "name": "Name",
+      "roles": "Roles",
+      "statusColumn": "Status",
+      "twoStep": "Two-step",
+      "twoStepOn": "On",
+      "twoStepOff": "Off",
+      "lastSignIn": "Last sign-in",
+      "never": "Never",
+      "you": "You",
+      "expires": "Expires {date}",
+      "noRoles": "No role",
+      "actions": "Actions",
+      "actionsFor": "Actions for {name}",
+      "empty": "No one matches these filters.",
+      "emptyAll": "No members yet.",
+      "loadMore": "Show more",
+      "loadingMore": "Loading",
+      "loadFailed": "We couldn't load the members. Check your connection and try again.",
+      "retry": "Try again",
+      "loading": "Loading",
+      "reactivatedToast": "{name} was reactivated.",
+      "resentToast": "Invitation sent again to {email}.",
+      "loadMoreFailed": "We couldn't load more members. Check your connection and try again."
+    },
+    "menu": {
+      "changeRoles": "Change roles",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "resetTwoFactor": "Reset two-step",
+      "resend": "Resend invitation",
+      "revoke": "Revoke invitation"
+    },
+    "invite": {
+      "title": "Invite people",
+      "description": "They'll get an email with a link to join. The link works for 7 days.",
+      "email": "Email",
+      "name": "Name",
+      "roles": "Roles",
+      "rolesHint": "Choose at least one. You can only give roles that don't go beyond your own access.",
+      "noRoles": "There are no roles you can give.",
+      "rolesLoadFailed": "We couldn't load the roles. Close this and try again.",
+      "submit": "Send invitation",
+      "submitting": "Sending",
+      "cancel": "Cancel",
+      "sent": "Invitation sent to {email}.",
+      "errors": {
+        "email": "Enter a valid email address.",
+        "name": "Enter their name, 2 to 80 characters.",
+        "roles": "Choose at least one role."
+      }
+    },
+    "changeRoles": {
+      "title": "Change roles for {name}",
+      "description": "Choose what {name} can do at this school.",
+      "roles": "Roles",
+      "locked": "You can't change this role.",
+      "submit": "Save roles",
+      "submitting": "Saving",
+      "cancel": "Cancel",
+      "saved": "Roles updated for {name}.",
+      "required": "Choose at least one role.",
+      "loading": "Loading roles",
+      "rolesLoadFailed": "We couldn't load the roles. Close this and try again.",
+      "noneToAssign": "You can't assign any roles."
+    },
+    "confirm": {
+      "cancel": "Cancel",
+      "deactivate": {
+        "title": "Deactivate {name}?",
+        "body": "They'll be signed out now and can't sign in to this school until reactivated.",
+        "action": "Deactivate",
+        "pending": "Deactivating",
+        "done": "{name} was deactivated."
+      },
+      "reset": {
+        "title": "Reset two-step for {name}?",
+        "body": "They'll be signed out of every school, and their authenticator app and recovery codes will stop working. We'll email them. They can turn two-step on again from their account.",
+        "action": "Reset two-step",
+        "pending": "Resetting",
+        "done": "Two-step was reset for {name}.",
+        "redirecting": "Taking you to sign in again."
+      },
+      "revoke": {
+        "title": "Revoke the invitation for {name}?",
+        "body": "The link in their email will stop working. You can invite them again later.",
+        "action": "Revoke invitation",
+        "pending": "Revoking",
+        "done": "Invitation for {name} was revoked."
+      },
+      "resetRole": {
+        "title": "Reset {name} to default?",
+        "body": "Its description, permissions and two-step setting go back to what they were when the school was set up. People who hold it get the default permissions straight away.",
+        "action": "Reset to default",
+        "pending": "Resetting",
+        "done": "{name} was reset to default."
+      },
+      "deleteRole": {
+        "title": "Delete {name}?",
+        "body": "This can't be undone. You can only delete a role that nobody holds.",
+        "action": "Delete role",
+        "pending": "Deleting",
+        "done": "{name} was deleted."
+      }
+    },
+    "errors": {
+      "lastOwner": "A school needs at least one active owner. Make someone else an owner first.",
+      "alreadyMember": "This person is already a member of this school.",
+      "alreadyInvited": "This person already has an open invitation. Resend it from the list.",
+      "permissionDenied": "You don't have permission to do that.",
+      "recentSignIn": "Taking you to sign in again.",
+      "twoFactorOff": "Two-step sign-in is already off for this person.",
+      "rateLimited": "Too many changes for now. Try again later.",
+      "generic": "Something went wrong. Try again.",
+      "nameTaken": "A role with this name already exists.",
+      "roleInUse": "This role is still assigned. Move the people who hold it to another role first.",
+      "roleChanged": "Someone changed this role at the same time. We reloaded it; check it and try again."
+    },
+    "roles": {
+      "title": "Roles",
+      "description": "What each role lets people do at this school.",
+      "create": "Create role",
+      "loading": "Loading",
+      "loadFailed": "We couldn't load the roles. Check your connection and try again.",
+      "retry": "Try again",
+      "empty": "No roles yet.",
+      "builtIn": "Built-in",
+      "custom": "Custom",
+      "requiresTwoFactor": "Requires two-step",
+      "members": "{count, plural, one {# member} other {# members}}",
+      "permissions": "{held} of {total} permissions",
+      "actionsFor": "Actions for {name}",
+      "view": "View",
+      "clone": "Clone",
+      "edit": "Edit",
+      "reset": "Reset to default",
+      "delete": "Delete",
+      "list": "Roles"
+    },
+    "roleEditor": {
+      "createTitle": "Create role",
+      "editTitle": "Edit role",
+      "viewTitle": "Role",
+      "back": "Back to roles",
+      "loading": "Loading",
+      "loadFailed": "We couldn't load this role. Check your connection and try again.",
+      "retry": "Try again",
+      "notFound": "This role doesn't exist any more.",
+      "readOnlyNote": "You can look at this role but not change it.",
+      "ownerNote": "Owner always has every permission, and it can't be renamed or deleted. Only an owner can change whether it requires two-step sign-in.",
+      "builtInNote": "Built-in roles can't be renamed.",
+      "cloneNote": "Some permissions were left out because you can't grant them.",
+      "details": "Details",
+      "name": "Name",
+      "description": "Description",
+      "descriptionHint": "Optional. Up to 200 characters.",
+      "twoFactor": "Require two-step sign-in",
+      "twoFactorHint": "People with this role must set up two-step sign-in before they can use the app.",
+      "twoFactorOwnerOnly": "Only an owner can change this.",
+      "save": "Save role",
+      "saveNew": "Create role",
+      "saving": "Saving",
+      "cancel": "Cancel",
+      "created": "{name} was created.",
+      "saved": "{name} was saved.",
+      "changed": "Someone changed this role. We reloaded it.",
+      "nameDefaultCopy": "{name} copy",
+      "errors": {
+        "name": "Enter a name, 2 to 40 characters.",
+        "description": "Keep the description to 200 characters or fewer.",
+        "validation": "Check the role and try again.",
+        "escalation": "You can't give or take away a permission you don't have."
+      },
+      "permissionsTitle": "Permissions",
+      "clone": "Clone",
+      "reset": "Reset to default",
+      "delete": "Delete"
+    },
+    "grid": {
+      "title": "Permissions",
+      "hint": "Choose what people with this role can do in each part of the school.",
+      "caption": "Permissions by module and action",
+      "module": "Module",
+      "selectAll": "Select all",
+      "selectAllFor": "Select all {module}",
+      "actionFor": "{module}: {action}",
+      "count": "{checked} of {total}",
+      "cantGrant": "You can't grant a permission you don't have.",
+      "presets": "Presets",
+      "presetsHint": "Replaces the ticks below. You can still change them.",
+      "preset": {
+        "readOnly": "Read only",
+        "editor": "Editor",
+        "manager": "Manager",
+        "fullAccess": "Full access"
+      }
+    },
+    "permissions": {
+      "modules": {
+        "dashboard": "Dashboard",
+        "students": "Students",
+        "admissions": "Admissions",
+        "parents": "Parents",
+        "staff": "Staff",
+        "classes": "Classes & sections",
+        "subjects": "Subjects",
+        "timetable": "Timetable",
+        "attendance": "Attendance",
+        "exams": "Exams & results",
+        "fees": "Fees",
+        "library": "Library",
+        "transport": "Transport",
+        "communication": "Communication",
+        "reports": "Reports",
+        "settings": "School settings",
+        "iam": "Users & roles"
+      },
+      "actions": {
+        "view": "View",
+        "create": "Create",
+        "edit": "Edit",
+        "delete": "Delete",
+        "export": "Export",
+        "approve": "Approve",
+        "manage": "Manage"
+      }
     }
   }
 }

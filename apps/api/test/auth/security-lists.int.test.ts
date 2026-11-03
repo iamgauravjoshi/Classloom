@@ -10,7 +10,7 @@ import { createApp } from '../../src/main';
 import { randomToken, sha256 } from '../../src/modules/auth/crypto';
 import { SessionService } from '../../src/modules/auth/session.service';
 import { ownerPrisma, startTestInfra, type TestInfra } from '../setup-containers';
-import { seedSchool } from './helpers';
+import { addMember, seedSchool } from './helpers';
 
 const WEB_ORIGIN = 'http://localhost:3000';
 const DAY = 86_400_000;
@@ -30,9 +30,7 @@ describe('sessions, devices and sign-in history', () => {
     counter += 1;
     const one = await seedSchool(owner, { code: `SLA${counter}`, email: `u${counter}@lists.test` });
     const two = await seedSchool(owner, { code: `SLB${counter}`, email: `x${counter}@lists.test` });
-    const membershipTwo = await owner.membership.create({
-      data: { tenantId: two.tenantId, userId: one.userId, role: 'OWNER' },
-    });
+    const membershipTwo = await addMember(owner, two.tenantId, one.userId);
     const first = await sessions.create({ ...one, remember: true, userAgent: CHROME });
     const second = await sessions.create({
       tenantId: two.tenantId,

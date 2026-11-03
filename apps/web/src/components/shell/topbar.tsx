@@ -5,7 +5,7 @@ import { SidebarTrigger } from '@classloom/ui/components/ui/sidebar';
 import { IconBell } from '@tabler/icons-react';
 import { useTranslations } from 'next-intl';
 
-import type { ShellSession } from '@/lib/session';
+import { roleLabelOf, type ShellSession } from '@/lib/session';
 
 import { AcademicYearSwitcher } from './academic-year-switcher';
 import { CommandSearch } from './command-search';
@@ -29,7 +29,7 @@ export function Topbar({ session }: { session: ShellSession }) {
         >
           <IconBell />
         </Button>
-        <UserMenu user={session.user} role={session.role} />
+        <UserMenu user={session.user} roleLabel={roleLabelOf(session)} />
       </div>
     </header>
   );

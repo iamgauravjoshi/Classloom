@@ -9,7 +9,9 @@ describe('auth security schema', () => {
 
   const user = () => {
     counter += 1;
-    return prisma.user.create({ data: { email: `sec${counter}@school.in`, name: `Sec ${counter}` } });
+    return prisma.user.create({
+      data: { email: `sec${counter}@school.in`, name: `Sec ${counter}` },
+    });
   };
 
   const device = (userId: string, hash: number) =>
@@ -108,7 +110,7 @@ describe('auth security schema', () => {
       },
     });
     const m = await prisma.membership.create({
-      data: { tenantId: t.id, userId: u.id, role: 'OWNER' },
+      data: { tenantId: t.id, userId: u.id },
     });
     const now = new Date();
     const s = await prisma.session.create({

@@ -79,6 +79,22 @@ describe('ProblemFilter', () => {
     }
   });
 
+  it('never echoes a link token back in instance', () => {
+    const { host, res } = mockHost('/invitations/preview?token=secret-token&x=1');
+    new ProblemFilter('production').catch(new HttpException('Gone', 410), host);
+    expect((res.body as Body).instance).toBe('/invitations/preview?token=[Redacted]&x=1');
+    expect(JSON.stringify(res.body)).not.toContain('secret-token');
+  });
+
+  it('carries schoolCode for invitation-joined', () => {
+    const { host, res } = mockHost('/invitations/accept');
+    new ProblemFilter('production').catch(
+      new HttpException({ type: 'invitation-joined', title: 'Joined.', schoolCode: 'GIS' }, 409),
+      host,
+    );
+    expect(res.body).toMatchObject({ type: 'invitation-joined', status: 409, schoolCode: 'GIS' });
+  });
+
   it('keeps a custom HttpException message as the detail', () => {
     const { host, res } = mockHost();
     new ProblemFilter('production').catch(new BadRequestException('Section is full'), host);

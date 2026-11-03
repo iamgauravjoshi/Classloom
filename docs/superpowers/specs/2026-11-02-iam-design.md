@@ -109,7 +109,7 @@ All new tables are **tenant-owned and row-level secured** (forced RLS, added to 
 
 ### Membership role (`membership_roles`)
 
-`membership_id` (FK cascade), `role_id` (FK restrict), `tenant_id`, `assigned_at`, `assigned_by` (user id, null for system). PK `(membership_id, role_id)`. A role still assigned to someone can't be deleted (`409`).
+`membership_id` (FK cascade), `role_id` (FK no action, so deleting a school still cascades), `tenant_id`, `assigned_at`, `assigned_by` (user id, null for system). PK `(membership_id, role_id)`. A role still assigned to someone can't be deleted (`409`).
 
 ### Membership (`memberships`): changes
 
@@ -232,7 +232,7 @@ IAM mutations: 60 per hour per user (Redis counter, as Part 2b's mutation limits
 - While set, the API allows only: `GET /auth/session`, `POST /auth/sign-out`, `GET /me`, `GET /me/two-factor`, `POST /me/two-factor/setup|enable`. Anything else → `403` (`type: two-factor-setup-required`).
 - `enable` clears the flag on the current session (and all the user's sessions with it set).
 - The requirement is re-evaluated on every request, alongside permissions, so if a role starts requiring two-step later, people already signed in are flagged on their next request. The stored flag only records the state at sign-in.
-- **After this part ships**, existing owners will be asked to set up two-step on their next request (Owner requires it by default). An owner can turn the requirement off on the Owner role.
+- **After this part ships**, existing owners will be asked to set up two-step on their next request (Owner requires it by default). Setup needs a sign-in from the last 10 minutes, so an owner with an older session signs in again by emailed code first. Once an owner has two-step, they can turn the requirement off on the Owner role. While setup is still required, the session can't reach that setting.
 - `AuthSession` gains `twoFactorSetupRequired: boolean`. The web app sends such sessions to `/[locale]/setup-two-factor`: an explanation ("Your school requires two-step sign-in for your role"), then Part 2b's setup dialog content as a page, then on to `next`.
 
 ## 11. Web
@@ -296,3 +296,51 @@ The defaults exist twice: as `BUILT_IN_ROLE_DEFAULTS` in contracts (used by "Res
 - [ ] Required two-step, deactivate/reactivate and admin two-step reset work.
 - [ ] Audit events are written for every IAM change.
 - [ ] All copy in i18n files; axe clean in light and dark; CI green.
+
+## 16. Decisions made during the build
+
+These rulings were made while building this part. Where they differ from the sections above, they take precedence.
+
+### Escalation and ownership (§7)
+
+- **Edits:** updating or resetting a role checks only the permissions being added or removed. Changing a member's roles checks only the roles being added or removed. An editor may change a role that holds permissions they lack, but can't add or remove those permissions.
+- **Acting on a stronger role or person:** reactivating a member, deactivating one, resetting their two-step, or turning off a role's two-step requirement all need the actor to hold every permission the target holds.
+- **Cloning:** anyone may clone a role whose permissions they all hold, so an Admin may clone Admin. Cloning Owner stays owner-only. A clone with an empty permission list copies the source's permissions.
+- **Owner changes:** a change that touches Owner re-checks the actor's own Owner status inside the locked transaction.
+- **Deactivated owners:** an invitation that would reactivate a deactivated owner's seat needs an owner as inviter.
+- **Two-step resets:** a reset is refused (403) for everyone when the person is an owner at another school.
+- **Error order:** a non-owner gets 403 before any last-owner 409, so the response doesn't reveal whether someone is the last owner.
+
+### Invitations (§8)
+
+- **Spent invite with no session:** if sign-in fails after the person has joined, the answer is `409 invitation-joined`, and the page says "You joined {school}. Sign in to continue."
+- **Password change during the two-step step:** the answer is `401 two-factor-expired`.
+- **Remember me:** accepting an invitation signs in with "remember me" off.
+- **Different signed-in user:** this is detected by comparing masked emails before the token is spent. `409 already-member` is the fallback.
+- **Token privacy:** the token is redacted from request logs and from problem `instance` values, and invitation responses are `no-store`.
+- **Closed invitations:** resending or revoking one answers 410. A second revoke answers 204. Resends aren't audited, and they re-run the escalation check.
+
+### Members (§9)
+
+- **Responses:** member changes return the updated member (200). A two-step reset returns 204.
+- **Already in the requested state:** the change is a no-op.
+- **REVOKED seats:** hidden unless the list is filtered for them.
+- **Reset when two-step is off:** answers `409 two-factor-off`.
+
+### Problem types
+
+New problem types: `role-in-use`, `role-changed`, `member-changed`, `two-factor-off` and `invitation-joined`.
+
+### Data (§6, §13)
+
+- **Columns:** `roles.name` is citext.
+- **Foreign keys:**
+  - Composite `(id, tenant_id)` foreign keys stop rows linking across schools.
+  - Actor, assignee and inviter ids have no foreign key to `users`, so history survives user deletion.
+- **One open invitation per person:** enforced in the service.
+- **New function:** the migrations also add the `SECURITY DEFINER` function `user_is_owner_elsewhere(user, tenant)`.
+
+### Web (§11)
+
+- **Access denied:** the page renders with HTTP 200. The API still enforces every permission.
+- **Copy:** the deactivate message says "They'll".

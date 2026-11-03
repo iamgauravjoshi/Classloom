@@ -1,3 +1,4 @@
+import { ALL_PERMISSIONS } from '@classloom/contracts';
 import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import type { Queue } from 'bullmq';
@@ -12,6 +13,7 @@ import {
 import { AuthEventsService } from '../../src/modules/auth/auth-events.service';
 import { sha256 } from '../../src/modules/auth/crypto';
 import { SessionService } from '../../src/modules/auth/session.service';
+import { loadMemberAccess } from '../../src/modules/iam/permissions';
 import { ownerPrisma, startTestInfra, type TestInfra } from '../setup-containers';
 import { seedSchool } from './helpers';
 
@@ -254,12 +256,16 @@ describe('sessions, auth events and clean-up', () => {
     const { token } = await create(s);
     const resolved = await sessions.resolve(token);
     const user = await owner.user.findUniqueOrThrow({ where: { id: s.userId } });
-    const membership = await owner.membership.findUniqueOrThrow({ where: { id: s.membershipId } });
+    const access = await loadMemberAccess(owner, s.membershipId);
     const campus = await owner.campus.findFirstOrThrow({
       where: { tenantId: s.tenantId, isPrimary: true },
     });
 
-    const authSession = await sessions.toAuthSession(resolved!, membership, user);
+    const authSession = await sessions.toAuthSession(
+      resolved!,
+      { ...access, twoFactorSetupRequired: false },
+      user,
+    );
 
     expect(authSession).toEqual({
       user: {
@@ -271,7 +277,10 @@ describe('sessions, auth events and clean-up', () => {
       },
       school: { id: s.tenantId, code: s.code, name: `School ${s.code}` },
       campus: { id: campus.id, name: campus.name },
-      role: 'OWNER',
+      // The seeded member holds Owner, which means every permission.
+      roles: [{ key: 'OWNER', name: 'Owner' }],
+      permissions: [...ALL_PERMISSIONS],
+      twoFactorSetupRequired: false,
       remember: true,
       expiresAt: resolved!.session.expiresAt.toISOString(),
     });

@@ -15,7 +15,7 @@ const TABS = [
 
 const tabClass = 'flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 text-xs';
 
-/** Bottom tab bar for teacher, parent and student portals on phones (below md). */
+/** Bottom tab bar for the parent and student portals on phones (below md). */
 export function MobileTabBar() {
   const t = useTranslations();
   const pathname = usePathname();

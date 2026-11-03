@@ -1,0 +1,125 @@
+// Identity and access: roles, their permissions, who holds them, invitations and the audit trail.
+// Spec: docs/superpowers/specs/2026-11-02-iam-design.md, sections 5, 6 and 13.
+//
+// Every model here is tenant-owned and row-level secured (forced RLS, listed in
+// TENANT_SCOPED_MODELS). Rows that point at a role or membership carry the same tenant_id, and
+// composite foreign keys ((role_id, tenant_id), (membership_id, tenant_id)) stop a row in one
+// school from referencing another school's role or membership. Added in the migration SQL:
+// CHECK constraints on lengths and keys, `seed_builtin_roles(uuid)` (the section 5 defaults,
+// also called at registration), `invitation_by_token(bytea)` (SECURITY DEFINER), and the
+// revoked UPDATE/DELETE on audit_events for the app role.
+
+/// A school's role: one of the nine built-ins (`key` set) or a custom role (`key` null).
+model Role {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  /// Built-in key (BUILT_IN_ROLE_KEYS); null for custom roles.
+  key               String?
+  /// 2-40 characters; unique per school, ignoring case.
+  name              String   @db.Citext
+  /// At most 200 characters.
+  description       String?
+  requiresTwoFactor Boolean  @default(false) @map("requires_two_factor")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  members     MembershipRole[]
+
+  @@unique([tenantId, key])
+  @@unique([tenantId, name])
+  /// Target of the composite foreign keys that keep references inside one school.
+  @@unique([id, tenantId])
+  @@map("roles")
+}
+
+/// One catalogue permission granted by a role. The Owner role has none: it means all.
+model RolePermission {
+  roleId     String @map("role_id") @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  /// A catalogue key, `module.action`.
+  permission String
+
+  role   Role   @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permission])
+  @@index([tenantId])
+  @@map("role_permissions")
+}
+
+/// A role held by a member. A role still held by someone cannot be deleted (NO ACTION rather
+/// than RESTRICT, so deleting a whole school still cascades; see the migration).
+model MembershipRole {
+  membershipId String   @map("membership_id") @db.Uuid
+  roleId       String   @map("role_id") @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  assignedAt   DateTime @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  /// The user who assigned it; null for the system (registration, migration, CLI).
+  assignedBy   String?  @map("assigned_by") @db.Uuid
+
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: NoAction)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, roleId])
+  @@index([roleId])
+  @@index([tenantId])
+  @@map("membership_roles")
+}
+
+/// An invitation to join a school. Only the SHA-256 of the 32-byte token is stored. Read by token
+/// before any tenant context exists through `invitation_by_token`, which returns only
+/// (id, tenant_id); everything else runs under the invitation's tenant.
+model Invitation {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  /// Normalised.
+  email      String    @db.Citext
+  /// 2-80 characters.
+  name       String
+  /// At least one; checked against the school's roles when accepted.
+  roleIds    String[]  @map("role_ids") @db.Uuid
+  /// SHA-256 of 32 random bytes.
+  tokenHash  Bytes     @unique @map("token_hash")
+  /// Created (or last resent) + 7 days.
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  /// The inviting user.
+  invitedBy  String    @map("invited_by") @db.Uuid
+  acceptedAt DateTime? @map("accepted_at") @db.Timestamptz(6)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, email])
+  @@map("invitations")
+}
+
+/// Append-only audit trail of IAM changes, written in the same transaction as the change. The app
+/// role may only INSERT and SELECT (UPDATE and DELETE are revoked in the migration).
+model AuditEvent {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  /// Null for the system and the CLI.
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  /// `role.created`, `member.invited`, ... (spec section 6; a CHECK in the migration).
+  action      String
+  /// `role`, `membership` or `invitation`.
+  targetType  String   @map("target_type")
+  targetId    String   @map("target_id") @db.Uuid
+  /// Changed fields only.
+  before      Json?
+  after       Json?
+  ip          String?  @db.Inet
+  /// Truncated to 512 characters.
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("audit_events")
+}

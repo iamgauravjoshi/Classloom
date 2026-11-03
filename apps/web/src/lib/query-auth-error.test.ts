@@ -30,6 +30,27 @@ describe('onQueryError', () => {
   });
 });
 
+describe('onQueryError for required two-step', () => {
+  const required = new ApiError(403, {
+    type: 'https://classloom.dev/problems/two-factor-setup-required',
+    title: 'x',
+    status: 403,
+  });
+
+  it('sends a session that was flagged mid-visit to the setup page, coming back afterwards', () => {
+    const replace = vi.fn();
+    onQueryError(required, { replace }, '/en/students?q=1');
+    expect(replace).toHaveBeenCalledWith('/en/setup-two-factor?next=%2Fen%2Fstudents%3Fq%3D1');
+  });
+
+  it('stays put on the setup page and on public pages', () => {
+    const replace = vi.fn();
+    onQueryError(required, { replace }, '/en/setup-two-factor?next=%2Fen%2Fdashboard');
+    onQueryError(required, { replace }, '/en/sign-in');
+    expect(replace).not.toHaveBeenCalled();
+  });
+});
+
 describe('retryQuery', () => {
   it('retries other failures once', () => {
     expect(retryQuery(0, new ApiError(500, problem(500)))).toBe(true);

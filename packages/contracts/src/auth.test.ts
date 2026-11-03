@@ -153,7 +153,9 @@ describe('authSessionSchema', () => {
     },
     school: { id: 's1', code: 'GISD', name: 'Global International School' },
     campus: { id: 'c1', name: 'Global International School' },
-    role: 'OWNER',
+    roles: [{ key: 'OWNER', name: 'Owner' }],
+    permissions: ['dashboard.view'],
+    twoFactorSetupRequired: false,
     remember: true,
     expiresAt: '2026-11-26T08:42:00.000Z',
   };
@@ -165,13 +167,17 @@ describe('authSessionSchema', () => {
     ).toBe(true);
   });
 
-  it('rejects other roles and a non-ISO expiry', () => {
-    expect(authSessionSchema.safeParse({ ...session, role: 'TEACHER' }).success).toBe(false);
+  it('rejects the old single role, a missing flag and a non-ISO expiry', () => {
+    expect(authSessionSchema.safeParse({ ...session, roles: 'OWNER' }).success).toBe(false);
+    const { twoFactorSetupRequired: _omit, ...without } = session;
+    expect(authSessionSchema.safeParse(without).success).toBe(false);
     expect(authSessionSchema.safeParse({ ...session, expiresAt: 'tomorrow' }).success).toBe(false);
   });
 
   it('exposes the inferred types', () => {
-    expectTypeOf<AuthSession['role']>().toEqualTypeOf<'OWNER'>();
+    expectTypeOf<AuthSession['roles']>().toEqualTypeOf<{ key: string | null; name: string }[]>();
+    expectTypeOf<AuthSession['permissions']>().toEqualTypeOf<string[]>();
+    expectTypeOf<AuthSession['twoFactorSetupRequired']>().toEqualTypeOf<boolean>();
     expectTypeOf<AuthSession['user']['mobile']>().toEqualTypeOf<string | null>();
     expectTypeOf<MembershipRoleName>().toEqualTypeOf<'OWNER'>();
   });

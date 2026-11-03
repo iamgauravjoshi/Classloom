@@ -4,6 +4,7 @@ import { latestEmailTo, verificationLink } from './support/mailpit';
 import {
   createVerifiedSchool,
   registerPendingSchool,
+  relaxOwnerTwoFactor,
   signInWithCode,
   type VerifiedSchool,
 } from './support/school';
@@ -55,6 +56,18 @@ async function signOut(page: Page) {
   await expect(page).toHaveURL(/\/en\/sign-in/);
 }
 
+/**
+ * A new owner's first sign-in lands on the two-step setup page (Owner requires it by default).
+ * Lets the owner use the app without it, then opens `next`: the tests here are about what follows.
+ */
+async function relaxAfterFirstSignIn(page: Page, next: string) {
+  await expect(page).toHaveURL(/\/en\/setup-two-factor/);
+  // The page starts its own setup on load; let it finish, or it would replace the secret below.
+  await expect(page.getByRole('img', { name: /QR code/ })).toBeVisible();
+  await relaxOwnerTwoFactor(page.request);
+  await page.goto(next);
+}
+
 async function expectDashboard(page: Page, school: VerifiedSchool) {
   await expect(page).toHaveURL(/\/en\/dashboard$/);
   await expect(page.getByText(`Welcome back, ${school.name}`)).toBeVisible();
@@ -84,6 +97,7 @@ test('journey: register, code sign-in, password, mobile sign-in, reset and sign 
 
   // The email code goes to the dashboard, which names the owner and the school.
   await signInByCode(page, school.email);
+  await relaxAfterFirstSignIn(page, '/en/dashboard');
   await expectDashboard(page, school);
   // Below lg the sidebar (which names the school) is a sheet behind the toggle.
   if ((page.viewportSize()?.width ?? 0) < 1024) {
@@ -158,7 +172,9 @@ test('a protected page asks for sign-in and returns there afterwards', async ({
   await page.getByRole('button', { name: 'Continue' }).click();
   await signInByCode(page, school.email);
 
-  await expect(page).toHaveURL(/\/en\/students$/);
+  // A new owner's first sign-in goes to the setup page, which remembers where it was going.
+  await expect(page).toHaveURL(/\/en\/setup-two-factor\?next=%2Fen%2Fstudents$/);
+  await relaxAfterFirstSignIn(page, '/en/students');
   await expect(page.getByRole('heading', { level: 1, name: 'Students' })).toBeVisible();
 });
 
@@ -246,7 +262,7 @@ test.describe('double submit', () => {
     await page
       .getByLabel('Sign-in code')
       .evaluate((input) => input.closest('form')!.requestSubmit());
-    await expect(page).toHaveURL(/\/en\/dashboard$/);
+    await expect(page).toHaveURL(/\/en\/setup-two-factor\?next=%2Fen%2Fdashboard$/);
     expect(verifies).toBe(1);
   });
 });
@@ -294,12 +310,11 @@ test('signing in at another school replaces the live session', async ({ page, pl
   expect(old, 'a session cookie').toBeDefined();
 
   await page.getByLabel('Sign-in code').fill(bCode);
-  await expectDashboard(page, b);
-  if ((page.viewportSize()?.width ?? 0) < 1024) {
-    await page.getByRole('button', { name: 'Toggle sidebar', exact: true }).click();
-  }
-  await expect(page.getByText(b.schoolName).first()).toBeVisible();
-  await expect(page.getByText(a.schoolName)).toHaveCount(0);
+  // B's owner is new here and goes to the setup page; the session is B's, not A's. (The two
+  // schools share one person, whose just-used two-step codes cannot be reused to relax B's owner.)
+  await expect(page).toHaveURL(/\/en\/setup-two-factor/);
+  const current = await page.request.get('/api/auth/session');
+  expect(((await current.json()) as { school: { code: string } }).school.code).toBe(b.code);
 
   // School A's session is gone on the server, not just replaced in this browser.
   const replay = await playwright.request.newContext();
@@ -339,7 +354,7 @@ test.describe('keyboard only', () => {
     await expect(page.getByLabel('Sign-in code')).toBeFocused();
     await page.keyboard.type(await emailedCode(page, school.email));
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/en\/dashboard$/);
+    await expect(page).toHaveURL(/\/en\/setup-two-factor\?next=%2Fen%2Fdashboard$/);
   });
 });
 

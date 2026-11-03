@@ -67,13 +67,11 @@ enum CampusStatus {
   INACTIVE
 }
 
-enum MembershipRole {
-  OWNER
-}
-
+/// REVOKED is the registration cancel path; DEACTIVATED is reversible (spec Part 3, section 6).
 enum MembershipStatus {
   ACTIVE
   REVOKED
+  DEACTIVATED
 }
 
 /// A school. Platform-level: not row-level secured.
@@ -101,6 +99,11 @@ model Tenant {
   registrationTokens RegistrationToken[]
   sessions           Session[]
   authEvents         AuthEvent[]
+  roles              Role[]
+  rolePermissions    RolePermission[]
+  membershipRoles    MembershipRole[]
+  invitations        Invitation[]
+  auditEvents        AuditEvent[]
 
   @@map("tenants")
 }
@@ -155,21 +158,26 @@ model User {
   @@map("users")
 }
 
-/// Tenant-owned, row-level secured.
+/// Tenant-owned, row-level secured. What a member may do comes from their roles
+/// (`membership_roles`, see iam.prisma).
 model Membership {
-  id        String           @id @default(uuid(7)) @db.Uuid
-  tenantId  String           @map("tenant_id") @db.Uuid
-  userId    String           @map("user_id") @db.Uuid
-  role      MembershipRole
-  status    MembershipStatus @default(ACTIVE)
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String           @id @default(uuid(7)) @db.Uuid
+  tenantId      String           @map("tenant_id") @db.Uuid
+  userId        String           @map("user_id") @db.Uuid
+  status        MembershipStatus @default(ACTIVE)
+  /// Set when the membership is deactivated; cleared when it is reactivated.
+  deactivatedAt DateTime?        @map("deactivated_at") @db.Timestamptz(6)
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   sessions Session[]
+  roles    MembershipRole[]
 
   @@unique([tenantId, userId])
+  /// Target of membership_roles' composite foreign key (keeps it inside one school).
+  @@unique([id, tenantId])
   @@index([userId])
   @@map("memberships")
 }

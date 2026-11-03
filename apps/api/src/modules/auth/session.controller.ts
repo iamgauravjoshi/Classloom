@@ -30,6 +30,7 @@ import { Public } from './public.decorator';
 import type { RequestAuth } from './request-auth';
 import { SessionService } from './session.service';
 import { clearSessionCookie, readSessionToken } from './session-cookie';
+import { AllowDuringTwoFactorSetup } from './two-factor-setup.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -42,8 +43,12 @@ export class SessionController {
   ) {}
 
   @Get('session')
+  @AllowDuringTwoFactorSetup()
   @ApiCookieAuth()
-  @ApiOperation({ operationId: 'getAuthSession', summary: 'The signed-in user, school and role' })
+  @ApiOperation({
+    operationId: 'getAuthSession',
+    summary: 'The signed-in user, school, roles and permissions',
+  })
   @ApiOkResponse({ type: AuthSessionDto })
   @ApiUnauthorizedResponse({ description: 'No valid session' })
   async getSession(@Req() req: Request, @CurrentAuth() auth: RequestAuth): Promise<AuthSession> {
@@ -51,7 +56,7 @@ export class SessionController {
     const resolved = token ? await this.sessions.resolve(token) : null;
     const user = await this.prisma.user.findUnique({ where: { id: auth.userId } });
     if (!resolved || !user) throw new UnauthorizedException('Sign in to continue');
-    return this.sessions.toAuthSession(resolved, { role: auth.role }, user);
+    return this.sessions.toAuthSession(resolved, auth, user);
   }
 
   @Post('sign-out')

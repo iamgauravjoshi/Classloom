@@ -6,14 +6,15 @@ import type { Env } from '../../core/config/env.schema';
 import { EmailService } from '../../core/email/email.service';
 import { newDeviceEmail } from '../../core/email/templates/new-device';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import type { MembershipRole, TenantStatus, User } from '../../generated/prisma/client';
+import type { TenantStatus, User } from '../../generated/prisma/client';
 import { AuthEventsService } from './auth-events.service';
 import { KnownDeviceService } from './known-device.service';
-import { findActiveMembership } from './member-lookup';
+import { findActiveMembership, findMemberAccess } from './member-lookup';
 import type { SignInMeta } from './password-sign-in.service';
 import { CredentialsChangedError, SessionService } from './session.service';
 import { TwoFactorService } from './two-factor.service';
-import { TwoFactorChallengeService } from './two-factor-challenge.service';
+import { type FirstFactorMethod, TwoFactorChallengeService } from './two-factor-challenge.service';
+import { needsTwoFactorSetup } from './two-factor-setup.guard';
 
 /** Failed new-device emails hold no secret; kept a day like the other security emails. */
 const KEEP_FAILED_EMAIL_SECONDS = 86_400;
@@ -43,13 +44,13 @@ export class TwoFactorInvalidException extends UnauthorizedException {
   }
 }
 
-/** What a first factor (password or emailed code) proved. */
+/** What a first factor (password, emailed code or accepted invitation) proved. */
 export interface FirstFactorResult {
   user: User;
   tenant: { id: string; code: string; name: string; status: TenantStatus };
-  membership: { id: string; role: MembershipRole };
+  membership: { id: string };
   remember: boolean;
-  method: 'PASSWORD' | 'EMAIL_CODE';
+  method: FirstFactorMethod;
 }
 
 export interface DeviceSignInMeta extends SignInMeta {
@@ -67,7 +68,7 @@ export type FirstFactorOutcome =
   ({ kind: 'session' } & SessionResult) | { kind: 'challenge'; body: TwoFactorChallenge };
 
 /**
- * The one place both first factors hand over to: decides between a session and the two-step
+ * The one place every first factor hands over to: decides between a session and the two-step
  * challenge, creates the session, records the device and sends the new-device email.
  */
 @Injectable()
@@ -136,7 +137,11 @@ export class TwoFactorSignInService {
       kind: 'session',
       token,
       remember: session.remember,
-      session: await this.sessions.toAuthSession({ session, tenant }, membership, user),
+      session: await this.sessions.toAuthSession(
+        { session, tenant },
+        await this.signInAccess(tenant.id, membership.id, user),
+        user,
+      ),
     };
   }
 
@@ -218,7 +223,20 @@ export class TwoFactorSignInService {
     return {
       token,
       remember: session.remember,
-      session: await this.sessions.toAuthSession({ session, tenant }, membership, user),
+      session: await this.sessions.toAuthSession(
+        { session, tenant },
+        await this.signInAccess(tenant.id, membership.id, user),
+        user,
+      ),
+    };
+  }
+
+  /** The member's access for the sign-in response, with whether they must set up two-step. */
+  private async signInAccess(tenantId: string, membershipId: string, user: User) {
+    const access = await findMemberAccess(this.prisma, tenantId, membershipId);
+    return {
+      ...access,
+      twoFactorSetupRequired: needsTwoFactorSetup(access.roles, user.totpEnabledAt),
     };
   }
 

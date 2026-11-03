@@ -1,7 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 
-import { createVerifiedSchool, signInWithCode, type VerifiedSchool } from './support/school';
+import { inviteAs, newInvitee } from './support/invitations';
+import {
+  createVerifiedSchool,
+  signInWithCode,
+  signInWithCodeKeepingRequirement,
+  type VerifiedSchool,
+  WEB_ORIGIN,
+} from './support/school';
 import { enableTwoFactorFor } from './support/totp';
 
 const PAGES = [
@@ -13,6 +20,18 @@ const PAGES = [
 ];
 
 async function expectNoViolations(page: Page) {
+  // Dialogs fade in; contrast measured mid-fade blends text with the page behind it (seen on WebKit).
+  // Two frames first, so a transition started by the last tap or focus is already listed.
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity,
+      ),
+  );
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
@@ -65,6 +84,70 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.getByText('This device').first()).toBeVisible();
         await expect(page.getByText('No trusted devices')).toBeVisible();
         await expect(page.getByText('Signed in with an email code').first()).toBeAttached();
+        await expectNoViolations(page);
+      });
+    });
+
+    test.describe('users and roles', () => {
+      // The page lists the school's people, so it gets a school of its own with one invitation.
+      test.use({ storageState: { cookies: [], origins: [] } });
+
+      test('/en/users-roles has no WCAG 2.1 AA violations, list and invite dialog', async ({
+        page,
+        playwright,
+      }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        // The owner is relaxed (no required two-step), so the session reaches the page.
+        await signInWithCode(page.request, own);
+        const invitee = newInvitee('Ravi Kumar');
+        await inviteAs(page.request, invitee);
+
+        await page.goto('/en/users-roles');
+        await expect(page.getByRole('heading', { level: 1, name: 'Users & roles' })).toBeVisible();
+        const tabs = page.getByRole('navigation', { name: 'Users and roles sections' });
+        await expect(tabs.getByRole('link', { name: 'Members' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        );
+        await expect(page.getByText(invitee.email).filter({ visible: true }).first()).toBeVisible();
+        await expect(page.getByText(own.email).filter({ visible: true }).first()).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Invite people' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Invite people' });
+        await expect(dialog.getByLabel('Email')).toBeFocused();
+        await expect(dialog.getByRole('checkbox', { name: 'Teacher', exact: true })).toBeVisible();
+        await expectNoViolations(page);
+      });
+
+      test('/en/users-roles roles tab and role editor have no WCAG 2.1 AA violations', async ({
+        page,
+        playwright,
+      }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+
+        await page.goto('/en/users-roles?tab=roles');
+        await expect(
+          page.getByRole('heading', { level: 3, name: 'Teacher', exact: true }),
+        ).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.goto('/en/users-roles/roles/new');
+        await expect(page.getByRole('heading', { level: 1, name: 'Create role' })).toBeVisible();
+        await expect(page.getByRole('checkbox', { name: 'Students: View' })).toBeVisible();
+        await expectNoViolations(page);
+
+        // A ticked grid, a disabled (read-only) one, and the tooltip on a cell that is not theirs.
+        await page.getByRole('button', { name: 'Manager', exact: true }).click();
+        await expectNoViolations(page);
+        await page.goto('/en/users-roles?tab=roles');
+        await page.getByRole('link', { name: 'Edit Owner' }).click();
+        await expect(page.getByRole('switch', { name: 'Require two-step sign-in' })).toBeVisible();
         await expectNoViolations(page);
       });
     });
@@ -157,6 +240,69 @@ for (const theme of ['light', 'dark'] as const) {
 
         await dialog.getByRole('button', { name: 'Next' }).click();
         await expect(dialog.getByLabel('Authenticator code')).toBeFocused();
+        await expectNoViolations(page);
+      });
+
+      test('join, the invitation, has no WCAG 2.1 AA violations', async ({ page, playwright }) => {
+        const owner = await playwright.request.newContext();
+        const own = await createVerifiedSchool(owner);
+        await signInWithCode(owner, own);
+        const link = await inviteAs(owner, newInvitee());
+        await owner.dispose();
+
+        await page.goto(link);
+        await expect(page.getByRole('button', { name: 'Join', exact: true })).toBeVisible();
+        await expect(page).toHaveURL(/\/en\/join$/);
+        await expectNoViolations(page);
+      });
+
+      test('join, a spent link, has no WCAG 2.1 AA violations', async ({ page }) => {
+        await page.goto(`/en/join?token=${UNUSED_TOKEN}`);
+        await expect(
+          page.getByRole('heading', {
+            level: 1,
+            name: 'This link has expired or was already used',
+          }),
+        ).toBeVisible();
+        await expectNoViolations(page);
+      });
+
+      test('setup-two-factor has no WCAG 2.1 AA violations', async ({ page, playwright }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCodeKeepingRequirement(page.request, own);
+
+        await page.goto('/en/dashboard');
+        await expect(page).toHaveURL(/\/en\/setup-two-factor/);
+        await expect(
+          page.getByRole('heading', { level: 1, name: 'Set up two-step sign-in' }),
+        ).toBeVisible();
+        await expect(page.getByRole('img', { name: /QR code/ })).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Next' }).click();
+        await expect(page.getByLabel('Authenticator code')).toBeFocused();
+        await expectNoViolations(page);
+      });
+
+      test('the access-denied page has no WCAG 2.1 AA violations', async ({ page, playwright }) => {
+        const owner = await playwright.request.newContext();
+        const own = await createVerifiedSchool(owner);
+        await signInWithCode(owner, own);
+        const link = await inviteAs(owner, newInvitee());
+        await owner.dispose();
+        // A Teacher has no fees permission.
+        const accepted = await page.request.post(`${WEB_ORIGIN}/api/invitations/accept`, {
+          data: { token: new URL(link).searchParams.get('token') },
+          headers: { origin: WEB_ORIGIN },
+        });
+        expect(accepted.status(), await accepted.text()).toBe(200);
+
+        await page.goto('/en/fees');
+        await expect(
+          page.getByRole('heading', { level: 2, name: "You don't have access to this page" }),
+        ).toBeVisible();
         await expectNoViolations(page);
       });
 

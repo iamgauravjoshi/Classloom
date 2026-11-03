@@ -1,5 +1,10 @@
 import { createHash } from 'node:crypto';
 
+import {
+  BUILT_IN_ROLE_DEFAULTS,
+  BUILT_IN_ROLE_KEYS,
+  type BuiltInRoleKey,
+} from '@classloom/contracts';
 import { formatDateIN } from '@classloom/utils';
 import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
@@ -123,13 +128,23 @@ describe('school registration', () => {
       await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenant.id}, true)`;
       return {
         campuses: await tx.campus.findMany(),
-        memberships: await tx.membership.findMany(),
+        memberships: await tx.membership.findMany({
+          include: { roles: { include: { role: true } } },
+        }),
+        roles: await tx.role.findMany({ include: { permissions: true } }),
       };
     });
     expect(rows.campuses).toHaveLength(1);
     expect(rows.campuses[0]).toMatchObject({ isPrimary: true, city: 'Dehradun', state: 'UK' });
     expect(rows.memberships).toHaveLength(1);
-    expect(rows.memberships[0]?.role).toBe('OWNER');
+    expect(rows.memberships[0]?.roles.map((r) => r.role.key)).toEqual(['OWNER']);
+    expect(rows.memberships[0]?.roles[0]?.assignedBy).toBeNull();
+    expect(rows.roles.map((r) => r.key).sort()).toEqual([...BUILT_IN_ROLE_KEYS].sort());
+    for (const role of rows.roles) {
+      const defaults = BUILT_IN_ROLE_DEFAULTS[role.key as BuiltInRoleKey];
+      const expected = defaults.permissions === 'ALL' ? [] : [...defaults.permissions];
+      expect(role.permissions.map((p) => p.permission).sort()).toEqual(expected.sort());
+    }
     const user = await prisma.user.findUniqueOrThrow({ where: { email: 'asha@school.in' } });
     expect(user.emailVerifiedAt).toBeNull();
     expect(await prisma.registrationToken.count({ where: { tenantId: tenant.id } })).toBe(1);

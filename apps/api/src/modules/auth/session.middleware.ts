@@ -5,8 +5,10 @@ import { ENV } from '../../core/config/config.module';
 import type { Env } from '../../core/config/env.schema';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { TenantContext } from '../../core/tenancy/tenant-context';
+import { MEMBER_ROLES_SELECT, toMemberAccess } from '../iam/permissions';
 import { SessionService } from './session.service';
 import { clearSessionCookie, readSessionToken, setSessionCookie } from './session-cookie';
+import { needsTwoFactorSetup } from './two-factor-setup.guard';
 
 /**
  * `X-Session-Touch: skip` validates the session without sliding it (no `last_seen_at` update, no
@@ -17,7 +19,8 @@ import { clearSessionCookie, readSessionToken, setSessionCookie } from './sessio
 export const SESSION_TOUCH_HEADER = 'x-session-touch';
 
 /**
- * Runs before guards. A valid cookie attaches `request.auth` and runs the rest of the request
+ * Runs before guards. A valid cookie attaches `request.auth`, with the member's roles and
+ * permissions loaded afresh on every request (spec §7), and runs the rest of the request
  * inside the session school's tenant context. Anything invalid is anonymous and clears the cookie.
  */
 @Injectable()
@@ -43,7 +46,12 @@ export class SessionMiddleware implements NestMiddleware {
                 userId: resolved.session.userId,
                 status: 'ACTIVE',
               },
-              select: { role: true },
+              // The roles come in the same query, under the same tenant context and RLS.
+              select: {
+                id: true,
+                roles: MEMBER_ROLES_SELECT,
+                user: { select: { totpEnabledAt: true } },
+              },
             }),
           )
         : null;
@@ -58,12 +66,16 @@ export class SessionMiddleware implements NestMiddleware {
         if (cookieRefresh) setSessionCookie(res, this.env, token, session.remember);
       }
 
+      const { roles, permissions, isOwner } = toMemberAccess(membership.roles);
       req.auth = {
         sessionId: session.id,
         userId: session.userId,
         tenantId: session.tenantId,
         membershipId: session.membershipId,
-        role: membership.role,
+        roles,
+        permissions,
+        isOwner,
+        twoFactorSetupRequired: needsTwoFactorSetup(roles, membership.user.totpEnabledAt),
         remember: session.remember,
         authenticatedAt: session.authenticatedAt,
       };
