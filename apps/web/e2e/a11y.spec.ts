@@ -201,6 +201,117 @@ for (const theme of ['light', 'dark'] as const) {
       });
     });
 
+    test.describe('academic years and campuses settings', () => {
+      // The pages change the school's years and campuses, so each test gets a school of its own.
+      test.use({ storageState: { cookies: [], origins: [] } });
+
+      /** A write through the web app's `/api` proxy, as the signed-in page would send it. */
+      const send = async (page: Page, path: string, data: unknown, status: number) => {
+        const response = await page.request.post(`${WEB_ORIGIN}/api${path}`, {
+          data,
+          headers: { origin: WEB_ORIGIN },
+        });
+        expect(response.status(), await response.text()).toBe(status);
+        return (await response.json().catch(() => ({}))) as { id: string };
+      };
+
+      test('/en/settings/academic-years has no WCAG 2.1 AA violations, empty, listed and in the form', async ({
+        page,
+        playwright,
+      }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+
+        // No years yet: the empty state and "Set up academic year".
+        await page.goto('/en/settings/academic-years');
+        await expect(page.getByRole('heading', { level: 1, name: 'Academic years' })).toBeVisible();
+        await expect(page.getByText('No academic year yet')).toBeVisible();
+        await expectNoViolations(page);
+
+        // The form dialog, with its terms and a tiling problem on a row.
+        await page.getByRole('button', { name: 'Set up academic year' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Set up academic year' });
+        await expect(dialog.getByLabel('Term 2 ends on')).toBeVisible();
+        await dialog.getByRole('radio', { name: '3 terms' }).check();
+        await expect(dialog.getByLabel('Term 3 ends on')).toBeVisible();
+        await dialog.getByLabel('Term 2 starts on').fill('05/08/2026');
+        await dialog.getByRole('button', { name: 'Create year' }).click();
+        await expect(
+          dialog.getByText('This term must start the day after the previous term ends.'),
+        ).toBeVisible();
+        await expectNoViolations(page);
+        await page.keyboard.press('Escape');
+
+        // A current and a planned year, and the make-current question with its early-start wording.
+        await send(
+          page,
+          '/school/academic-years',
+          { startsOn: '2026-04-01', endsOn: '2027-03-31', termCount: 2 },
+          201,
+        );
+        await send(
+          page,
+          '/school/academic-years',
+          { startsOn: '2027-04-01', endsOn: '2028-03-31', termCount: 3 },
+          201,
+        );
+        await page.goto('/en/settings/academic-years');
+        await expect(page.getByRole('heading', { level: 2, name: '2026–27' })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 2, name: '2027–28' })).toBeVisible();
+        await expect(page.getByText('Planned', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Prepare next year' })).toHaveCount(0);
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Make current: 2027–28' }).click();
+        const question = page.getByRole('dialog', { name: 'Make 2027–28 the current year?' });
+        await expect(
+          question.getByText('2027–28 starts on 01/04/2027.', { exact: false }),
+        ).toBeVisible();
+        await expectNoViolations(page);
+      });
+
+      test('/en/settings/campuses has no WCAG 2.1 AA violations, one and two campuses and the edit dialog', async ({
+        page,
+        playwright,
+      }) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+
+        // The campus the school was registered with.
+        await page.goto('/en/settings/campuses');
+        await expect(page.getByRole('heading', { level: 1, name: 'Campuses' })).toBeVisible();
+        await expect(page.getByText('Primary', { exact: true })).toBeVisible();
+        await expectNoViolations(page);
+
+        // A second campus, deactivated.
+        const added = await send(
+          page,
+          '/school/campuses',
+          { name: 'North Campus', addressLine1: '12 Rajpur Road', pinCode: '248001' },
+          201,
+        );
+        await send(page, `/school/campuses/${added.id}/deactivate`, {}, 200);
+        await page.goto('/en/settings/campuses');
+        await expect(page.getByRole('heading', { level: 2, name: 'North Campus' })).toBeVisible();
+        await expect(page.getByText('Inactive', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Reactivate North Campus' })).toBeVisible();
+        await expectNoViolations(page);
+
+        // The edit dialog, with a field error.
+        await page.getByRole('button', { name: 'Edit North Campus' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Edit North Campus' });
+        await expect(dialog.getByLabel('Campus name')).toHaveValue('North Campus');
+        await dialog.getByLabel('PIN code').fill('012345');
+        await dialog.getByRole('button', { name: 'Save changes' }).click();
+        await expect(dialog.getByText('Enter a 6-digit PIN code.')).toBeVisible();
+        await expectNoViolations(page);
+      });
+    });
+
     test.describe('signed out', () => {
       // The auth pages send a signed-in visitor to the dashboard.
       test.use({ storageState: { cookies: [], origins: [] } });
