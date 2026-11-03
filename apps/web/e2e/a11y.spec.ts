@@ -20,6 +20,14 @@ const PAGES = [
 ];
 
 async function expectNoViolations(page: Page) {
+  // Dialogs fade in; contrast measured mid-fade blends text with the page behind it (seen on WebKit).
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity,
+      ),
+  );
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
