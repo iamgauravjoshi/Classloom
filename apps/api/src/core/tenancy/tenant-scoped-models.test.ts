@@ -30,6 +30,12 @@ describe('TENANT_SCOPED_MODELS', () => {
     }
   });
 
+  it('scopes every onboarding table (Part 4 spec section 4: all are row-level secured)', () => {
+    for (const model of ['SchoolProfile', 'File', 'AcademicYear', 'AcademicTerm']) {
+      expect((TENANT_SCOPED_MODELS as ReadonlySet<string>).has(model)).toBe(true);
+    }
+  });
+
   it('lists every model with a tenantId field, unless it is an explicit platform exemption', () => {
     const missing = modelsWithTenantId().filter(
       (m) =>

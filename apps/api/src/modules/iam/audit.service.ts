@@ -5,7 +5,10 @@ import type { RequestAuth } from '../auth/request-auth';
 
 export const MAX_AUDIT_USER_AGENT_LENGTH = 512;
 
-/** The actions the `audit_events` CHECK constraint admits (spec §6). */
+/**
+ * The actions the `audit_events` CHECK constraint admits (IAM spec §6; onboarding spec §4, widened
+ * by the school_onboarding migration). Keep the two lists identical.
+ */
 export type AuditAction =
   | 'role.created'
   | 'role.updated'
@@ -17,9 +20,22 @@ export type AuditAction =
   | 'member.roles_changed'
   | 'member.deactivated'
   | 'member.reactivated'
-  | 'member.two_factor_reset';
+  | 'member.two_factor_reset'
+  | 'school.profile_updated'
+  | 'school.logo_changed'
+  | 'school.logo_removed'
+  | 'academic_year.created'
+  | 'academic_year.updated'
+  | 'academic_year.made_current'
+  | 'academic_year.deleted'
+  | 'campus.created'
+  | 'campus.updated'
+  | 'campus.deactivated'
+  | 'campus.reactivated'
+  | 'campus.made_primary';
 
-export type AuditTargetType = 'role' | 'membership' | 'invitation';
+export type AuditTargetType =
+  'role' | 'membership' | 'invitation' | 'school' | 'academic_year' | 'campus';
 
 export interface AuditInput {
   /** The school the change happened in: the actor's school, or the invited one for the system. */

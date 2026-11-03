@@ -85,6 +85,11 @@ export class SchoolRegistrationService {
               state: input.state,
             },
           });
+          // Every school has exactly one profile row (onboarding spec section 12); it starts with
+          // the registration's city and state.
+          await tx.schoolProfile.create({
+            data: { tenantId: tenant.id, city: input.city, state: input.state },
+          });
           const user = await tx.user.upsert({
             where: { email: input.email },
             create: { email: input.email, name: input.adminName, mobile },

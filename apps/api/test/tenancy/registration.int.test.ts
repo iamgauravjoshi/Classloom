@@ -132,7 +132,15 @@ describe('school registration', () => {
           include: { roles: { include: { role: true } } },
         }),
         roles: await tx.role.findMany({ include: { permissions: true } }),
+        profiles: await tx.schoolProfile.findMany(),
       };
+    });
+    expect(rows.profiles).toHaveLength(1);
+    expect(rows.profiles[0]).toMatchObject({
+      tenantId: tenant.id,
+      city: 'Dehradun',
+      state: 'UK',
+      logoFileId: null,
     });
     expect(rows.campuses).toHaveLength(1);
     expect(rows.campuses[0]).toMatchObject({ isPrimary: true, city: 'Dehradun', state: 'UK' });
