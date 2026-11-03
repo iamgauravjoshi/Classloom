@@ -8,7 +8,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
 import { Client } from 'pg';
-import { GenericContainer, type StartedTestContainer } from 'testcontainers';
+import { GenericContainer, type StartedTestContainer, Wait } from 'testcontainers';
 
 import type { Env } from '../src/core/config/env.schema';
 import { PrismaClient } from '../src/generated/prisma/client';
@@ -23,6 +23,8 @@ export interface TestInfra {
   redis: StartedRedisContainer;
   mailpit?: StartedTestContainer;
   mailpitApiUrl?: string;
+  /** RustFS, when started with `storage: true`. */
+  storage?: StartedTestContainer;
   stop(): Promise<void>;
 }
 
@@ -56,21 +58,37 @@ export async function applyMigrations(migrationUrl: string, prismaConfig?: strin
   );
 }
 
+const S3_ACCESS_KEY = 'classloom-test';
+const S3_SECRET_KEY = 'classloom-test-secret';
+/** Where suites without the storage container point S3: nothing listens there. */
+const UNREACHABLE_S3_ENDPOINT = 'http://127.0.0.1:1';
+
+/** RustFS (S3-compatible), the image docker/compose.yml runs. The API creates the bucket itself. */
+function startStorage(): Promise<StartedTestContainer> {
+  return new GenericContainer('rustfs/rustfs:1.0.4')
+    .withEnvironment({ RUSTFS_ACCESS_KEY: S3_ACCESS_KEY, RUSTFS_SECRET_KEY: S3_SECRET_KEY })
+    .withExposedPorts(9000)
+    .withWaitStrategy(Wait.forHttp('/health', 9000).forStatusCode(200))
+    .start();
+}
+
 /**
- * Starts throwaway Postgres 17 and Redis 7 containers (plus Mailpit on request), creates the
- * owner and app roles, and applies migrations as the owner. `env.DATABASE_URL` connects as the
- * restricted `classloom_app` role, exactly as the API does in production. `prismaConfig` applies
- * another config's migrations instead of the API's own (see `applyMigrations`).
+ * Starts throwaway Postgres 17 and Redis 7 containers (plus Mailpit and RustFS storage on
+ * request), creates the owner and app roles, and applies migrations as the owner.
+ * `env.DATABASE_URL` connects as the restricted `classloom_app` role, exactly as the API does in
+ * production. `prismaConfig` applies another config's migrations instead of the API's own (see
+ * `applyMigrations`). Without `storage`, S3 points at an unreachable endpoint (storage is down).
  */
 export async function startTestInfra(
-  options: { mailpit?: boolean; prismaConfig?: string } = {},
+  options: { mailpit?: boolean; storage?: boolean; prismaConfig?: string } = {},
 ): Promise<TestInfra> {
-  const [postgres, redis, mailpit] = await Promise.all([
+  const [postgres, redis, mailpit, storage] = await Promise.all([
     new PostgreSqlContainer('postgres:17-alpine').start(),
     new RedisContainer('redis:7-alpine').start(),
     options.mailpit
       ? new GenericContainer('axllent/mailpit:v1.31.2').withExposedPorts(1025, 8025).start()
       : undefined,
+    options.storage ? startStorage() : undefined,
   ]);
 
   const superuserUri = postgres.getConnectionUri();
@@ -108,6 +126,13 @@ export async function startTestInfra(
     SIGN_IN_RATE_LIMIT_PER_15_MIN: 30,
     CODE_REQUEST_RATE_LIMIT_PER_HOUR: 10,
     PASSWORD_RESET_RATE_LIMIT_PER_HOUR: 10,
+    S3_ENDPOINT: storage
+      ? `http://${storage.getHost()}:${storage.getMappedPort(9000)}`
+      : UNREACHABLE_S3_ENDPOINT,
+    S3_BUCKET: 'classloom-test',
+    S3_ACCESS_KEY,
+    S3_SECRET_KEY,
+    S3_FORCE_PATH_STYLE: true,
   };
   return {
     env,
@@ -117,9 +142,10 @@ export async function startTestInfra(
     mailpitApiUrl: mailpit
       ? `http://${mailpit.getHost()}:${mailpit.getMappedPort(8025)}`
       : undefined,
+    storage,
     async stop() {
-      // Redis may already have been stopped by a test.
-      await Promise.allSettled([postgres.stop(), redis.stop(), mailpit?.stop()]);
+      // Redis and storage may already have been stopped by a test.
+      await Promise.allSettled([postgres.stop(), redis.stop(), mailpit?.stop(), storage?.stop()]);
     },
   };
 }

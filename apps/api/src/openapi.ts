@@ -26,6 +26,11 @@ async function exportOpenApi(): Promise<void> {
     SIGN_IN_RATE_LIMIT_PER_15_MIN: 30,
     CODE_REQUEST_RATE_LIMIT_PER_HOUR: 10,
     PASSWORD_RESET_RATE_LIMIT_PER_HOUR: 10,
+    S3_ENDPOINT: 'http://127.0.0.1:1',
+    S3_BUCKET: 'openapi',
+    S3_ACCESS_KEY: 'openapi',
+    S3_SECRET_KEY: 'openapi',
+    S3_FORCE_PATH_STYLE: true,
   };
   const app = await createApp(env, { logger: false });
   const target = resolve(__dirname, '../../../packages/api-client/openapi.json');
