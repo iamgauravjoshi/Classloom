@@ -28,7 +28,7 @@ test('root redirects to the dashboard, which reports the API online', async ({
 });
 
 test('pages never scroll horizontally', async ({ page }) => {
-  for (const path of ['/en/dashboard', '/en/school-profile', '/en/account']) {
+  for (const path of ['/en/dashboard', '/en/settings/school-profile', '/en/account']) {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     expect(await noHorizontalOverflow(page), path).toBe(true);

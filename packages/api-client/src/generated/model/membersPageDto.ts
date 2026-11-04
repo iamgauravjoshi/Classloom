@@ -9,5 +9,6 @@ import type { MembersPageDtoMembersItem } from './membersPageDtoMembersItem';
 
 export interface MembersPageDto {
   members: MembersPageDtoMembersItem[];
-  nextCursor: string[];
+  /** @nullable */
+  nextCursor: string | null;
 }

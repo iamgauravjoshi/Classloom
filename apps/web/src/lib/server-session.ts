@@ -40,3 +40,22 @@ export async function requireServerSession(): Promise<AuthSession> {
   const requested = (await headers()).get(PATHNAME_HEADER) ?? `/${routing.defaultLocale}/dashboard`;
   redirect(signInRedirectFor(requested));
 }
+
+/**
+ * A read from the API as the signed-in person (server only), for a page that needs data before it
+ * renders (the dashboard's wizard redirect). Never cached. `null` when signed out or on any refusal
+ * or failure, so the page can carry on without it.
+ */
+export async function serverApiGet<T>(path: string): Promise<T | null> {
+  const cookie = (await headers()).get('cookie');
+  if (!cookie) return null;
+  try {
+    const res = await fetch(`${apiInternalUrl()}${path}`, {
+      headers: { cookie, accept: 'application/json', ...NO_TOUCH },
+      cache: 'no-store',
+    });
+    return res.ok ? ((await res.json()) as T) : null;
+  } catch {
+    return null;
+  }
+}

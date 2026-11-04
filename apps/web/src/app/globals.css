@@ -1,3 +1,13 @@
 @import '@classloom/ui/globals.css';
 
 @source '../**/*.{ts,tsx}';
+
+/*
+ * Below md the setup wizard's step actions stick to the bottom of the screen. Toasts rise above
+ * them instead of covering Save and Skip (`StepActions` keeps the height up to date).
+ */
+@media (width < 48rem) {
+  [data-slot='toast-viewport'] {
+    bottom: calc(var(--step-actions-height, 0px) + 1rem);
+  }
+}

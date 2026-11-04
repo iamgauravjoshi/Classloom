@@ -1,6 +1,8 @@
 import {
   type Icon,
   IconBook,
+  IconBuildingCommunity,
+  IconCalendarEvent,
   IconCalendarTime,
   IconCash,
   IconLayoutDashboard,
@@ -72,8 +74,20 @@ export const navConfig: NavGroup[] = [
     items: [
       {
         key: 'schoolProfile',
-        href: '/school-profile',
+        href: '/settings/school-profile',
         icon: IconSettings,
+        permission: 'settings.view',
+      },
+      {
+        key: 'academicYears',
+        href: '/settings/academic-years',
+        icon: IconCalendarEvent,
+        permission: 'settings.view',
+      },
+      {
+        key: 'campuses',
+        href: '/settings/campuses',
+        icon: IconBuildingCommunity,
         permission: 'settings.view',
       },
       { key: 'usersRoles', href: '/users-roles', icon: IconUserShield, permission: 'iam.view' },
@@ -81,8 +95,11 @@ export const navConfig: NavGroup[] = [
   },
 ];
 
-/** Single-segment paths of every placeholder module page (all nav items except the dashboard). */
+/**
+ * Single-segment paths of every placeholder module page: all nav items except the dashboard and
+ * the pages under a folder (`settings/...`), which have routes of their own.
+ */
 export const comingSoonSections: string[] = navConfig
   .flatMap((group) => group.items)
   .map((item) => item.href.slice(1))
-  .filter((section) => section !== 'dashboard');
+  .filter((section) => section !== 'dashboard' && !section.includes('/'));

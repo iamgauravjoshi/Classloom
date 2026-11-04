@@ -25,6 +25,8 @@ export const problemDetailsSchema = z.object({
   attemptsLeft: z.number().int().optional(),
   /** Set on a 409 `invitation-joined`: the school the person joined, to sign in to. */
   schoolCode: z.string().optional(),
+  /** Set on a 422 `logo-invalid`: why the image was refused (`type`, `size`, `dimensions`, `decode`). */
+  reason: z.string().optional(),
 });
 
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;

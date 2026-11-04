@@ -1,0 +1,184 @@
+// School onboarding: the school profile, stored files, academic years and their terms.
+// Spec: docs/superpowers/specs/2026-11-03-onboarding-design.md, sections 4 and 12.
+//
+// Every model here is tenant-owned and row-level secured (forced RLS, listed in
+// TENANT_SCOPED_MODELS). Added in the migration SQL, as Prisma cannot express them:
+// CHECK constraints on every field rule of section 4; the `btree_gist` exclusion constraint
+// `academic_years_no_overlap` (no overlapping years per school); the partial unique indexes
+// `academic_years_one_current` and `academic_years_one_planned`; the case-insensitive unique
+// indexes `academic_years_label_key` (lower(label)) and `campuses_name_key` (lower(name)); and the
+// composite foreign keys that keep a term on its own school's year and a profile's logo on its
+// own school's file (foreign key checks bypass row-level security).
+
+/// Values (and order) match CLASS_LEVELS in @classloom/contracts; the order makes the
+/// `lowest_class <= highest_class` CHECK meaningful.
+enum ClassLevel {
+  NURSERY
+  LKG
+  UKG
+  I
+  II
+  III
+  IV
+  V
+  VI
+  VII
+  VIII
+  IX
+  X
+  XI
+  XII
+}
+
+/// Values match SCHOOL_TYPES in @classloom/contracts.
+enum SchoolType {
+  CO_ED
+  BOYS
+  GIRLS
+}
+
+/// Values match RESIDENTIAL in @classloom/contracts.
+enum Residential {
+  DAY
+  BOARDING
+  DAY_AND_BOARDING
+}
+
+/// Values match ACADEMIC_YEAR_STATUSES in @classloom/contracts.
+enum AcademicYearStatus {
+  PLANNED
+  CURRENT
+  CLOSED
+}
+
+/// What a stored file is for. Later modules add their own purposes.
+enum FilePurpose {
+  SCHOOL_LOGO
+}
+
+/// One row per school, created by the onboarding migration and at registration. The school's
+/// name and board stay on `tenants`; saving `city` or `state` also updates `tenants`.
+model SchoolProfile {
+  tenantId              String       @id @map("tenant_id") @db.Uuid
+  /// The trust or society name; at most 150 characters.
+  legalName             String?      @map("legal_name")
+  /// At most 12 characters.
+  shortName             String?      @map("short_name")
+  /// 1800 to the current year (the upper bound is checked by the API).
+  establishedYear       Int?         @map("established_year") @db.SmallInt
+  /// 11 digits; the first two are a UDISE+ state code (01-38).
+  udiseCode             String?      @map("udise_code") @db.Char(11)
+  /// 1-30 letters, digits, `/` and `-`.
+  affiliationNumber     String?      @map("affiliation_number")
+  schoolType            SchoolType?  @map("school_type")
+  residential           Residential?
+  /// At most 40 characters.
+  medium                String?
+  /// lowest_class <= highest_class.
+  lowestClass           ClassLevel?  @map("lowest_class")
+  highestClass          ClassLevel?  @map("highest_class")
+  /// E.164, `+91` and 10 digits.
+  phone                 String?
+  email                 String?      @db.Citext
+  /// `https://`, at most 200 characters.
+  website               String?
+  /// At most 120 characters each.
+  addressLine1          String?      @map("address_line1")
+  addressLine2          String?      @map("address_line2")
+  /// At most 60 characters each. `city` starts as `tenants.city`.
+  city                  String?
+  district              String?
+  /// Starts as `tenants.state`.
+  state                 IndianState
+  /// 6 digits, not starting with 0.
+  pinCode               String?      @map("pin_code") @db.Char(6)
+  /// Cleared when the file row is deleted. The migration's foreign key is (logo_file_id,
+  /// tenant_id), so the logo is always one of this school's files.
+  logoFileId            String?      @map("logo_file_id") @db.Uuid
+  /// Set when the onboarding wizard first opens.
+  onboardingStartedAt   DateTime?    @map("onboarding_started_at") @db.Timestamptz(6)
+  /// Set when the onboarding checklist is dismissed.
+  onboardingDismissedAt DateTime?    @map("onboarding_dismissed_at") @db.Timestamptz(6)
+  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  logoFile File?  @relation(fields: [logoFileId], references: [id], onDelete: SetNull)
+
+  @@index([logoFileId])
+  @@map("school_profiles")
+}
+
+/// A stored object (in the S3-compatible store). Every value describes what was stored, never
+/// what was uploaded.
+model File {
+  id              String      @id @default(uuid(7)) @db.Uuid
+  tenantId        String      @map("tenant_id") @db.Uuid
+  purpose         FilePurpose
+  /// `tenants/<tenantId>/<purpose>/<fileId>.png`; never taken from user input.
+  storageKey      String      @map("storage_key")
+  contentType     String      @map("content_type")
+  byteSize        Int         @map("byte_size")
+  width           Int
+  height          Int
+  /// SHA-256 of the stored bytes.
+  sha256          Bytes
+  /// Null for the system and the CLI.
+  createdByUserId String?     @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  schoolLogoFor SchoolProfile[]
+
+  /// Target of school_profiles' composite foreign key (keeps the logo inside one school).
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("files")
+}
+
+/// A school's academic year. At most one CURRENT and one PLANNED per school, and no two overlap
+/// (constraints in the migration SQL). Written together with its terms in one transaction.
+model AcademicYear {
+  id        String             @id @default(uuid(7)) @db.Uuid
+  tenantId  String             @map("tenant_id") @db.Uuid
+  /// 1-20 characters, unique per school ignoring case; defaults to "YYYY–YY".
+  label     String
+  startsOn  DateTime           @map("starts_on") @db.Date
+  /// After starts_on; the year is 180-400 days long.
+  endsOn    DateTime           @map("ends_on") @db.Date
+  status    AcademicYearStatus
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  terms  AcademicTerm[]
+
+  /// Target of academic_terms' composite foreign key (keeps a term inside one school).
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("academic_years")
+}
+
+/// A term of an academic year. A year has 2 or 3 terms that tile it exactly (checked by the API).
+model AcademicTerm {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  academicYearId String   @map("academic_year_id") @db.Uuid
+  /// 1-3, unique per year.
+  seq            Int      @db.SmallInt
+  /// 1-40 characters; defaults to "Term 1", "Term 2", "Term 3".
+  name           String
+  startsOn       DateTime @map("starts_on") @db.Date
+  /// On or after starts_on.
+  endsOn         DateTime @map("ends_on") @db.Date
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  academicYear AcademicYear @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([academicYearId, seq])
+  @@index([tenantId])
+  @@map("academic_terms")
+}

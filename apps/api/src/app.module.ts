@@ -26,6 +26,7 @@ import { RedisService } from './core/redis/redis.service';
 import { TenancyCoreModule } from './core/tenancy/tenancy-core.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { IamModule } from './modules/iam/iam.module';
+import { SchoolModule } from './modules/school/school.module';
 import { TenancyModule } from './modules/tenancy/tenancy.module';
 
 const LOG_LEVEL: Record<Env['NODE_ENV'], string> = {
@@ -101,6 +102,7 @@ export class AppModule {
         AuthModule,
         // After AuthModule: its PermissionGuard must run after AuthGuard (registration order).
         IamModule,
+        SchoolModule,
       ],
       providers: [
         { provide: APP_PIPE, useClass: ZodValidationPipe },

@@ -3,6 +3,7 @@ import { expect, type Page, type PlaywrightWorkerArgs, test } from '@playwright/
 import { latestEmailTo, verificationLink } from './support/mailpit';
 import {
   createVerifiedSchool,
+  markSetupWizardSeen,
   registerPendingSchool,
   relaxOwnerTwoFactor,
   signInWithCode,
@@ -65,6 +66,8 @@ async function relaxAfterFirstSignIn(page: Page, next: string) {
   // The page starts its own setup on load; let it finish, or it would replace the secret below.
   await expect(page.getByRole('img', { name: /QR code/ })).toBeVisible();
   await relaxOwnerTwoFactor(page.request);
+  // This journey is about signing in; the first-run setup wizard has its own spec.
+  await markSetupWizardSeen(page.request);
   await page.goto(next);
 }
 

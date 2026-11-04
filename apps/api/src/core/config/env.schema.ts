@@ -55,6 +55,14 @@ const envSchema = z.object({
   SIGN_IN_RATE_LIMIT_PER_15_MIN: z.coerce.number().int().positive().default(30),
   CODE_REQUEST_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(10),
   PASSWORD_RESET_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(10),
+  // S3-compatible object storage (RustFS locally). The API creates the bucket when it is missing.
+  S3_ENDPOINT: z.url({ protocol: /^https?$/ }),
+  // S3 bucket naming rules: 3-63 lowercase letters, digits, dots and hyphens.
+  S3_BUCKET: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, 'is not a valid bucket name'),
+  S3_ACCESS_KEY: z.string().min(1),
+  S3_SECRET_KEY: z.string().min(1),
+  // Path-style URLs (`<endpoint>/<bucket>/<key>`), which RustFS and MinIO need. Defaults to true.
+  S3_FORCE_PATH_STYLE: optionalBooleanString,
 });
 
 const envWithDerivedValues = envSchema
@@ -73,6 +81,7 @@ const envWithDerivedValues = envSchema
   .transform((env) => ({
     ...env,
     COOKIE_SECURE: env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
+    S3_FORCE_PATH_STYLE: env.S3_FORCE_PATH_STYLE ?? true,
   }));
 
 export type Env = z.infer<typeof envWithDerivedValues>;

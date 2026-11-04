@@ -1,5 +1,4 @@
 import { type AuthSession, OWNER_ROLE_KEY } from '@classloom/contracts';
-import { academicYearOf } from '@classloom/utils';
 
 /**
  * Which portal the shell renders. Every school member is staff; parent and student portals come
@@ -17,8 +16,7 @@ export interface ShellSession {
   isOwner: boolean;
   /** Effective permissions (catalogue keys); the shell hides what is not here. */
   permissions: string[];
-  campus: { id: string; name: string };
-  academicYear: string;
+  // The year and campus switchers fetch their own lists (`SelectionProvider`), so neither is here.
 }
 
 /** Maps the API session to the shell's: roles and permissions come straight from the API. */
@@ -29,8 +27,6 @@ export function toShellSession(session: AuthSession): ShellSession {
     roles: session.roles.map((role) => ({ key: role.key, name: role.name })),
     isOwner: session.roles.some((role) => role.key === OWNER_ROLE_KEY),
     permissions: [...session.permissions],
-    campus: { id: session.campus.id, name: session.campus.name },
-    academicYear: academicYearOf(new Date()),
   };
 }
 

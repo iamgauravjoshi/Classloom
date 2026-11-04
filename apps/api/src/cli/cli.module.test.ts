@@ -8,6 +8,10 @@ const env = parseEnv({
   REDIS_URL: 'redis://localhost:6379',
   AUTH_SECRET: 'test-auth-secret-0123456789-abcdefghij',
   TOTP_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
+  S3_ENDPOINT: 'http://localhost:9000',
+  S3_BUCKET: 'classloom-dev',
+  S3_ACCESS_KEY: 'classloom',
+  S3_SECRET_KEY: 'classloom-secret',
 });
 
 describe('CliModule', () => {

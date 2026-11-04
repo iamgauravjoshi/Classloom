@@ -67,6 +67,28 @@ describe('apiFetch', () => {
     expect(new Headers(init.headers).get('content-type')).toBe('application/json');
   });
 
+  it('sends FormData as is, letting fetch set the multipart boundary', async () => {
+    const fetchMock = respond(200, '{}', 'application/json');
+    const form = new FormData();
+    form.append('file', new Blob(['png']), 'logo.png');
+    await apiFetch({
+      url: '/school/logo',
+      method: 'PUT',
+      headers: { 'Content-Type': 'multipart/form-data' },
+      data: form,
+    });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.body).toBe(form);
+    expect(new Headers(init.headers).get('content-type')).toBeNull();
+  });
+
+  it('resolves a Blob when the response type is blob', async () => {
+    respond(200, 'PNGDATA', 'image/png');
+    const blob = await apiFetch<Blob>({ url: '/school/logo', method: 'GET', responseType: 'blob' });
+    expect(blob).toBeInstanceOf(Blob);
+    expect(await blob.text()).toBe('PNGDATA');
+  });
+
   it('throws ApiError carrying the problem details', async () => {
     respond(
       404,

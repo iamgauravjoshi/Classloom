@@ -7,8 +7,10 @@
  */
 import type { HealthResponseDtoChecksDatabase } from './healthResponseDtoChecksDatabase';
 import type { HealthResponseDtoChecksRedis } from './healthResponseDtoChecksRedis';
+import type { HealthResponseDtoChecksStorage } from './healthResponseDtoChecksStorage';
 
 export type HealthResponseDtoChecks = {
   database: HealthResponseDtoChecksDatabase;
   redis: HealthResponseDtoChecksRedis;
+  storage: HealthResponseDtoChecksStorage;
 };

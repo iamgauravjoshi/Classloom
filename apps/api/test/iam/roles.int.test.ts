@@ -642,14 +642,36 @@ describe('roles API', () => {
       const custom = (
         await createRole(s.cookie, { name: 'Racing', permissions: [], requiresTwoFactor: false })
       ).body as { id: string };
-      const [user] = await Promise.all([
-        memberWithRole(s.tenantId, custom.id),
+      const user = await owner.user.create({
+        data: { email: 'racer@roles.test', name: 'Racer', emailVerifiedAt: new Date() },
+      });
+      const membership = await owner.membership.create({
+        data: { tenantId: s.tenantId, userId: user.id },
+      });
+      const [assigned, deleted] = await Promise.all([
+        owner.membershipRole
+          .create({
+            data: { tenantId: s.tenantId, membershipId: membership.id, roleId: custom.id },
+          })
+          .then(
+            () => true,
+            (error: unknown) => {
+              // The delete won: the role is gone, so the foreign key refuses the assignment.
+              if ((error as { code?: string }).code === 'P2003') return false;
+              throw error;
+            },
+          ),
         send('delete', s.cookie, `/iam/roles/${custom.id}`),
       ]);
-      expect(user.membershipId).toBeDefined();
       // Either order is consistent: the role survives with its holder, or was deleted first.
       const still = await owner.role.count({ where: { id: custom.id } });
-      expect([0, 1]).toContain(still);
+      if (assigned) {
+        expect(deleted.status).toBe(409);
+        expect(still).toBe(1);
+      } else {
+        expect(deleted.status).toBe(204);
+        expect(still).toBe(0);
+      }
     });
   });
 

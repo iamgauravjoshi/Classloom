@@ -39,7 +39,7 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
 };
 
 /**
- * @summary Database and Redis connectivity
+ * @summary Database, Redis and storage connectivity
  */
 export const getHealth = (signal?: AbortSignal) => {
   return apiFetch<HealthResponseDto>({ url: `/health`, method: 'GET', signal });
@@ -116,7 +116,7 @@ export function useGetHealth<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Database and Redis connectivity
+ * @summary Database, Redis and storage connectivity
  */
 
 export function useGetHealth<

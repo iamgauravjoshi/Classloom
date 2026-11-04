@@ -104,22 +104,38 @@ model Tenant {
   membershipRoles    MembershipRole[]
   invitations        Invitation[]
   auditEvents        AuditEvent[]
+  schoolProfile      SchoolProfile?
+  files              File[]
+  academicYears      AcademicYear[]
+  academicTerms      AcademicTerm[]
 
   @@map("tenants")
 }
 
 /// Tenant-owned, row-level secured. Exactly one primary campus per tenant (partial unique
-/// index `campuses_one_primary`, added in the migration SQL).
+/// index `campuses_one_primary`, added in the migration SQL). The name is unique per school,
+/// ignoring case (`campuses_name_key` on lower(name), Part 4 migration), and the contact columns
+/// follow the school profile's rules (CHECKs in the same migration).
 model Campus {
-  id        String       @id @default(uuid(7)) @db.Uuid
-  tenantId  String       @map("tenant_id") @db.Uuid
-  name      String
-  isPrimary Boolean      @default(false) @map("is_primary")
-  city      String
-  state     IndianState
-  status    CampusStatus @default(ACTIVE)
-  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String       @id @default(uuid(7)) @db.Uuid
+  tenantId     String       @map("tenant_id") @db.Uuid
+  name         String
+  isPrimary    Boolean      @default(false) @map("is_primary")
+  /// At most 120 characters each.
+  addressLine1 String?      @map("address_line1")
+  addressLine2 String?      @map("address_line2")
+  city         String
+  /// At most 60 characters.
+  district     String?
+  state        IndianState
+  /// 6 digits, not starting with 0.
+  pinCode      String?      @map("pin_code") @db.Char(6)
+  /// E.164, `+91` and 10 digits.
+  phone        String?
+  email        String?      @db.Citext
+  status       CampusStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

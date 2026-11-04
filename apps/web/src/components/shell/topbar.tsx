@@ -19,7 +19,7 @@ export function Topbar({ session }: { session: ShellSession }) {
       <SidebarTrigger aria-label={t('toggleSidebar')} className="size-7 pointer-coarse:size-11" />
       <CommandSearch permissions={session.permissions} />
       <div className="ml-auto flex min-w-0 items-center gap-1">
-        <AcademicYearSwitcher year={session.academicYear} />
+        <AcademicYearSwitcher permissions={session.permissions} />
         <ThemeToggle />
         <Button
           variant="ghost"

@@ -12,7 +12,7 @@ describe('GET /health', () => {
   let server: App;
 
   beforeAll(async () => {
-    infra = await startTestInfra();
+    infra = await startTestInfra({ storage: true });
     app = await createApp(infra.env, { logger: false });
     await app.init();
     server = app.getHttpServer() as App;
@@ -23,12 +23,12 @@ describe('GET /health', () => {
     await infra?.stop();
   });
 
-  it('reports ok when Postgres and Redis are up', async () => {
+  it('reports ok when Postgres, Redis and storage are up', async () => {
     const res = await request(server).get('/health');
     expect(res.status).toBe(200);
     expect(healthResponseSchema.parse(res.body)).toEqual({
       status: 'ok',
-      checks: { database: 'up', redis: 'up' },
+      checks: { database: 'up', redis: 'up', storage: 'up' },
     });
   });
 
@@ -38,7 +38,7 @@ describe('GET /health', () => {
     expect(res.status).toBe(503);
     expect(healthResponseSchema.parse(res.body)).toEqual({
       status: 'error',
-      checks: { database: 'up', redis: 'down' },
+      checks: { database: 'up', redis: 'down', storage: 'up' },
     });
   });
 });

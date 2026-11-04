@@ -13,6 +13,10 @@ const validEnv = {
   WEB_ORIGIN: 'http://localhost:3000',
   AUTH_SECRET: 'test-auth-secret-0123456789-abcdefghij',
   TOTP_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
+  S3_ENDPOINT: 'http://localhost:9000',
+  S3_BUCKET: 'classloom-dev',
+  S3_ACCESS_KEY: 'classloom',
+  S3_SECRET_KEY: 'classloom-secret',
 };
 
 describe('parseEnv', () => {
@@ -38,6 +42,10 @@ describe('parseEnv', () => {
       REDIS_URL: validEnv.REDIS_URL,
       AUTH_SECRET: validEnv.AUTH_SECRET,
       TOTP_ENCRYPTION_KEY: validEnv.TOTP_ENCRYPTION_KEY,
+      S3_ENDPOINT: validEnv.S3_ENDPOINT,
+      S3_BUCKET: validEnv.S3_BUCKET,
+      S3_ACCESS_KEY: validEnv.S3_ACCESS_KEY,
+      S3_SECRET_KEY: validEnv.S3_SECRET_KEY,
     });
     expect(env).toMatchObject({
       API_PORT: 4000,
@@ -133,6 +141,44 @@ describe('parseEnv', () => {
         /CODE_REQUEST_RATE_LIMIT_PER_HOUR/,
       );
     });
+  });
+});
+
+describe('parseEnv storage settings', () => {
+  it.each(['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY', 'S3_SECRET_KEY'] as const)(
+    'requires %s',
+    (key) => {
+      const { [key]: _omit, ...rest } = validEnv;
+      expect(() => parseEnv(rest)).toThrow(new RegExp(key));
+    },
+  );
+
+  it('reads the endpoint, bucket and credentials', () => {
+    expect(parseEnv(validEnv)).toMatchObject({
+      S3_ENDPOINT: 'http://localhost:9000',
+      S3_BUCKET: 'classloom-dev',
+      S3_ACCESS_KEY: 'classloom',
+      S3_SECRET_KEY: 'classloom-secret',
+    });
+  });
+
+  it('rejects an endpoint that is not an http(s) URL', () => {
+    expect(() => parseEnv({ ...validEnv, S3_ENDPOINT: 'localhost:9000' })).toThrow(/S3_ENDPOINT/);
+    expect(() => parseEnv({ ...validEnv, S3_ENDPOINT: 'ftp://localhost' })).toThrow(/S3_ENDPOINT/);
+  });
+
+  it('rejects a bucket name S3 would refuse', () => {
+    expect(() => parseEnv({ ...validEnv, S3_BUCKET: 'Classloom_Dev' })).toThrow(/S3_BUCKET/);
+    expect(() => parseEnv({ ...validEnv, S3_BUCKET: 'ab' })).toThrow(/S3_BUCKET/);
+  });
+
+  it('defaults S3_FORCE_PATH_STYLE to true and reads false', () => {
+    expect(parseEnv(validEnv).S3_FORCE_PATH_STYLE).toBe(true);
+    expect(parseEnv({ ...validEnv, S3_FORCE_PATH_STYLE: '' }).S3_FORCE_PATH_STYLE).toBe(true);
+    expect(parseEnv({ ...validEnv, S3_FORCE_PATH_STYLE: 'false' }).S3_FORCE_PATH_STYLE).toBe(false);
+    expect(() => parseEnv({ ...validEnv, S3_FORCE_PATH_STYLE: 'no' })).toThrow(
+      /S3_FORCE_PATH_STYLE/,
+    );
   });
 });
 

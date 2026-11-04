@@ -20,13 +20,27 @@ describe('problemDetailsSchema', () => {
 
 describe('healthResponseSchema', () => {
   it('accepts the all-up shape', () => {
-    const body = { status: 'ok', checks: { database: 'up', redis: 'up' } };
+    const body = { status: 'ok', checks: { database: 'up', redis: 'up', storage: 'up' } };
+    expect(healthResponseSchema.parse(body)).toEqual(body);
+  });
+
+  it('accepts ok with storage down (storage never fails the check)', () => {
+    const body = { status: 'ok', checks: { database: 'up', redis: 'up', storage: 'down' } };
     expect(healthResponseSchema.parse(body)).toEqual(body);
   });
 
   it('rejects unknown check states', () => {
     expect(
-      healthResponseSchema.safeParse({ status: 'ok', checks: { database: 'maybe', redis: 'up' } })
+      healthResponseSchema.safeParse({
+        status: 'ok',
+        checks: { database: 'maybe', redis: 'up', storage: 'up' },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('requires the storage check', () => {
+    expect(
+      healthResponseSchema.safeParse({ status: 'ok', checks: { database: 'up', redis: 'up' } })
         .success,
     ).toBe(false);
   });

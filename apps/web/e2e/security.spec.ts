@@ -254,8 +254,9 @@ test('the two-step step also follows an emailed code, with "Don\'t ask again" un
   await expect(twoStepHeading(page)).toBeVisible();
   await expect(trustBox(page)).not.toBeChecked();
   await page.getByLabel('Authenticator code').fill(nextCode(secret));
-  await expect(page).toHaveURL(/\/en\/dashboard$/);
-  await expect(page.getByText(`Welcome back, ${second.name}`)).toBeVisible();
+  // The second school is new, so its owner's first dashboard visit opens the setup wizard.
+  await expect(page).toHaveURL(/\/en\/onboarding$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Set up your school' })).toBeVisible();
 });
 
 test.describe('an expired challenge', () => {
