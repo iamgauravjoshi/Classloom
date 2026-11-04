@@ -12,7 +12,13 @@ import type { SelectableYear } from '@/components/shell/selection-provider';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { formatList, useAcademicsErrorText } from './academics-errors';
-import { type DroppedField, groupDropped, previousYearOf } from './section-helpers';
+import {
+  type ClassRange,
+  copyableCount,
+  type DroppedField,
+  groupDropped,
+  previousYearOf,
+} from './section-helpers';
 
 /** What a copy did: how many sections it made, from which year, and what it left out. */
 export interface CopyOutcome {
@@ -29,12 +35,15 @@ export function CopyOffer({
   year,
   years,
   campusId,
+  range,
   onCopied,
   onAddFirst,
 }: {
   year: SelectableYear;
   years: SelectableYear[];
   campusId: string;
+  /** The profile's class range, loaded: what would be copied. */
+  range: ClassRange;
   onCopied: (outcome: CopyOutcome) => void;
   onAddFirst: () => void;
 }) {
@@ -47,7 +56,8 @@ export function CopyOffer({
   );
   const copy = useCopySectionsFromPrevious();
   const [error, setError] = useState<string | null>(null);
-  const count = source.data?.sections.length ?? 0;
+  // Only sections in the class range are copied; with none, there is nothing to offer.
+  const count = copyableCount(source.data?.sections ?? [], range);
 
   async function run() {
     if (!previous) return;

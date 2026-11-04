@@ -1271,6 +1271,7 @@
       "closedNotice": "{year} is closed, so its sections can't be changed. Switch to the current year in the top bar to make changes.",
       "classesNotSet": "Set the school's lowest and highest class in the school profile before adding sections.",
       "classesNotSetLink": "Open the school profile",
+      "classesNotSetAsk": "Ask an administrator to set the classes your school offers in the school profile.",
       "empty": "No sections in {year} yet",
       "emptyCopyBody": "Start from last year's sections, then change what's different. You can also add sections class by class below.",
       "emptyBody": "Add each class's sections, such as A and B, with their room and class teacher.",

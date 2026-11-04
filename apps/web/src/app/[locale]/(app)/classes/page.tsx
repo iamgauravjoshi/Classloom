@@ -51,7 +51,12 @@ export default async function ClassesPage({
       {current === 'streams' ? <StreamsTab canEdit={canEdit} /> : null}
       {current === 'houses' ? <HousesTab canEdit={canEdit} /> : null}
       {current === 'rooms' ? <RoomsTab canEdit={canEdit} /> : null}
-      {current === 'sections' ? <SectionsTab canEdit={canEdit} /> : null}
+      {current === 'sections' ? (
+        <SectionsTab
+          canEdit={canEdit}
+          canManageSettings={session.permissions.includes('settings.manage')}
+        />
+      ) : null}
     </div>
   );
 }

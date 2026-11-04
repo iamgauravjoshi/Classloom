@@ -114,3 +114,24 @@ export function sectionErrorField(error: unknown): SectionField | null {
   if (isSectionField(path)) return path;
   return PROBLEM_FIELDS[problem.type.slice(problem.type.lastIndexOf('/') + 1)] ?? null;
 }
+
+/**
+ * Whether a class-teacher option already leads a section other than the one being edited (whose
+ * teacher is `currentTeacherId`). Compared by membership: labels such as VI-A repeat across
+ * campuses, and a teacher leads at most one section a year.
+ */
+export function leadsAnotherSection(
+  option: { membershipId: string; sectionName: string | null },
+  currentTeacherId: string | null | undefined,
+): boolean {
+  return option.sectionName !== null && option.membershipId !== currentTeacherId;
+}
+
+/** How many of the previous year's sections copy-forward would copy: those in the range. */
+export function copyableCount(
+  sections: readonly { classLevel: ClassLevel }[],
+  range: ClassRange,
+): number {
+  const inRange = new Set(classesInRange(range.lowest, range.highest));
+  return sections.filter((s) => inRange.has(s.classLevel)).length;
+}

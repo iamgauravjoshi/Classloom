@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   type ClassGroup,
+  copyableCount,
   groupByClass,
   groupDropped,
+  leadsAnotherSection,
   previousYearOf,
   roomTooSmall,
   sectionErrorField,
@@ -148,5 +150,37 @@ describe('sectionErrorField', () => {
     expect(sectionErrorField(refused({ type: 'academic-year-locked' }))).toBeNull();
     expect(sectionErrorField(refused({ type: 'name-taken', field: 'code' }))).toBeNull();
     expect(sectionErrorField(new Error('offline'))).toBeNull();
+  });
+});
+
+describe('leadsAnotherSection', () => {
+  const asha = { membershipId: 'm-asha', sectionName: 'VI-A' };
+
+  it('is false for the teacher of the section being edited', () => {
+    expect(leadsAnotherSection(asha, 'm-asha')).toBe(false);
+  });
+
+  it('is true for a teacher who leads a section with the same label on another campus', () => {
+    // Editing VI-A on Campus 1, led by someone else; Asha leads VI-A on Campus 2.
+    expect(leadsAnotherSection(asha, 'm-ravi')).toBe(true);
+    expect(leadsAnotherSection(asha, null)).toBe(true);
+  });
+
+  it('is false for a teacher who leads no section', () => {
+    expect(leadsAnotherSection({ membershipId: 'm-ravi', sectionName: null }, null)).toBe(false);
+  });
+});
+
+describe('copyableCount', () => {
+  const sections = [section('VI', 'A'), section('VI', 'B'), section('XI', 'A')];
+
+  it('counts only the sections whose class is in the range', () => {
+    expect(copyableCount(sections, { lowest: 'VI', highest: 'X' })).toBe(2);
+    expect(copyableCount(sections, { lowest: 'VI', highest: 'XII' })).toBe(3);
+  });
+
+  it('is 0 when every class is outside the range, or no range is set', () => {
+    expect(copyableCount(sections, { lowest: 'I', highest: 'V' })).toBe(0);
+    expect(copyableCount(sections, { lowest: null, highest: null })).toBe(0);
   });
 });

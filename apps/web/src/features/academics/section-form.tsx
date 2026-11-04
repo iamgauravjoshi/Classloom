@@ -36,7 +36,12 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { BUTTON_CLASS, CONTROL_CLASS } from '../auth/auth-ui';
 import { useAcademicsErrorText } from './academics-errors';
 import { TRIGGER_CLASS } from './academics-ui';
-import { roomTooSmall, sectionErrorField, type SectionField } from './section-helpers';
+import {
+  leadsAnotherSection,
+  roomTooSmall,
+  sectionErrorField,
+  type SectionField,
+} from './section-helpers';
 
 type FormInput = {
   name: string;
@@ -107,7 +112,6 @@ export function SectionForm({
   const streams = useListStreams();
   const teachers = useListClassTeacherOptions({ yearId });
 
-  const currentLabel = section ? sectionLabel(section.classLevel, section.name) : null;
   const activeStreams = (streams.data?.streams ?? []).filter((s) => s.status === 'ACTIVE');
   const showStream = isSeniorClass(classLevel) && (activeStreams.length > 0 || !!section?.stream);
 
@@ -158,7 +162,7 @@ export function SectionForm({
   const teacherOptions: Option[] = [
     { value: null, label: t('noTeacher') },
     ...teacherList.map((m) => {
-      const leadsOther = m.sectionName !== null && m.sectionName !== currentLabel;
+      const leadsOther = leadsAnotherSection(m, section?.classTeacher?.membershipId);
       return {
         value: m.membershipId,
         label: leadsOther ? t('teacherLeads', { name: m.name, section: m.sectionName! }) : m.name,

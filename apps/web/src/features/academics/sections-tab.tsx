@@ -47,7 +47,14 @@ const LINK_CLASS =
  * The Sections tab (spec section 8): the sections of the year chosen in the top bar and the campus
  * chosen in the sidebar, grouped by class. Switching either switches the list.
  */
-export function SectionsTab({ canEdit }: { canEdit: boolean }) {
+/** `canManageSettings`: whether they may open the school profile to set the class range. */
+export function SectionsTab({
+  canEdit,
+  canManageSettings,
+}: {
+  canEdit: boolean;
+  canManageSettings: boolean;
+}) {
   const t = useTranslations('academics.sections');
   const { year, years, isPending: yearPending } = useSelectedYear();
   const { campus, isPending: campusPending } = useSelectedCampus();
@@ -60,6 +67,7 @@ export function SectionsTab({ canEdit }: { canEdit: boolean }) {
         years={years}
         campus={campus}
         canEdit={canEdit}
+        canManageSettings={canManageSettings}
       />
     );
   }
@@ -92,11 +100,13 @@ function YearSections({
   years,
   campus,
   canEdit,
+  canManageSettings,
 }: {
   year: SelectableYear;
   years: SelectableYear[];
   campus: CampusDto;
   canEdit: boolean;
+  canManageSettings: boolean;
 }) {
   const t = useTranslations('academics.sections');
   const tCommon = useTranslations('academics.common');
@@ -175,10 +185,17 @@ function YearSections({
           {!rangeSet ? (
             <Alert>
               <AlertDescription className="flex flex-col items-start gap-1">
-                <span>{t('classesNotSet')}</span>
-                <Link href="/settings/school-profile" className={LINK_CLASS}>
-                  {t('classesNotSetLink')}
-                </Link>
+                {/* Only settings managers can open the profile; others are told whom to ask. */}
+                {canManageSettings ? (
+                  <>
+                    <span>{t('classesNotSet')}</span>
+                    <Link href="/settings/school-profile" className={LINK_CLASS}>
+                      {t('classesNotSetLink')}
+                    </Link>
+                  </>
+                ) : (
+                  <span>{t('classesNotSetAsk')}</span>
+                )}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -200,6 +217,7 @@ function YearSections({
                   year={year}
                   years={years}
                   campusId={campus.id}
+                  range={range}
                   onCopied={(outcome) => {
                     setCopied(outcome);
                     refresh();

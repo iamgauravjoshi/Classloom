@@ -600,7 +600,7 @@ for (const theme of ['light', 'dark'] as const) {
 
         await page.goto('/en/classes');
         await expect(page.getByText(`No sections in ${target.label} yet`)).toBeVisible();
-        const copy = page.getByRole('button', { name: `Copy 3 sections from ${previousLabel}` });
+        const copy = page.getByRole('button', { name: `Copy 2 sections from ${previousLabel}` });
         await expect(copy).toBeVisible();
         await expectNoViolations(page);
 
