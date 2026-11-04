@@ -49,7 +49,10 @@ class StarterStreamsAddedResponseDto extends withNullableProperties(
   createZodDto(starterStreamsAddedResponseSchema),
 ) {}
 class CreateStreamRequestDto extends createZodDto(createStreamRequestSchema) {}
-class UpdateStreamRequestDto extends createZodDto(updateStreamRequestSchema) {}
+/** Status changes only through archive and restore: a `status` here is a 400. */
+class UpdateStreamRequestDto extends createZodDto(
+  updateStreamRequestSchema.omit({ status: true }).strict(),
+) {}
 
 const NOT_FOUND = 'No such stream in this school';
 const NO_SESSION = 'No valid session';

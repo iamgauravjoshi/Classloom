@@ -168,7 +168,7 @@ export class SubjectsService {
   update(auth: Actor, id: string, input: UpdateSubjectRequest, meta: AuditMeta): Promise<Subject> {
     return academicsWrite(this.prisma, auth.tenantId, async (tx) => {
       const current = await this.load(tx, id);
-      const { before, after } = changedFields(['name', 'code', 'type', 'status'], current, input);
+      const { before, after } = changedFields(['name', 'code', 'type'], current, input);
       if (Object.keys(after).length === 0) return toSubject(current);
       const row = await tx.subject.update({ where: { id }, data: after });
       await this.audit.record(tx, {

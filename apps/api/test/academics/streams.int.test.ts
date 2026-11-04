@@ -158,6 +158,17 @@ describe('streams API', () => {
     expect(problem(starter).type).toBe('academics-limit');
   });
 
+  it('refuses a status in PATCH with 400: archive and restore are the only status changes', async () => {
+    const s = await h.school();
+    const st = await create(s.admin.cookie, 'Science');
+    const res = await h.patch(`${BASE}/${st.id}`, s.admin.cookie).send({ status: 'ARCHIVED' });
+    expect(res.status).toBe(400);
+    expect((await h.owner.stream.findUniqueOrThrow({ where: { id: st.id } })).status).toBe(
+      'ACTIVE',
+    );
+    expect((await h.audits(s.tenantId, 'stream')).map((e) => e.action)).toEqual(['stream.created']);
+  });
+
   it('refuses an invalid name with 400', async () => {
     const s = await h.school();
     expect((await h.post(BASE, s.admin.cookie).send({ name: 'S' })).status).toBe(400);

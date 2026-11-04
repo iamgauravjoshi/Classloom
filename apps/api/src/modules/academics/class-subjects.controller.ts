@@ -75,7 +75,7 @@ export class ClassSubjectsController {
   @ApiConflictResponse({ description: 'classes-not-set' })
   @ApiUnprocessableEntityResponse({
     description:
-      'class-out-of-range, stream-not-allowed, subject-archived, or a row naming an unknown subject or stream or repeating one',
+      'class-out-of-range, stream-not-allowed (a stream on a junior class), subject-archived or stream-archived (newly added), or a row naming an unknown subject or stream, repeating one, or one deleted meanwhile',
   })
   replace(
     @CurrentAuth() auth: RequestAuth,

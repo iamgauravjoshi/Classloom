@@ -14,7 +14,11 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
 import type { Prisma } from '../../generated/prisma/client';
 import { AuditService } from '../iam/audit.service';
-import { StreamNotAllowedException, SubjectArchivedException } from './academics-problems';
+import {
+  StreamArchivedException,
+  StreamNotAllowedException,
+  SubjectArchivedException,
+} from './academics-problems';
 import { academicsWrite, type Actor, type AuditMeta } from './academics-write';
 import { ClassRange } from './class-range';
 
@@ -92,8 +96,9 @@ export class ClassSubjectsService {
    * Replaces the class's rows. The class must be in the profile range (409 `classes-not-set`,
    * 422 `class-out-of-range`); only XI and XII rows name a stream (422 `stream-not-allowed`);
    * a subject or stream must be this school's and active, or already in this class (422
-   * `subject-archived`, `stream-not-allowed`). The same rows again write nothing; otherwise one
-   * `class_subjects.updated` row holds the before and after lists.
+   * `subject-archived`, `stream-archived`). A subject or stream deleted meanwhile is a 422 too.
+   * The same rows again write nothing; otherwise one `class_subjects.updated` row holds the
+   * before and after lists.
    */
   replace(
     auth: Actor,
@@ -101,54 +106,66 @@ export class ClassSubjectsService {
     rows: readonly ClassSubjectRow[],
     meta: AuditMeta,
   ): Promise<ClassSubjectsClass> {
-    return academicsWrite(this.prisma, auth.tenantId, async (tx) => {
-      const lockKey = `class-subjects:${auth.tenantId}:${level}`;
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
-      ClassRange.assertWritable(await ClassRange.load(tx, auth.tenantId), level);
+    return academicsWrite(
+      this.prisma,
+      auth.tenantId,
+      async (tx) => {
+        const lockKey = `class-subjects:${auth.tenantId}:${level}`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+        ClassRange.assertWritable(await ClassRange.load(tx, auth.tenantId), level);
 
-      const check = checkClassSubjectRows(level, rows);
-      if (!check.ok) {
-        if (check.problem === 'stream-not-allowed') {
-          throw new StreamNotAllowedException([
-            { path: `rows.${check.index}.streamId`, message: 'Only XI and XII have streams.' },
-          ]);
+        const check = checkClassSubjectRows(level, rows);
+        if (!check.ok) {
+          if (check.problem === 'stream-not-allowed') {
+            throw new StreamNotAllowedException([
+              { path: `rows.${check.index}.streamId`, message: 'Only XI and XII have streams.' },
+            ]);
+          }
+          throw rowProblem(
+            `rows.${check.index}`,
+            'This subject is already listed for this stream.',
+          );
         }
-        throw rowProblem(`rows.${check.index}`, 'This subject is already listed for this stream.');
-      }
 
-      const current = await tx.classSubject.findMany({
-        where: { classLevel: level },
-        select: ROW_SELECT,
-      });
-      await this.assertUsable(tx, rows, current);
+        const current = await tx.classSubject.findMany({
+          where: { classLevel: level },
+          select: ROW_SELECT,
+        });
+        await this.assertUsable(tx, rows, current);
 
-      const result = { classLevel: level, outsideRange: false };
-      if (sameRows(current, rows)) return { ...result, rows: await this.rowsOf(tx, level) };
+        const result = { classLevel: level, outsideRange: false };
+        if (sameRows(current, rows)) return { ...result, rows: await this.rowsOf(tx, level) };
 
-      await tx.classSubject.deleteMany({ where: { classLevel: level } });
-      await tx.classSubject.createMany({
-        data: rows.map((row) => ({
+        await tx.classSubject.deleteMany({ where: { classLevel: level } });
+        await tx.classSubject.createMany({
+          data: rows.map((row) => ({
+            tenantId: auth.tenantId,
+            classLevel: level,
+            subjectId: row.subjectId,
+            streamId: row.streamId,
+            kind: row.kind,
+          })),
+        });
+        await this.audit.record(tx, {
           tenantId: auth.tenantId,
-          classLevel: level,
-          subjectId: row.subjectId,
-          streamId: row.streamId,
-          kind: row.kind,
-        })),
-      });
-      await this.audit.record(tx, {
-        tenantId: auth.tenantId,
-        action: 'class_subjects.updated',
-        targetType: 'class_level',
-        // A class level has no row of its own: the target is the school, and the level is named
-        // in before and after.
-        targetId: auth.tenantId,
-        before: { classLevel: level, rows: sortRows(current) },
-        after: { classLevel: level, rows: sortRows(rows) },
-        actor: auth,
-        meta,
-      });
-      return { ...result, rows: await this.rowsOf(tx, level) };
-    });
+          action: 'class_subjects.updated',
+          targetType: 'class_level',
+          // A class level has no row of its own: the target is the school, and the level is named
+          // in before and after.
+          targetId: auth.tenantId,
+          before: { classLevel: level, rows: sortRows(current) },
+          after: { classLevel: level, rows: sortRows(rows) },
+          actor: auth,
+          meta,
+        });
+        return { ...result, rows: await this.rowsOf(tx, level) };
+      },
+      // A subject or stream deleted between the check above and the insert.
+      {
+        foreignKeyProblem: () =>
+          rowProblem('rows', 'A subject or stream was just deleted. Reload and try again.'),
+      },
+    );
   }
 
   /**
@@ -190,7 +207,7 @@ export class ClassSubjectsService {
         throw rowProblem(`rows.${i}.streamId`, 'No such stream in this school.');
       }
       if (stream === 'ARCHIVED' && !hadStream.has(row.streamId)) {
-        throw new StreamNotAllowedException([
+        throw new StreamArchivedException([
           { path: `rows.${i}.streamId`, message: 'This stream is archived.' },
         ]);
       }

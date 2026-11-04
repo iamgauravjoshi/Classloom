@@ -85,11 +85,11 @@ export class StreamsService {
     });
   }
 
-  /** Renames (and may set the status); no change writes nothing, else one `stream.updated` row. */
+  /** Renames; no change writes nothing, else one `stream.updated` row. */
   update(auth: Actor, id: string, input: UpdateStreamRequest, meta: AuditMeta): Promise<Stream> {
     return academicsWrite(this.prisma, auth.tenantId, async (tx) => {
       const current = await this.load(tx, id);
-      const { before, after } = changedFields(['name', 'status'], current, input);
+      const { before, after } = changedFields(['name'], current, input);
       if (Object.keys(after).length === 0) return toStream(current);
       const row = await tx.stream.update({ where: { id }, data: after });
       await this.audit.record(tx, {

@@ -78,6 +78,19 @@ describe('subjects API', () => {
     expect(problem(res)).toMatchObject({ type: 'name-taken', field: 'name' });
   });
 
+  it('refuses a status in PATCH with 400', async () => {
+    const s = await h.school();
+    const sub = await create(s.admin.cookie, { name: 'Physics', type: 'SCHOLASTIC' });
+    const res = await h
+      .patch(`${BASE}/${sub.id}`, s.admin.cookie)
+      .send({ name: 'Physics 2', status: 'ARCHIVED' });
+    expect(res.status).toBe(400);
+    expect(await h.owner.subject.findUniqueOrThrow({ where: { id: sub.id } })).toMatchObject({
+      name: 'Physics',
+      status: 'ACTIVE',
+    });
+  });
+
   it('updates only the changed fields, and "" clears the code', async () => {
     const s = await h.school();
     const sub = await create(s.admin.cookie, { name: 'Physics', code: '042', type: 'SCHOLASTIC' });

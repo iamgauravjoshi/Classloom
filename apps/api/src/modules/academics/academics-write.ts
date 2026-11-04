@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { type HttpException, NotFoundException } from '@nestjs/common';
 import type { Request } from 'express';
 
 import { dbViolation, uniqueViolationProblem } from '../../core/prisma/constraint-problem';
@@ -48,22 +48,24 @@ const NAME_PROBLEMS = NAME_INDEXES.map(
 
 /**
  * One `withTenant` transaction for an academics write. A unique-name violation becomes 409
- * `name-taken` (`field: 'name'`); with `inUseOnForeignKey`, a foreign key violation (a row still
- * referenced, NO ACTION) becomes 409 `in-use`.
+ * `name-taken` (`field: 'name'`). A foreign key violation becomes `foreignKeyProblem()` when given
+ * (e.g. a 422 for a row deleted between a check and an insert); with `inUseOnForeignKey`, it (a
+ * row still referenced, NO ACTION) becomes 409 `in-use`.
  */
 export async function academicsWrite<T>(
   prisma: PrismaService,
   tenantId: string,
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
-  options: { inUseOnForeignKey?: boolean } = {},
+  options: { inUseOnForeignKey?: boolean; foreignKeyProblem?: () => HttpException } = {},
 ): Promise<T> {
   try {
     return await withTenant(prisma, tenantId, fn);
   } catch (error) {
     const named = uniqueViolationProblem(error, NAME_PROBLEMS);
     if (named) throw named;
-    if (options.inUseOnForeignKey && dbViolation(error)?.sqlState === '23503') {
-      throw new InUseException({});
+    if (dbViolation(error)?.sqlState === '23503') {
+      if (options.foreignKeyProblem) throw options.foreignKeyProblem();
+      if (options.inUseOnForeignKey) throw new InUseException({});
     }
     throw error;
   }

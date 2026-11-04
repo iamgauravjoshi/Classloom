@@ -145,13 +145,19 @@ describe('class subjects API', () => {
     expect(other.status).toBe(422);
   });
 
-  it('refuses an archived stream newly added', async () => {
-    const { s, physics, science } = await setup();
+  it('keeps an archived stream already in the class but refuses adding it (422 stream-archived)', async () => {
+    const { s, physics, chemistry, science } = await setup();
+    const kept = { subjectId: physics.id, streamId: science.id, kind: 'COMPULSORY' };
+    expect((await put(s, 'XI', [kept])).status).toBe(200);
     await h.owner.stream.update({ where: { id: science.id }, data: { status: 'ARCHIVED' } });
-    const res = await put(s, 'XI', [
-      { subjectId: physics.id, streamId: science.id, kind: 'COMPULSORY' },
+    const keep = await put(s, 'XI', [
+      kept,
+      { subjectId: chemistry.id, streamId: science.id, kind: 'OPTIONAL' },
     ]);
+    expect(keep.status).toBe(200);
+    const res = await put(s, 'XII', [kept]);
     expect(res.status).toBe(422);
+    expect(problem(res).type).toBe('stream-archived');
     expect(problem(res).errors?.[0]?.path).toBe('rows.0.streamId');
   });
 

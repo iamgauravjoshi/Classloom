@@ -20,6 +20,7 @@ export type AcademicsProblemType =
   | 'teacher-taken'
   | 'stream-required'
   | 'stream-not-allowed'
+  | 'stream-archived'
   | 'sections-exist'
   | 'nothing-to-copy'
   | 'subject-archived';
@@ -142,6 +143,11 @@ export class StreamRequiredException extends unprocessable('stream-required', {
 export class StreamNotAllowedException extends unprocessable('stream-not-allowed', {
   title: 'This stream cannot be used here.',
   message: 'Only classes XI and XII have streams, and only active streams can be added.',
+}) {}
+
+export class StreamArchivedException extends unprocessable('stream-archived', {
+  title: 'This stream is archived.',
+  message: 'Restore the stream before adding it to a class.',
 }) {}
 
 /* ------------------------------- Sections ------------------------------- */
