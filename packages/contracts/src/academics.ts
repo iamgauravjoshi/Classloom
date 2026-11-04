@@ -215,7 +215,12 @@ export const starterSubjectsResponseSchema = z.object({
 export type StarterSubjectsResponse = z.infer<typeof starterSubjectsResponseSchema>;
 
 export const starterSubjectsRequestSchema = z.object({
-  names: z.array(name(2, 60)).min(1).max(100),
+  items: z
+    .array(
+      z.object({ name: name(2, 60), code: subjectCode.optional(), type: z.enum(SUBJECT_TYPES) }),
+    )
+    .min(1)
+    .max(100),
 });
 export type StarterSubjectsRequest = z.infer<typeof starterSubjectsRequestSchema>;
 export const starterSubjectsAddedResponseSchema = z.object({
@@ -235,16 +240,13 @@ export const classSubjectRowSchema = z.object({
 });
 export type ClassSubjectRow = z.infer<typeof classSubjectRowSchema>;
 
+/** Every row, grouped by class level; outsideRange marks classes outside the profile range. */
 export const classSubjectsResponseSchema = z.object({
-  classLevel,
-  rows: z.array(classSubjectRowSchema),
+  classes: z.array(
+    z.object({ classLevel, outsideRange: z.boolean(), rows: z.array(classSubjectRowSchema) }),
+  ),
 });
 export type ClassSubjectsResponse = z.infer<typeof classSubjectsResponseSchema>;
-
-export const classSubjectsSummaryResponseSchema = z.object({
-  classes: z.array(z.object({ classLevel, count: z.number().int().min(0) })),
-});
-export type ClassSubjectsSummaryResponse = z.infer<typeof classSubjectsSummaryResponseSchema>;
 
 export const replaceClassSubjectsRequestSchema = z.object({
   rows: z.array(classSubjectRowSchema).max(200),
@@ -324,6 +326,7 @@ export const sectionSchema = z.object({
   academicYearId: id,
   campusId: id,
   classLevel,
+  outsideRange: z.boolean(),
   name: z.string(),
   capacity: z.number().int(),
   stream: z.object({ id, name: z.string() }).nullable(),
@@ -356,7 +359,7 @@ export type UpdateSectionRequest = z.infer<typeof updateSectionRequestSchema>;
 export const sectionsResponseSchema = z.object({ sections: z.array(sectionSchema) });
 export type SectionsResponse = z.infer<typeof sectionsResponseSchema>;
 
-export const copySectionsRequestSchema = z.object({ campusId: id });
+export const copySectionsRequestSchema = z.object({ yearId: id, campusId: id });
 export type CopySectionsRequest = z.infer<typeof copySectionsRequestSchema>;
 export const copySectionsResponseSchema = z.object({
   created: z.number().int().min(0),

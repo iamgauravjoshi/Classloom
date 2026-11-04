@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  classSubjectRowSchema,
+  copySectionsRequestSchema,
   createSectionRequestSchema,
   SENIOR_CLASSES,
   STARTER_STREAMS,
   STARTER_SUBJECTS,
+  starterSubjectsRequestSchema,
 } from './academics';
 import { BOARDS } from './tenancy';
 
@@ -64,5 +67,60 @@ describe('createSectionRequestSchema', () => {
     expect(createSectionRequestSchema.safeParse({ ...base, capacity: 0 }).success).toBe(false);
     expect(createSectionRequestSchema.safeParse({ ...base, capacity: 201 }).success).toBe(false);
     expect(createSectionRequestSchema.safeParse({ ...base, capacity: 200 }).success).toBe(true);
+  });
+});
+
+const U1 = '8d5f3c64-0f77-4d6e-9d0e-1f0c7a3f5a11';
+const U2 = '2b1e7c0a-5c64-4a8e-8f3d-7a6b9c0d1e22';
+
+describe('starterSubjectsRequestSchema', () => {
+  it('parses items with name, optional code and type', () => {
+    const r = starterSubjectsRequestSchema.parse({
+      items: [
+        { name: ' Physics ', code: '042', type: 'SCHOLASTIC' },
+        { name: 'Art', type: 'CO_SCHOLASTIC' },
+      ],
+    });
+    expect(r.items[0]).toEqual({ name: 'Physics', code: '042', type: 'SCHOLASTIC' });
+    expect(r.items[1]!.code).toBeUndefined();
+  });
+  it('rejects bad input', () => {
+    const bad = (items: unknown) => starterSubjectsRequestSchema.safeParse({ items }).success;
+    expect(bad([])).toBe(false);
+    expect(bad([{ name: 'A', type: 'SCHOLASTIC' }])).toBe(false);
+    expect(bad([{ name: 'Physics', code: 'bad code!', type: 'SCHOLASTIC' }])).toBe(false);
+    expect(bad([{ name: 'Physics', type: 'OTHER' }])).toBe(false);
+    expect(starterSubjectsRequestSchema.safeParse({ names: ['Physics'] }).success).toBe(false);
+  });
+});
+
+describe('copySectionsRequestSchema', () => {
+  it('needs yearId and campusId uuids', () => {
+    expect(copySectionsRequestSchema.safeParse({ yearId: U1, campusId: U2 }).success).toBe(true);
+    expect(copySectionsRequestSchema.safeParse({ campusId: U2 }).success).toBe(false);
+    expect(copySectionsRequestSchema.safeParse({ yearId: 'x', campusId: U2 }).success).toBe(false);
+  });
+});
+
+describe('classSubjectRowSchema', () => {
+  it('accepts a null or uuid stream and valid kinds', () => {
+    expect(
+      classSubjectRowSchema.safeParse({ subjectId: U1, streamId: null, kind: 'COMPULSORY' })
+        .success,
+    ).toBe(true);
+    expect(
+      classSubjectRowSchema.safeParse({ subjectId: U1, streamId: U2, kind: 'OPTIONAL' }).success,
+    ).toBe(true);
+  });
+  it('rejects a missing stream, bad kind or non-uuid', () => {
+    expect(classSubjectRowSchema.safeParse({ subjectId: U1, kind: 'COMPULSORY' }).success).toBe(
+      false,
+    );
+    expect(
+      classSubjectRowSchema.safeParse({ subjectId: U1, streamId: null, kind: 'X' }).success,
+    ).toBe(false);
+    expect(
+      classSubjectRowSchema.safeParse({ subjectId: 'a', streamId: null, kind: 'OPTIONAL' }).success,
+    ).toBe(false);
   });
 });
