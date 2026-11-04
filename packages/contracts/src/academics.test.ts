@@ -53,6 +53,7 @@ describe('starter data', () => {
 
 describe('createSectionRequestSchema', () => {
   const base = {
+    academicYearId: '2b1e7c0a-5c64-4a8e-8f3d-7a6b9c0d1e22',
     campusId: '8d5f3c64-0f77-4d6e-9d0e-1f0c7a3f5a11',
     classLevel: 'V',
     name: ' A ',
@@ -67,6 +68,10 @@ describe('createSectionRequestSchema', () => {
     expect(createSectionRequestSchema.safeParse({ ...base, capacity: 0 }).success).toBe(false);
     expect(createSectionRequestSchema.safeParse({ ...base, capacity: 201 }).success).toBe(false);
     expect(createSectionRequestSchema.safeParse({ ...base, capacity: 200 }).success).toBe(true);
+  });
+  it('requires the academic year', () => {
+    const { academicYearId: _year, ...noYear } = base;
+    expect(createSectionRequestSchema.safeParse(noYear).success).toBe(false);
   });
 });
 

@@ -351,6 +351,7 @@ export type Section = z.infer<typeof sectionSchema>;
 const sectionCapacity = z.number().int().min(1).max(200);
 
 export const createSectionRequestSchema = z.object({
+  academicYearId: id,
   campusId: id,
   classLevel,
   name: name(1, 20),

@@ -128,6 +128,32 @@ export function academicsHarness(tag: string) {
     del: (path: string, cookie: string) =>
       request(server).delete(path).set('Cookie', cookie).set('Origin', WEB_ORIGIN),
 
+    /** An academic year from 1 April `startYear` to 31 March the next year; returns its id. */
+    async year(
+      tenantId: string,
+      startYear: number,
+      status: 'PLANNED' | 'CURRENT' | 'CLOSED',
+    ): Promise<string> {
+      const row = await owner.academicYear.create({
+        data: {
+          tenantId,
+          label: `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`,
+          startsOn: new Date(`${startYear}-04-01T00:00:00.000Z`),
+          endsOn: new Date(`${startYear + 1}-03-31T00:00:00.000Z`),
+          status,
+        },
+      });
+      return row.id;
+    },
+
+    /** Another active campus of the school; returns its id. */
+    async campus(tenantId: string, name: string): Promise<string> {
+      const row = await owner.campus.create({
+        data: { tenantId, name, city: 'Dehradun', state: 'UK' },
+      });
+      return row.id;
+    },
+
     audits: (tenantId: string, targetType?: string) =>
       owner.auditEvent.findMany({
         where: { tenantId, ...(targetType ? { targetType } : {}) },
