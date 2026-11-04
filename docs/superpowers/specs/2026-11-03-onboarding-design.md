@@ -349,3 +349,52 @@ The migration aborts with a clear message if any school has more or fewer than o
 - [ ] Every change writes an audit event.
 - [ ] All copy is in i18n files.
 - [ ] Seed data shows a school with a profile, a logo, a current year with 3 terms and two campuses.
+
+## 15. Decisions made during the build
+
+These refine the sections above. Each was ruled on during the build and is covered by tests.
+
+### Academic years (§4, §6)
+
+- **Year length:** counted as end date minus start date. 1 April – 31 March is 364 days, inside the 180–400 range.
+- **Years that don't start on the 1st:**
+  - Default terms keep the start's day of the month: 15 Apr – 14 Oct, then 15 Oct – 14 Apr.
+  - "Prepare next year" keeps the same length in months.
+- **Labels:**
+  - An update without a label recomputes it when the stored label is still the automatic one for the old dates.
+  - A custom label is kept.
+- **Planned years:** a planned year must start after the current year ends. An earlier one is refused with 409 `academic-year-overlap`, so "Make current" can never close the real current year by mistake.
+- **Locking:** every write takes a per-school advisory lock as well as the row lock. This also covers a school with no years yet, where there is no row to lock.
+
+### Campuses (§4, §7)
+
+- **City and state:** a campus has its own `city` and `state` in requests and responses. On create, they default to the school's when left out, so a branch in another city can be recorded.
+- **Deactivate on the primary campus:** the web hides it rather than offering an action that would be refused. The page explains that another campus must be made primary first.
+
+### Files and health (§5)
+
+- **Bucket:** the API creates the storage bucket when it starts, as `docker/compose.yml` describes. `pnpm infra:up` doesn't.
+- **Health:** `/health` reports `storage: up | down`. Storage never changes the status code.
+- **Upload order:**
+  - The logo object is stored before the database transaction opens, and removed if the transaction fails.
+  - The replaced object is deleted after the commit.
+  - A stalled store gives 503 `storage-unavailable`.
+- **Missing object:** a logo whose object is missing gives 404, not 503.
+- **Truncated files:** image intake keeps sharp's `failOn: 'error'`, which is stricter than `'truncated'`. A truncated JPEG is refused as `decode`.
+- **Rate limit:** rejected uploads count toward the 10-per-hour limit, as abuse protection.
+
+### Web (§9, §10)
+
+- **Wizard:** it stays mounted across its steps and calls `start` exactly once. "Save and finish" asks before dropping an unsaved extra campus.
+- **Dates:** academic-year dates are typed as DD/MM/YYYY text, with a numeric keypad on phones.
+- **Shared component:** `features/iam`'s `useLastShown` keeps dialog text steady while a dialog closes.
+- **Demo data:** `school:demo-setup <code>` fills a school for demos and acceptance. It's documented with the other platform CLI commands.
+
+### Schema notes for later migrations
+
+Prisma can't express these, so a future `prisma migrate dev` will report drift on them. Review any generated SQL that touches them:
+
+- the composite logo FK `(logo_file_id, tenant_id)`;
+- the gist exclusion on academic years;
+- the partial unique indexes (one CURRENT year, one PLANNED year, one primary campus);
+- the `lower(...)` unique indexes.
