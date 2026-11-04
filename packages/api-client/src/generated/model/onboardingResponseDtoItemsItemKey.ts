@@ -14,4 +14,5 @@ export const OnboardingResponseDtoItemsItemKey = {
   logo: 'logo',
   academicYear: 'academicYear',
   campuses: 'campuses',
+  academics: 'academics',
 } as const;

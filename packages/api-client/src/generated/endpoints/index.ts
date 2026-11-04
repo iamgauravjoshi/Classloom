@@ -1,3 +1,4 @@
+export * from './academics/academics';
 export * from './auth/auth';
 export * from './health/health';
 export * from './iam/iam';

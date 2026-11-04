@@ -12,14 +12,15 @@ const MANAGE = 'settings.manage';
 
 /**
  * The onboarding checklist (onboarding spec section 9): what is done is read from the profile,
- * the current year and the primary campus, never stored.
+ * the current year, the primary campus and the academic structure (academics spec section 8),
+ * never stored.
  */
 @Injectable()
 export class OnboardingService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * The four items and the timestamps. `visible` is false without `settings.manage`, once every
+   * The five items and the timestamps. `visible` is false without `settings.manage`, once every
    * item is done, or after the checklist was dismissed.
    */
   get(auth: Actor): Promise<OnboardingResponse> {
@@ -45,13 +46,19 @@ export class OnboardingService {
         select: { addressLine1: true, pinCode: true },
       })) ?? { addressLine1: null, pinCode: null };
 
-      // academics: Task 5
+      const hasCurrentYearSection =
+        (await tx.section.count({
+          where: { tenantId: auth.tenantId, academicYear: { status: 'CURRENT' } },
+        })) > 0;
+      const hasClassSubject =
+        (await tx.classSubject.count({ where: { tenantId: auth.tenantId } })) > 0;
+
       const items = checklistOf({
         profile,
         hasCurrentYear,
         primaryCampus,
-        hasCurrentYearSection: false,
-        hasClassSubject: false,
+        hasCurrentYearSection,
+        hasClassSubject,
       });
       return {
         visible:

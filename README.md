@@ -62,18 +62,21 @@ Support and operations commands run against the database in `.env`, outside any 
 Build the API first (`pnpm --filter @classloom/api build`), then run
 `pnpm --filter @classloom/api cli <command>`. Each command prints one JSON line.
 
-| Command                                     | What it does                                                    |
-| ------------------------------------------- | --------------------------------------------------------------- |
-| `schools:list [--status <status>]`          | List schools, optionally by status                              |
-| `schools:suspend <code> --reason <text>`    | Suspend an active school                                        |
-| `schools:activate <code>`                   | Reactivate a suspended school                                   |
-| `schools:rename-code <old> <new>`           | Change a school code                                            |
-| `users:disable-2fa <email> --reason <text>` | Turn off two-step sign-in for a user who lost every factor      |
-| `school:demo-setup <code>`                  | Fill a school with a demo profile, logo, year and second campus |
+| Command                                     | What it does                                               |
+| ------------------------------------------- | ---------------------------------------------------------- |
+| `schools:list [--status <status>]`          | List schools, optionally by status                         |
+| `schools:suspend <code> --reason <text>`    | Suspend an active school                                   |
+| `schools:activate <code>`                   | Reactivate a suspended school                              |
+| `schools:rename-code <old> <new>`           | Change a school code                                       |
+| `users:disable-2fa <email> --reason <text>` | Turn off two-step sign-in for a user who lost every factor |
+| `school:demo-setup <code>`                  | Fill a school with demo settings and academic structure    |
 
 `school:demo-setup` completes what the setup wizard would, through the API's own services (so
-validation, locks and audit events apply), and keeps anything the school already has. It needs
-Postgres, Redis and object storage running (`pnpm infra:up`). For example:
+validation, locks and audit events apply), and keeps anything the school already has. Besides the
+profile, logo, current year and a second campus, it adds two streams (Science, Commerce), three
+rooms, the board's starter subjects, sections of classes VI and XI in the current year, and a few
+class subjects. It needs Postgres, Redis and object storage running (`pnpm infra:up`). For
+example:
 
 ```sh
 pnpm --filter @classloom/api cli school:demo-setup DPS-DEHRADUN
