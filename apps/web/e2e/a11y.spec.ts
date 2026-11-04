@@ -5,6 +5,7 @@ import { inviteAs, newInvitee } from './support/invitations';
 import { solidPng } from './support/png';
 import {
   createVerifiedSchool,
+  currentAcademicYear,
   signInWithCode,
   signInWithCodeKeepingRequirement,
   type VerifiedSchool,
@@ -475,6 +476,174 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(dialog.getByText('Enter a capacity from 1 to 500.')).toBeVisible();
         // The pointer still rests on the submit button; its hover shade is not what is measured.
         await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+      });
+
+      /** Sets the school profile's class range, keeping the rest of the profile as it is. */
+      const setClassRange = async (page: Page, lowestClass: string, highestClass: string) => {
+        const read = await page.request.get(`${WEB_ORIGIN}/api/school/profile`);
+        const {
+          code: _code,
+          logoUrl: _logo,
+          ...profile
+        } = (await read.json()) as Record<string, unknown>;
+        const response = await page.request.put(`${WEB_ORIGIN}/api/school/profile`, {
+          data: { ...profile, lowestClass, highestClass },
+          headers: { origin: WEB_ORIGIN },
+        });
+        expect(response.status(), await response.text()).toBe(200);
+      };
+
+      const primaryCampusId = async (page: Page) => {
+        const listed = await page.request.get(`${WEB_ORIGIN}/api/school/campuses`);
+        const { campuses } = (await listed.json()) as {
+          campuses: { id: string; isPrimary: boolean }[];
+        };
+        return campuses.find((campus) => campus.isPrimary)!.id;
+      };
+
+      test('/en/classes has no WCAG 2.1 AA violations, without a class range and with no sections', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const year = currentAcademicYear();
+        await send(
+          page,
+          '/school/academic-years',
+          { startsOn: year.startsOn, endsOn: year.endsOn, termCount: 2 },
+          201,
+        );
+
+        // No class range yet: a link to the school profile, and nothing to add to.
+        await page.goto('/en/classes');
+        await expect(tabs(page).getByRole('link', { name: 'Sections' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        );
+        await expect(page.getByRole('link', { name: 'Open the school profile' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Add section' })).toHaveCount(0);
+        await expectNoViolations(page);
+
+        // With a range and no earlier year: "Add your first section" and every class, empty.
+        await setClassRange(page, 'XI', 'XII');
+        await send(page, '/academics/streams', { name: 'Science' }, 201);
+        await page.goto('/en/classes');
+        await expect(page.getByText(`No sections in ${year.label} yet`)).toBeVisible();
+        await expect(page.getByRole('heading', { level: 3, name: 'Class XII' })).toBeVisible();
+        await expect(page.getByRole('button', { name: /^Copy / })).toHaveCount(0);
+        await expectNoViolations(page);
+
+        // The form for a senior class asks for a stream.
+        await page.getByRole('button', { name: 'Add your first section' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Add a section to Class XI' });
+        await expect(dialog.getByLabel('Stream')).toBeVisible();
+        await dialog.getByLabel('Section name').fill('A');
+        await dialog.getByLabel('Capacity').fill('40');
+        await dialog.getByRole('button', { name: 'Add section' }).click();
+        await expect(dialog.getByText('Choose a stream.')).toBeVisible();
+        // The pointer still rests on the submit button; its hover shade is not what is measured.
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+      });
+
+      test('/en/classes has no WCAG 2.1 AA violations, copying from last year and in the form', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const target = currentAcademicYear();
+        const start = Number(target.startsOn.slice(0, 4));
+        const previousLabel = `${start - 1}–${String(start).slice(2)}`;
+        // Last year first, so it is current while its sections are added; then this year.
+        const previous = await send(
+          page,
+          '/school/academic-years',
+          { startsOn: `${start - 1}-04-01`, endsOn: `${start}-03-31`, termCount: 2 },
+          201,
+        );
+        const current = await send(
+          page,
+          '/school/academic-years',
+          { startsOn: target.startsOn, endsOn: target.endsOn, termCount: 2 },
+          201,
+        );
+        await setClassRange(page, 'VI', 'XII');
+        const campusId = await primaryCampusId(page);
+        const science = await send(page, '/academics/streams', { name: 'Science' }, 201);
+        const room = (name: string, capacity: number) =>
+          send(page, '/academics/rooms', { campusId, name, type: 'CLASSROOM', capacity }, 201);
+        const room101 = await room('Room 101', 40);
+        const room102 = await room('Room 102', 30);
+        const options = await page.request.get(
+          `${WEB_ORIGIN}/api/academics/class-teacher-options?yearId=${previous.id}`,
+        );
+        const { teachers } = (await options.json()) as { teachers: { membershipId: string }[] };
+        const section = (classLevel: string, name: string, extra: object = {}) =>
+          send(
+            page,
+            '/academics/sections',
+            { academicYearId: previous.id, campusId, classLevel, name, capacity: 40, ...extra },
+            201,
+          );
+        await section('VI', 'A', {
+          roomId: room101.id,
+          classTeacherMembershipId: teachers[0]!.membershipId,
+        });
+        await section('VI', 'B', { roomId: room102.id });
+        await section('XI', 'A', { streamId: science.id });
+        // This year becomes current and last year closes; then a room is archived and XI leaves
+        // the range, so the copy drops them.
+        await send(page, `/school/academic-years/${current.id}/make-current`, {}, 200);
+        await send(page, `/academics/rooms/${room102.id}/archive`, {}, 200);
+        await setClassRange(page, 'VI', 'X');
+
+        await page.goto('/en/classes');
+        await expect(page.getByText(`No sections in ${target.label} yet`)).toBeVisible();
+        const copy = page.getByRole('button', { name: `Copy 3 sections from ${previousLabel}` });
+        await expect(copy).toBeVisible();
+        await expectNoViolations(page);
+
+        await copy.click();
+        await expect(
+          page.getByRole('heading', { level: 3, name: `2 sections copied from ${previousLabel}` }),
+        ).toBeFocused();
+        await expect(
+          page.getByText('Not copied, as the class is outside your classes: XI-A.'),
+        ).toBeVisible();
+        await expect(
+          page.getByText('Room left empty, as the room is archived: VI-B.'),
+        ).toBeVisible();
+        await expect(page.getByRole('heading', { level: 4, name: 'VI-A' })).toBeVisible();
+        await expect(page.getByText('Room: Room 101')).toBeVisible();
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+
+        // The form, warning that the room seats fewer than the section holds.
+        await page.getByRole('button', { name: 'Edit VI-A' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Edit VI-A' });
+        await expect(dialog.getByLabel('Section name')).toHaveValue('A');
+        await dialog.getByLabel('Capacity').fill('45');
+        await expect(
+          dialog.getByText(
+            "Room 101 seats 40, fewer than this section's capacity of 45. You can still save.",
+          ),
+        ).toBeVisible();
+        await expectNoViolations(page);
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0);
+
+        // Last year, now closed: read-only, with XI outside the range listed last.
+        await page.context().addCookies([{ name: 'cl_year', value: previous.id, url: WEB_ORIGIN }]);
+        await page.goto('/en/classes');
+        await expect(
+          page.getByText(`${previousLabel} is closed, so its sections can't be changed.`, {
+            exact: false,
+          }),
+        ).toBeVisible();
+        await expect(page.getByText('Outside your classes', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Edit VI-A' })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /^Add section/ })).toHaveCount(0);
         await expectNoViolations(page);
       });
     });

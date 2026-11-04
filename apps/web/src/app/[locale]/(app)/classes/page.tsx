@@ -6,6 +6,7 @@ import { AppPageHeader } from '@/components/app-page-header';
 import { classesTabOf, ClassesTabs } from '@/features/academics/classes-tabs';
 import { HousesTab } from '@/features/academics/houses-tab';
 import { RoomsTab } from '@/features/academics/rooms-tab';
+import { SectionsTab } from '@/features/academics/sections-tab';
 import { StreamsTab } from '@/features/academics/streams-tab';
 import { canOpenSection } from '@/lib/page-access';
 import { requireServerSession } from '@/lib/server-session';
@@ -50,13 +51,7 @@ export default async function ClassesPage({
       {current === 'streams' ? <StreamsTab canEdit={canEdit} /> : null}
       {current === 'houses' ? <HousesTab canEdit={canEdit} /> : null}
       {current === 'rooms' ? <RoomsTab canEdit={canEdit} /> : null}
-      {current === 'sections' ? (
-        // Task 7 replaces this with the Sections tab.
-        <div className="flex flex-col gap-2">
-          <h2 className="text-h5">{t('sectionsStub.title')}</h2>
-          <p className="text-muted-foreground">{t('sectionsStub.body')}</p>
-        </div>
-      ) : null}
+      {current === 'sections' ? <SectionsTab canEdit={canEdit} /> : null}
     </div>
   );
 }
