@@ -376,7 +376,9 @@ export const copySectionsRequestSchema = z.object({ yearId: id, campusId: id });
 export type CopySectionsRequest = z.infer<typeof copySectionsRequestSchema>;
 export const copySectionsResponseSchema = z.object({
   created: z.number().int().min(0),
-  dropped: z.array(z.object({ section: z.string(), field: z.enum(['room', 'teacher', 'stream']) })),
+  dropped: z.array(
+    z.object({ section: z.string(), field: z.enum(['room', 'teacher', 'stream', 'class']) }),
+  ),
 });
 export type CopySectionsResponse = z.infer<typeof copySectionsResponseSchema>;
 

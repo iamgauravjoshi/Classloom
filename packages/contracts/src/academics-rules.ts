@@ -54,6 +54,17 @@ export type CopySource = {
 export type CopyRow = CopySource;
 
 /**
+ * What copy-forward left out of a section: its room, teacher or stream (set to null), or the
+ * whole section (`class`: its class is outside the profile range).
+ */
+export type CopyDropped = { section: string; field: 'room' | 'teacher' | 'stream' | 'class' };
+
+/** A section's class-qualified label, e.g. "VI-A". */
+export function sectionLabel(level: ClassLevel, name: string): string {
+  return `${level}-${name}`;
+}
+
+/**
  * Plans the sections to create in a new year from the previous one. A room, teacher or stream
  * that no longer qualifies is dropped (set to null) and reported. A teacher stays only on the
  * first copied row that names them (source order is class order).
@@ -66,12 +77,12 @@ export function planCopyForward(
     takenTeacherIds: Set<string>;
     activeStreamIds: Set<string>;
   },
-): { create: CopyRow[]; dropped: { section: string; field: 'room' | 'teacher' | 'stream' }[] } {
+): { create: CopyRow[]; dropped: CopyDropped[] } {
   const used = new Set(ctx.takenTeacherIds);
   const create: CopyRow[] = [];
-  const dropped: { section: string; field: 'room' | 'teacher' | 'stream' }[] = [];
+  const dropped: CopyDropped[] = [];
   for (const s of source) {
-    const label = `${s.classLevel} ${s.name}`;
+    const label = sectionLabel(s.classLevel, s.name);
     const row: CopyRow = { ...s };
     if (s.roomId !== null && !ctx.activeRoomIds.has(s.roomId)) {
       row.roomId = null;

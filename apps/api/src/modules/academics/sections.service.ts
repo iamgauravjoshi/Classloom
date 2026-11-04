@@ -1,6 +1,7 @@
 import {
   type ClassLevel,
   type ClassTeacherOptionsResponse,
+  type CopyDropped,
   type CopySectionsRequest,
   type CopySectionsResponse,
   type CreateSectionRequest,
@@ -8,6 +9,7 @@ import {
   isSeniorClass,
   planCopyForward,
   type Section,
+  sectionLabel,
   type SectionsResponse,
   type UpdateSectionRequest,
 } from '@classloom/contracts';
@@ -275,8 +277,10 @@ export class SectionsService {
   /**
    * Copies the sections of the previous year (the latest whose `ends_on` is before this year's
    * `starts_on`) on the same campus into this year, which must have none there. A room, teacher
-   * or stream that no longer qualifies is dropped and reported (`planCopyForward`). One
-   * `sections.copied` row (target: the year) records the result.
+   * or stream that no longer qualifies is dropped and reported (`planCopyForward`); a section
+   * whose class is outside the profile range is skipped and reported as `class` (all of them
+   * skipped is still a 201 with `created: 0`). One `sections.copied` row (target: the year)
+   * records the result.
    */
   copyFromPrevious(
     auth: Actor,
@@ -303,6 +307,9 @@ export class SectionsService {
           })
         : [];
       if (!source || rows.length === 0) throw new NothingToCopyException();
+      // A class outside the (possibly narrowed) profile range is not copied, only reported.
+      const outside = rows.filter((r) => !isInRange(r.classLevel, range.lowest, range.highest));
+      const inside = rows.filter((r) => isInRange(r.classLevel, range.lowest, range.highest));
 
       const [rooms, members, taken, streams] = await Promise.all([
         tx.room.findMany({
@@ -317,7 +324,7 @@ export class SectionsService {
         tx.stream.findMany({ where: { status: 'ACTIVE' }, select: { id: true } }),
       ]);
       const plan = planCopyForward(
-        rows.map((r) => ({
+        inside.map((r) => ({
           campusId: r.campusId,
           classLevel: r.classLevel,
           name: r.name,
@@ -333,6 +340,13 @@ export class SectionsService {
           activeStreamIds: new Set(streams.map((s) => s.id)),
         },
       );
+      const dropped: CopyDropped[] = [
+        ...plan.dropped,
+        ...outside.map((r) => ({
+          section: sectionLabel(r.classLevel, r.name),
+          field: 'class' as const,
+        })),
+      ];
 
       await AcademicsLimits.assertBelow(tx, 'sections', auth.tenantId, {
         ...where,
@@ -354,12 +368,12 @@ export class SectionsService {
           campusId: input.campusId,
           fromYearId: source.id,
           created: plan.create.length,
-          dropped: plan.dropped,
+          dropped,
         },
         actor: auth,
         meta,
       });
-      return { created: plan.create.length, dropped: plan.dropped };
+      return { created: plan.create.length, dropped };
     });
   }
 
@@ -377,10 +391,12 @@ export class SectionsService {
         }),
         tx.section.findMany({
           where: { academicYearId: yearId, classTeacherMembershipId: { not: null } },
-          select: { name: true, classTeacherMembershipId: true },
+          select: { classLevel: true, name: true, classTeacherMembershipId: true },
         }),
       ]);
-      const leads = new Map(leading.map((s) => [s.classTeacherMembershipId!, s.name]));
+      const leads = new Map(
+        leading.map((s) => [s.classTeacherMembershipId!, sectionLabel(s.classLevel, s.name)]),
+      );
       const teachers = members
         .map((m) => ({
           membershipId: m.id,
@@ -452,9 +468,9 @@ export class SectionsService {
         classTeacherMembershipId: membershipId,
         ...(exceptSectionId ? { id: { not: exceptSectionId } } : {}),
       },
-      select: { name: true },
+      select: { classLevel: true, name: true },
     });
-    if (other) throw new TeacherTakenException(other.name);
+    if (other) throw new TeacherTakenException(sectionLabel(other.classLevel, other.name));
   }
 
   /* -------------------------------- Loads --------------------------------- */

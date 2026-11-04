@@ -98,7 +98,7 @@ describe('sections API', () => {
         .post(BASE, s.admin.cookie)
         .send(body(s, year, { name: 'B', classTeacherMembershipId: s.teacher.membershipId }));
       expect(res.status).toBe(409);
-      expect(problem(res)).toMatchObject({ type: 'teacher-taken', sectionName: 'A' });
+      expect(problem(res)).toMatchObject({ type: 'teacher-taken', sectionName: 'VI-A' });
 
       const next = await h.year(s.tenantId, 2027, 'PLANNED');
       await create(s, next, { classTeacherMembershipId: s.teacher.membershipId });
@@ -385,8 +385,8 @@ describe('sections API', () => {
       const out = copySectionsResponseSchema.parse(res.body);
       expect(out.created).toBe(3);
       expect(out.dropped).toEqual([
-        { section: 'VI A', field: 'room' },
-        { section: 'VII A', field: 'teacher' },
+        { section: 'VI-A', field: 'room' },
+        { section: 'VII-A', field: 'teacher' },
       ]);
 
       const copied = sections(await list(s, next));
@@ -454,8 +454,56 @@ describe('sections API', () => {
         .send({ yearId: next, campusId: s.primaryCampusId });
       expect(res.status).toBe(201);
       expect(copySectionsResponseSchema.parse(res.body).dropped).toEqual([
-        { section: 'VI A', field: 'teacher' },
+        { section: 'VI-A', field: 'teacher' },
       ]);
+    });
+
+    it('skips sections whose class is outside a narrowed range and reports them', async () => {
+      const { s, year } = await setup();
+      await create(s, year, { classLevel: 'X', name: 'A' });
+      await create(s, year, { classLevel: 'XII', name: 'A' });
+      await create(s, year, { classLevel: 'XII', name: 'B' });
+      const next = await h.year(s.tenantId, 2027, 'PLANNED');
+      await h.owner.schoolProfile.update({
+        where: { tenantId: s.tenantId },
+        data: { highestClass: 'X' },
+      });
+      const res = await h
+        .post(`${BASE}/copy-from-previous`, s.admin.cookie)
+        .send({ yearId: next, campusId: s.primaryCampusId });
+      expect(res.status).toBe(201);
+      expect(copySectionsResponseSchema.parse(res.body)).toEqual({
+        created: 1,
+        dropped: [
+          { section: 'XII-A', field: 'class' },
+          { section: 'XII-B', field: 'class' },
+        ],
+      });
+      expect(sections(await list(s, next)).map((x) => `${x.classLevel}-${x.name}`)).toEqual([
+        'X-A',
+      ]);
+    });
+
+    it('answers 201 with created 0 when every source section is outside the range', async () => {
+      const { s, year } = await setup();
+      await create(s, year, { classLevel: 'XII', name: 'A' });
+      const next = await h.year(s.tenantId, 2027, 'PLANNED');
+      await h.owner.schoolProfile.update({
+        where: { tenantId: s.tenantId },
+        data: { highestClass: 'X' },
+      });
+      const res = await h
+        .post(`${BASE}/copy-from-previous`, s.admin.cookie)
+        .send({ yearId: next, campusId: s.primaryCampusId });
+      expect(res.status).toBe(201);
+      expect(copySectionsResponseSchema.parse(res.body)).toEqual({
+        created: 0,
+        dropped: [{ section: 'XII-A', field: 'class' }],
+      });
+      const copied = (await h.audits(s.tenantId, 'academic_year')).filter(
+        (e) => e.action === 'sections.copied',
+      );
+      expect(copied).toHaveLength(1);
     });
 
     it('gives 409 nothing-to-copy when copying into the first year', async () => {
@@ -474,7 +522,7 @@ describe('sections API', () => {
       const gone = await s.person('TEACHER');
       await deactivate(gone.membershipId);
       await create(s, year, { name: 'B', classTeacherMembershipId: s.teacher.membershipId });
-      const res = await h.get(`/academics/class-teacher-options?yearId=${year}`, s.teacher.cookie);
+      const res = await h.get(`/academics/class-teacher-options?yearId=${year}`, s.admin.cookie);
       expect(res.status).toBe(200);
       const teachers = classTeacherOptionsResponseSchema.parse(res.body).teachers;
       const ids = teachers.map((t) => t.membershipId);
@@ -482,14 +530,14 @@ describe('sections API', () => {
       expect(ids).toContain(s.accountant.membershipId);
       expect(ids).not.toContain(gone.membershipId);
       expect(teachers.find((t) => t.membershipId === s.teacher.membershipId)?.sectionName).toBe(
-        'B',
+        'VI-B',
       );
       expect(teachers.find((t) => t.membershipId === s.admin.membershipId)?.sectionName).toBeNull();
     });
   });
 
   describe('permissions and isolation', () => {
-    it('lets a Teacher read but not write', async () => {
+    it('lets a Teacher read sections, but not write or list class-teacher options', async () => {
       const { s, year } = await setup();
       const a = await create(s, year);
       const next = await h.year(s.tenantId, 2027, 'PLANNED');
@@ -504,6 +552,7 @@ describe('sections API', () => {
         h
           .post(`${BASE}/copy-from-previous`, s.teacher.cookie)
           .send({ yearId: next, campusId: s.primaryCampusId }),
+        h.get(`/academics/class-teacher-options?yearId=${year}`, s.teacher.cookie),
       ];
       for (const res of await Promise.all(writes)) {
         expect(res.status).toBe(403);

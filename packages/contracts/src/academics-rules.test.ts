@@ -6,6 +6,7 @@ import {
   isInRange,
   isSeniorClass,
   planCopyForward,
+  sectionLabel,
 } from './academics-rules';
 
 describe('class range', () => {
@@ -93,10 +94,10 @@ describe('planCopyForward', () => {
       c,
     );
     expect(r.dropped).toEqual([
-      { section: 'XI A', field: 'room' },
-      { section: 'XI A', field: 'stream' },
-      { section: 'XI B', field: 'teacher' },
-      { section: 'XI C', field: 'teacher' },
+      { section: 'XI-A', field: 'room' },
+      { section: 'XI-A', field: 'stream' },
+      { section: 'XI-B', field: 'teacher' },
+      { section: 'XI-C', field: 'teacher' },
     ]);
     expect(r.create.map((x) => x.classTeacherMembershipId)).toEqual(['m1', null, null]);
     expect(r.create[0]).toMatchObject({ roomId: null, streamId: null });
@@ -110,6 +111,12 @@ describe('planCopyForward', () => {
       ctx(),
     );
     expect(r.create.map((x) => x.classTeacherMembershipId)).toEqual(['m3', null]);
-    expect(r.dropped).toEqual([{ section: 'XI B', field: 'teacher' }]);
+    expect(r.dropped).toEqual([{ section: 'XI-B', field: 'teacher' }]);
+  });
+});
+
+describe('sectionLabel', () => {
+  it('joins the class and the section name with a hyphen', () => {
+    expect(sectionLabel('VI', 'A')).toBe('VI-A');
   });
 });

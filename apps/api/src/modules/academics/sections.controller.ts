@@ -179,7 +179,7 @@ export class SectionsController {
   }
 
   @Get('class-teacher-options')
-  @RequirePermission('classes.view')
+  @RequirePermission('classes.manage')
   @ApiOperation({
     operationId: 'listClassTeacherOptions',
     summary: 'Active members, with the section each already leads in the year',
@@ -187,7 +187,7 @@ export class SectionsController {
   @ApiOkResponse({ type: ClassTeacherOptionsResponseDto })
   @ApiBadRequestResponse({ description: 'yearId must be a UUID' })
   @ApiUnauthorizedResponse({ description: NO_SESSION })
-  @ApiForbiddenResponse({ description: NEEDS_VIEW })
+  @ApiForbiddenResponse({ description: NEEDS_MANAGE })
   @ApiNotFoundResponse({ description: 'No such academic year in this school' })
   classTeacherOptions(
     @CurrentAuth() auth: RequestAuth,
