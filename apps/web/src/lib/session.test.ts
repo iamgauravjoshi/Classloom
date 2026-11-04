@@ -1,5 +1,4 @@
 import { ALL_PERMISSIONS, type AuthSession } from '@classloom/contracts';
-import { academicYearOf } from '@classloom/utils';
 import { describe, expect, it } from 'vitest';
 
 import { roleLabelOf, toShellSession } from './session';
@@ -55,14 +54,11 @@ describe('toShellSession', () => {
     expect(shell.isOwner).toBe(false);
   });
 
-  it("shows the user's name and the session's campus", () => {
+  it("shows the user's name, and leaves the year and campus to the switchers", () => {
     const shell = toShellSession(session);
     expect(shell.user).toEqual({ name: 'Asha Rawat' });
-    expect(shell.campus).toEqual({ id: 'c1', name: 'Global International School, Dehradun' });
-  });
-
-  it('uses the current academic year', () => {
-    expect(toShellSession(session).academicYear).toBe(academicYearOf(new Date()));
+    expect(shell).not.toHaveProperty('campus');
+    expect(shell).not.toHaveProperty('academicYear');
   });
 });
 

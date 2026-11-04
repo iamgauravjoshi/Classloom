@@ -30,13 +30,7 @@ const PROFILE_STALE_MS = 5 * 60_000;
 const isActive = (pathname: string, href: string) =>
   pathname === href || pathname.startsWith(`${href}/`);
 
-export function AppSidebar({
-  permissions,
-  campus,
-}: {
-  permissions: string[];
-  campus: { id: string; name: string };
-}) {
+export function AppSidebar({ permissions }: { permissions: string[] }) {
   const t = useTranslations();
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -47,7 +41,13 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <CampusSwitcher campus={campus} logoUrl={profile.data?.logoUrl ?? null} />
+        <CampusSwitcher
+          logoUrl={profile.data?.logoUrl ?? null}
+          canManage={permissions.includes('settings.manage')}
+          onNavigate={() => {
+            if (isMobile) setOpenMobile(false);
+          }}
+        />
       </SidebarHeader>
       <SidebarContent>
         <nav aria-label={t('shell.mainNavigation')}>

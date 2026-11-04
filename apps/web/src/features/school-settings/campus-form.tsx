@@ -26,7 +26,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { type ComponentProps, type ReactNode, useId, useState } from 'react';
+import { type ComponentProps, type ReactNode, useEffect, useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { BUTTON_CLASS, CONTROL_CLASS } from '../auth/auth-ui';
@@ -102,10 +102,19 @@ export function CampusForm({
   campus,
   onSaved,
   onCancel,
+  onDirtyChange,
+  renderActions,
+  formId,
 }: {
   campus?: Campus;
   onSaved: (campus: CampusDto) => void;
   onCancel?: () => void;
+  /** Hears whether the form has unsaved edits (the wizard's leave guard). */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Replaces the Cancel and save buttons (the wizard's step actions); a submit button saves. */
+  renderActions?: (state: { pending: boolean }) => ReactNode;
+  /** The form element's id, for a submit button placed outside it (`form=`). */
+  formId?: string;
 }) {
   const t = useTranslations('schoolSettings.campuses.form');
   const tErrors = useTranslations('schoolSettings.errors');
@@ -122,7 +131,8 @@ export function CampusForm({
     defaultValues: toFormValues(campus),
     mode: 'onTouched',
   });
-  const { errors } = form.formState;
+  const { errors, isDirty } = form.formState;
+  useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
 
   const fieldId = (name: FieldName) => `${id}-${name}`;
   const hasHint = (name: FieldName) => name === 'city' && !editing;
@@ -157,6 +167,7 @@ export function CampusForm({
         title: campus ? t('saved') : t('created', { name: saved.name }),
         type: 'success',
       });
+      form.reset(toFormValues(saved));
       onSaved(saved);
     } catch (error) {
       const fields = schoolFieldErrors(error).filter(isFieldName);
@@ -208,6 +219,7 @@ export function CampusForm({
 
   return (
     <form
+      id={formId}
       noValidate
       onSubmit={(event) =>
         void form.handleSubmit(onValid, () => setFormError(t('fixErrors')))(event)
@@ -263,23 +275,27 @@ export function CampusForm({
           <AlertDescription role="alert">{formError}</AlertDescription>
         </Alert>
       ) : null}
-      <div className="flex flex-wrap justify-end gap-2">
-        {onCancel ? (
-          <Button
-            type="button"
-            variant="outline"
-            className={BUTTON_CLASS}
-            disabled={pending}
-            onClick={onCancel}
-          >
-            {t('cancel')}
+      {renderActions ? (
+        renderActions({ pending })
+      ) : (
+        <div className="flex flex-wrap justify-end gap-2">
+          {onCancel ? (
+            <Button
+              type="button"
+              variant="outline"
+              className={BUTTON_CLASS}
+              disabled={pending}
+              onClick={onCancel}
+            >
+              {t('cancel')}
+            </Button>
+          ) : null}
+          <Button type="submit" className={BUTTON_CLASS} disabled={pending}>
+            {pending ? <Spinner aria-hidden="true" /> : null}
+            {pending ? t('saving') : editing ? t('save') : t('create')}
           </Button>
-        ) : null}
-        <Button type="submit" className={BUTTON_CLASS} disabled={pending}>
-          {pending ? <Spinner aria-hidden="true" /> : null}
-          {pending ? t('saving') : editing ? t('save') : t('create')}
-        </Button>
-      </div>
+        </div>
+      )}
     </form>
   );
 }

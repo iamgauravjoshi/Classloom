@@ -44,9 +44,17 @@
     "notifications": "Notifications",
     "academicYear": "Academic year",
     "academicYearValue": "AY {year}",
+    "academicYearCurrent": "{year} (current)",
+    "academicYearNone": "not set",
+    "academicYearLoading": "loading",
+    "setUpAcademicYear": "Set up academic year",
+    "noAcademicYear": "No academic year has been set up yet.",
     "campus": "Campus",
     "switchCampus": "Switch campus",
-    "addCampus": "Add campus",
+    "campusPrimary": "{name} (primary)",
+    "campusLoading": "Loading campuses",
+    "campusNone": "No campus",
+    "manageCampuses": "Manage campuses",
     "accountMenu": "Account menu",
     "myAccount": "My account",
     "signOut": "Sign out",
@@ -61,6 +69,7 @@
     "title": "Dashboard",
     "welcome": "Welcome back, {name}",
     "today": "Today is {date} · Academic year {year}",
+    "todayNoYear": "Today is {date}",
     "placeholderNote": "Live figures arrive with the Students & Admissions module.",
     "stats": {
       "students": "Total students",
@@ -1159,6 +1168,79 @@
         "created": "{name} was added.",
         "saved": "The campus has been saved.",
         "fixErrors": "Check the highlighted fields."
+      }
+    }
+  },
+  "onboarding": {
+    "metaTitle": "Set up your school",
+    "title": "Set up your school",
+    "description": "Four short steps. Skip any of them and finish later from the checklist on your dashboard.",
+    "stepsLabel": "Setup steps",
+    "stepOf": "Step {n} of {total}",
+    "stepDone": "Done",
+    "stepNotDone": "Not done yet",
+    "loading": "Loading",
+    "loadError": "We couldn't load this step.",
+    "retry": "Try again",
+    "steps": {
+      "profile": {
+        "short": "Profile",
+        "title": "School profile",
+        "description": "Your UDISE+ code, address, PIN code and phone number complete this step. Everything else can wait."
+      },
+      "logo": {
+        "short": "Logo",
+        "title": "School logo",
+        "description": "Shown in the sidebar and on documents. It saves as soon as you choose a file."
+      },
+      "academicYear": {
+        "short": "Academic year",
+        "title": "Academic year",
+        "description": "Pick 2 or 3 terms, then check the dates and the label."
+      },
+      "campuses": {
+        "short": "Campuses",
+        "title": "Campuses",
+        "description": "Add your main campus's address and PIN code. Add more campuses if you have them."
+      }
+    },
+    "actions": {
+      "back": "Back",
+      "skip": "Skip",
+      "continue": "Continue",
+      "saveAndContinue": "Save and continue",
+      "saveAndFinish": "Save and finish",
+      "saving": "Saving"
+    },
+    "year": {
+      "editing": "{label} is your current year. Check its dates and terms."
+    },
+    "campuses": {
+      "primaryHeading": "{name} (primary campus)",
+      "addHeading": "Other campuses",
+      "addAnother": "Add another campus",
+      "added": "Campuses added",
+      "addedItem": "{name} was added."
+    },
+    "leave": {
+      "title": "Leave without saving?",
+      "body": "Your changes on this step haven't been saved.",
+      "leave": "Leave",
+      "stay": "Stay"
+    },
+    "checklist": {
+      "title": "Finish setting up your school",
+      "progress": "{done} of {total} done",
+      "dismiss": "Dismiss",
+      "dismissing": "Dismissing",
+      "dismissError": "We couldn't dismiss the checklist. Try again.",
+      "done": "done",
+      "todo": "to do",
+      "items": {
+        "profile": "Fill in the school profile",
+        "logo": "Upload the school logo",
+        "academicYear": "Set up the academic year",
+        "campuses": "Add the main campus's address"
       }
     }
   }

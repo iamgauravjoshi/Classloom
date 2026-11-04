@@ -89,6 +89,19 @@ export async function signInWithCode(
   await signInWithCodeKeepingRequirement(request, school, remember);
   // Owner requires two-step by default, which would limit the session to the setup routes.
   await relaxOwnerTwoFactor(request);
+  // The dashboard would otherwise open the setup wizard on the first visit.
+  await markSetupWizardSeen(request);
+}
+
+/**
+ * Records that the school's setup wizard was opened (`POST /school/onboarding/start`), as opening
+ * it does, so the dashboard no longer sends the owner there. `signInWithCode` calls it; a test of
+ * the first-run redirect signs in with `signInWithCodeKeepingRequirement` and
+ * `relaxOwnerTwoFactor` instead.
+ */
+export async function markSetupWizardSeen(request: APIRequestContext): Promise<void> {
+  const started = await post(request, '/school/onboarding/start', {});
+  expect(started.status(), await started.text()).toBe(204);
 }
 
 /**

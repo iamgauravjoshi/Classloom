@@ -21,10 +21,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (session.twoFactorSetupRequired) return <main>{children}</main>;
 
   // shadcn's sidebar persists its expanded/collapsed state in this cookie.
-  const defaultOpen = (await cookies()).get('sidebar_state')?.value !== 'false';
+  const jar = await cookies();
+  const defaultOpen = jar.get('sidebar_state')?.value !== 'false';
+  // The year and campus being looked at; the shell checks them against the school's own lists.
+  const selection = { year: jar.get('cl_year')?.value, campus: jar.get('cl_campus')?.value };
 
   return (
-    <AppShell session={toShellSession(session)} defaultOpen={defaultOpen}>
+    <AppShell session={toShellSession(session)} defaultOpen={defaultOpen} selection={selection}>
       {children}
     </AppShell>
   );

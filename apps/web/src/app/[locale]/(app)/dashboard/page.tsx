@@ -1,15 +1,19 @@
+import type { AcademicYearsResponseDto, OnboardingResponseDto } from '@classloom/api-client';
 import { StatCard } from '@classloom/ui/components/stat-card';
 import { Card, CardDescription, CardHeader, CardTitle } from '@classloom/ui/components/ui/card';
-import { academicYearOf, formatDateIN } from '@classloom/utils';
+import { formatDateIN } from '@classloom/utils';
 import { IconBook, IconSchool, IconUsers, IconUserShield } from '@tabler/icons-react';
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { AccessDenied } from '@/components/access-denied';
 import { AppPageHeader } from '@/components/app-page-header';
 import { ApiStatus } from '@/components/shell/api-status';
+import { ChecklistCard } from '@/features/onboarding/checklist-card';
+import { shouldOpenWizard } from '@/lib/onboarding-redirect';
 import { canOpenSection } from '@/lib/page-access';
-import { requireServerSession } from '@/lib/server-session';
+import { requireServerSession, serverApiGet } from '@/lib/server-session';
 
 export async function generateMetadata({
   params,
@@ -28,6 +32,20 @@ export default async function DashboardPage({ params }: PageProps<'/[locale]/das
   if (!canOpenSection('dashboard', session.permissions)) {
     return <AccessDenied title={t('title')} canOpenDashboard={false} />;
   }
+  const canManage = session.permissions.includes('settings.manage');
+  // A session still limited to two-step setup is sent there by the layout; nothing to read here.
+  const [onboarding, years] = session.twoFactorSetupRequired
+    ? [null, null]
+    : await Promise.all([
+        serverApiGet<OnboardingResponseDto>('/school/onboarding'),
+        serverApiGet<AcademicYearsResponseDto>('/school/academic-years'),
+      ]);
+  // The first visit of someone who manages settings opens the setup wizard, once per school.
+  if (onboarding && shouldOpenWizard({ canManage, startedAt: onboarding.startedAt })) {
+    redirect(`/${locale}/onboarding`);
+  }
+  const currentYear = years?.years.find((year) => year.status === 'CURRENT');
+  const today = formatDateIN(new Date());
   const empty = t('notAvailable');
 
   return (
@@ -41,10 +59,13 @@ export default async function DashboardPage({ params }: PageProps<'/[locale]/das
         <CardHeader>
           <CardTitle className="text-h4">{t('welcome', { name: session.user.name })}</CardTitle>
           <CardDescription>
-            {t('today', { date: formatDateIN(new Date()), year: academicYearOf(new Date()) })}
+            {currentYear
+              ? t('today', { date: today, year: currentYear.label })
+              : t('todayNoYear', { date: today })}
           </CardDescription>
         </CardHeader>
       </Card>
+      {onboarding?.visible ? <ChecklistCard initial={onboarding} /> : null}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label={t('stats.students')} value={empty} tone="orange" icon={IconSchool} />
         <StatCard label={t('stats.teachers')} value={empty} tone="primary" icon={IconUsers} />

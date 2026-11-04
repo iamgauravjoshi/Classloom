@@ -37,7 +37,7 @@ import { cn } from '@classloom/ui/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { type ComponentProps, type ReactNode, useId, useMemo, useState } from 'react';
+import { type ComponentProps, type ReactNode, useEffect, useId, useMemo, useState } from 'react';
 import { Controller, type FieldPath, useForm } from 'react-hook-form';
 
 import { BUTTON_CLASS, CONTROL_CLASS } from '../auth/auth-ui';
@@ -145,10 +145,16 @@ export function ProfileForm({
   profile,
   canEdit,
   onSaved,
+  onDirtyChange,
+  renderActions,
 }: {
   profile: SchoolProfile;
   canEdit: boolean;
   onSaved?: () => void;
+  /** Hears whether the form has unsaved edits (the wizard's leave guard). */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Replaces the save button (the wizard's step actions); a submit button saves. */
+  renderActions?: (state: { pending: boolean }) => ReactNode;
 }) {
   const t = useTranslations('schoolSettings.profile');
   const tBoards = useTranslations('registration.boards');
@@ -170,7 +176,15 @@ export function ProfileForm({
   }, [t, tBoards]);
 
   if (!canEdit) return <ProfileView profile={profile} options={options} />;
-  return <ProfileEditor profile={profile} options={options} onSaved={onSaved} />;
+  return (
+    <ProfileEditor
+      profile={profile}
+      options={options}
+      onSaved={onSaved}
+      onDirtyChange={onDirtyChange}
+      renderActions={renderActions}
+    />
+  );
 }
 
 type Options = {
@@ -262,10 +276,14 @@ function ProfileEditor({
   profile,
   options,
   onSaved,
+  onDirtyChange,
+  renderActions,
 }: {
   profile: SchoolProfile;
   options: Options;
   onSaved?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
+  renderActions?: (state: { pending: boolean }) => ReactNode;
 }) {
   const t = useTranslations('schoolSettings.profile');
   const tErrors = useTranslations('schoolSettings.errors');
@@ -278,7 +296,8 @@ function ProfileEditor({
     defaultValues: toFormValues(profile),
     mode: 'onTouched',
   });
-  const { errors } = form.formState;
+  const { errors, isDirty } = form.formState;
+  useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
   const currentYear = new Date().getFullYear();
 
   const fieldId = (name: FieldName) => `${id}-${name}`;
@@ -497,12 +516,16 @@ function ProfileEditor({
           <AlertDescription role="alert">{formError}</AlertDescription>
         </Alert>
       ) : null}
-      <div>
-        <Button type="submit" className={BUTTON_CLASS} disabled={update.isPending}>
-          {update.isPending ? <Spinner aria-hidden="true" /> : null}
-          {update.isPending ? t('saving') : t('save')}
-        </Button>
-      </div>
+      {renderActions ? (
+        renderActions({ pending: update.isPending })
+      ) : (
+        <div>
+          <Button type="submit" className={BUTTON_CLASS} disabled={update.isPending}>
+            {update.isPending ? <Spinner aria-hidden="true" /> : null}
+            {update.isPending ? t('saving') : t('save')}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

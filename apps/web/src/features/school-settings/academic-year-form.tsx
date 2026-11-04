@@ -26,7 +26,7 @@ import { toISTDateString } from '@classloom/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
 import { BUTTON_CLASS, CONTROL_CLASS } from '../auth/auth-ui';
 import { schoolErrorMessage } from './school-errors';
@@ -71,10 +71,16 @@ export function AcademicYearForm({
   initial,
   onSaved,
   onCancel,
+  onDirtyChange,
+  renderActions,
 }: {
   initial?: AcademicYearFormInitial;
   onSaved: (year: AcademicYearDto) => void;
   onCancel?: () => void;
+  /** Hears whether the form differs from what it started with (the wizard's leave guard). */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Replaces the Cancel and save buttons (the wizard's step actions); a submit button saves. */
+  renderActions?: (state: { pending: boolean }) => ReactNode;
 }) {
   const t = useTranslations('schoolSettings.academicYears.form');
   const tErrors = useTranslations('schoolSettings.errors');
@@ -89,6 +95,9 @@ export function AcademicYearForm({
   const [state, setState] = useState<YearFormState>(() =>
     initialYearFormState(initial ?? thisAcademicYear()),
   );
+  const [startState, setStartState] = useState(state);
+  const dirty = JSON.stringify(state) !== JSON.stringify(startState);
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const [confirmPending, setConfirmPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -130,6 +139,7 @@ export function AcademicYearForm({
         title: editingId ? t('saved') : t('created', { label: saved.label }),
         type: 'success',
       });
+      setStartState(state);
       onSaved(saved);
     } catch (error) {
       setFormError(tErrors(schoolErrorMessage(error)));
@@ -315,23 +325,27 @@ export function AcademicYearForm({
           <AlertDescription role="alert">{formError}</AlertDescription>
         </Alert>
       ) : null}
-      <div className="flex flex-wrap justify-end gap-2">
-        {onCancel ? (
-          <Button
-            type="button"
-            variant="outline"
-            className={BUTTON_CLASS}
-            disabled={pending}
-            onClick={onCancel}
-          >
-            {t('cancel')}
+      {renderActions ? (
+        renderActions({ pending })
+      ) : (
+        <div className="flex flex-wrap justify-end gap-2">
+          {onCancel ? (
+            <Button
+              type="button"
+              variant="outline"
+              className={BUTTON_CLASS}
+              disabled={pending}
+              onClick={onCancel}
+            >
+              {t('cancel')}
+            </Button>
+          ) : null}
+          <Button type="submit" className={BUTTON_CLASS} disabled={pending}>
+            {pending ? <Spinner aria-hidden="true" /> : null}
+            {pending ? t('saving') : editingId ? t('save') : t('create')}
           </Button>
-        ) : null}
-        <Button type="submit" className={BUTTON_CLASS} disabled={pending}>
-          {pending ? <Spinner aria-hidden="true" /> : null}
-          {pending ? t('saving') : editingId ? t('save') : t('create')}
-        </Button>
-      </div>
+        </div>
+      )}
     </form>
   );
 }
