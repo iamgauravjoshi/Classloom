@@ -27,6 +27,14 @@ export const problemDetailsSchema = z.object({
   schoolCode: z.string().optional(),
   /** Set on a 422 `logo-invalid`: why the image was refused (`type`, `size`, `dimensions`, `decode`). */
   reason: z.string().optional(),
+  /** Set on a 409 `name-taken`: the request field whose value is taken (e.g. `name`). */
+  field: z.string().optional(),
+  /** Set on a 409 `academics-limit`: the most allowed. */
+  limit: z.number().int().optional(),
+  /** Set on a 409 `in-use`: how many rows of each kind still use the item. */
+  counts: z.record(z.string(), z.number().int()).optional(),
+  /** Set on a 409 `teacher-taken`: the section the teacher already leads that year. */
+  sectionName: z.string().optional(),
 });
 
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;

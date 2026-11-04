@@ -24,6 +24,7 @@ import { QueueModule } from './core/queue/queue.module';
 import { RedisModule } from './core/redis/redis.module';
 import { RedisService } from './core/redis/redis.service';
 import { TenancyCoreModule } from './core/tenancy/tenancy-core.module';
+import { AcademicsModule } from './modules/academics/academics.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { IamModule } from './modules/iam/iam.module';
 import { SchoolModule } from './modules/school/school.module';
@@ -103,6 +104,7 @@ export class AppModule {
         // After AuthModule: its PermissionGuard must run after AuthGuard (registration order).
         IamModule,
         SchoolModule,
+        AcademicsModule,
       ],
       providers: [
         { provide: APP_PIPE, useClass: ZodValidationPipe },

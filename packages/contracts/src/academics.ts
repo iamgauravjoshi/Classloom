@@ -170,6 +170,12 @@ export const updateStreamRequestSchema = z.object({
 export type UpdateStreamRequest = z.infer<typeof updateStreamRequestSchema>;
 export const streamsResponseSchema = z.object({ streams: z.array(streamSchema) });
 export type StreamsResponse = z.infer<typeof streamsResponseSchema>;
+/** `POST /academics/streams/starter`: the streams created, and the starter names that existed. */
+export const starterStreamsAddedResponseSchema = z.object({
+  created: z.array(streamSchema),
+  skipped: z.array(z.string()),
+});
+export type StarterStreamsAddedResponse = z.infer<typeof starterStreamsAddedResponseSchema>;
 
 /* ------------------------------------------------------------------ */
 /* Subjects                                                            */
@@ -240,11 +246,17 @@ export const classSubjectRowSchema = z.object({
 });
 export type ClassSubjectRow = z.infer<typeof classSubjectRowSchema>;
 
+/** One class's rows; outsideRange marks a class outside the profile range. */
+export const classSubjectsClassSchema = z.object({
+  classLevel,
+  outsideRange: z.boolean(),
+  rows: z.array(classSubjectRowSchema),
+});
+export type ClassSubjectsClass = z.infer<typeof classSubjectsClassSchema>;
+
 /** Every row, grouped by class level; outsideRange marks classes outside the profile range. */
 export const classSubjectsResponseSchema = z.object({
-  classes: z.array(
-    z.object({ classLevel, outsideRange: z.boolean(), rows: z.array(classSubjectRowSchema) }),
-  ),
+  classes: z.array(classSubjectsClassSchema),
 });
 export type ClassSubjectsResponse = z.infer<typeof classSubjectsResponseSchema>;
 
