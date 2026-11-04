@@ -45,6 +45,17 @@ const STEPS = [
   },
 ];
 
+/** Counts the browser's `POST /onboarding/start` calls (the wizard sends one when it mounts). */
+function countStarts(page: Page): { count: number } {
+  const starts = { count: 0 };
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/api/school/onboarding/start')) {
+      starts.count += 1;
+    }
+  });
+  return starts;
+}
+
 const checklistHeading = (page: Page) =>
   page.getByRole('heading', { level: 2, name: 'Finish setting up your school' });
 
@@ -78,6 +89,8 @@ test('a new owner is sent to the wizard, completes every step and lands on a fin
   test.slow();
   const school = await newOwner(page, playwright);
   const year = currentAcademicYear();
+  // The wizard stays mounted from the first step to the last, so it records the start once.
+  const starts = countStarts(page);
 
   // The first dashboard visit opens the wizard.
   await page.goto('/en/dashboard');
@@ -97,10 +110,11 @@ test('a new owner is sent to the wizard, completes every step and lands on a fin
   // 2. Logo: a JPEG, previewed once saved.
   await expect(stepHeading(page, 'School logo')).toBeVisible();
   await expect(page).toHaveURL(/\?step=logo$/);
-  await closeToasts(page);
   await page.getByLabel('Choose a logo image').setInputFiles(LOGO_JPEG);
   await expect(page.getByRole('img', { name: 'School logo' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Replace' })).toBeVisible();
+  // On a wide screen the step's buttons are in the card, and a toast can sit over them; on a
+  // phone they stick to the bottom and toasts rise above them (the 375 px test below).
   await closeToasts(page);
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
 
@@ -109,18 +123,10 @@ test('a new owner is sent to the wizard, completes every step and lands on a fin
   await page.getByRole('radio', { name: '3 terms' }).check();
   await expect(page.getByLabel('Term 3 ends on')).toBeVisible();
   await expect(page.getByLabel('Label', { exact: true })).toHaveValue(year.label);
-  // The year form refreshes the page after saving; the refresh lands after the wizard has moved
-  // to ?step=campuses, and the page then mounts afresh (opening it again calls `start`). Anything
-  // typed before that would be lost, so wait for it.
-  const remounted = page.waitForRequest(
-    (request) =>
-      request.method() === 'POST' && request.url().endsWith('/api/school/onboarding/start'),
-  );
   await page.getByRole('button', { name: 'Save and continue' }).click();
 
-  // 4. Campuses: a second campus, then the primary campus's address.
-  await expect(stepHeading(page, 'Campuses')).toBeVisible();
-  await remounted;
+  // 4. Campuses: a second campus, then the primary campus's address. Typing can start at once:
+  // the wizard is not mounted afresh after the year's save.
   await expect(stepHeading(page, 'Campuses')).toBeVisible();
   await closeToasts(page);
   const others = page.getByRole('region', { name: 'Other campuses' });
@@ -146,6 +152,7 @@ test('a new owner is sent to the wizard, completes every step and lands on a fin
 
   // The dashboard: nothing left on the checklist.
   await expect(page).toHaveURL(/\/en\/dashboard$/);
+  expect(starts.count).toBe(1);
   await expect(page.getByText('API online')).toBeVisible();
   await expect(page.getByText(`Academic year ${year.label}`, { exact: false })).toBeVisible();
   await expect(checklistHeading(page)).toHaveCount(0);
@@ -262,4 +269,78 @@ test('no wizard step scrolls sideways at 375 px', async ({ page, playwright }) =
     expect(await noHorizontalOverflow(page), name).toBe(true);
     if (index < STEPS.length - 1) await page.getByRole('button', { name: 'Skip' }).click();
   }
+});
+
+test('Save and finish asks before dropping a half-filled "Add another campus" form', async ({
+  page,
+  playwright,
+}) => {
+  const school = await newOwner(page, playwright);
+  await page.goto('/en/onboarding?step=campuses');
+  await expect(stepHeading(page, 'Campuses')).toBeVisible();
+  await expect(STEPS[3]!.ready(page)).toBeVisible({ timeout: 15_000 });
+
+  const others = page.getByRole('region', { name: 'Other campuses' });
+  await others.getByRole('button', { name: 'Add another campus' }).click();
+  await others.getByLabel('Campus name').fill('North Campus');
+  const primary = page.getByRole('region', { name: `${school.schoolName} (primary campus)` });
+  await primary.getByLabel('PIN code').fill('248001');
+  await page.getByRole('button', { name: 'Save and finish' }).click();
+
+  // The primary campus is saved, but the wizard stays and asks about the other form.
+  const question = page.getByRole('dialog', { name: 'Leave without saving?' });
+  await expect(question).toBeVisible();
+  await question.getByRole('button', { name: 'Stay' }).click();
+  await expect(question).toHaveCount(0);
+  await expect(page).toHaveURL(/\/en\/onboarding/);
+  await expect(others.getByLabel('Campus name')).toHaveValue('North Campus');
+
+  // Leaving anyway finishes on the dashboard.
+  await page.getByRole('button', { name: 'Save and finish' }).click();
+  await question.getByRole('button', { name: 'Leave' }).click();
+  await expect(page).toHaveURL(/\/en\/dashboard$/);
+});
+
+test('a link to another ?step= is followed while the wizard is open', async ({
+  page,
+  playwright,
+}) => {
+  await newOwner(page, playwright);
+  const starts = countStarts(page);
+  await page.goto('/en/onboarding');
+  await expect(STEPS[0]!.ready(page)).toBeVisible({ timeout: 15_000 });
+
+  // With no year yet, the year switcher offers "Set up academic year": the wizard's year step.
+  await page.getByRole('button', { name: /^AY / }).click();
+  await page.getByRole('menuitem', { name: 'Set up academic year' }).click();
+  await expect(page).toHaveURL(/\?step=academicYear$/);
+  await expect(stepHeading(page, 'Academic year')).toBeVisible();
+  await expect(stepHeading(page, 'Academic year')).toBeFocused();
+  expect(starts.count).toBe(1);
+});
+
+test("at 375 px a toast sits above the wizard's sticky actions, not over them", async ({
+  page,
+  playwright,
+}) => {
+  await newOwner(page, playwright);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/en/onboarding?step=logo');
+  await expect(STEPS[1]!.ready(page)).toBeVisible({ timeout: 15_000 });
+  await page.getByLabel('Choose a logo image').setInputFiles(LOGO_JPEG);
+
+  const toast = page
+    .locator('[data-slot="toast"]')
+    .filter({ hasText: 'The logo has been updated.' });
+  await expect(toast).toBeVisible();
+  const actions = page.locator('[data-slot="step-actions"]');
+  // Measured once the toast has finished sliding in.
+  await expect(async () => {
+    const toastBox = (await toast.boundingBox())!;
+    const actionsBox = (await actions.boundingBox())!;
+    expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(actionsBox.y);
+  }).toPass({ timeout: 5_000 });
+  // Continue can be pressed without closing the toast first.
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(stepHeading(page, 'Academic year')).toBeVisible();
 });

@@ -151,16 +151,31 @@ test('a second campus can become primary, and the old primary can then be deacti
 
   // Move the primary flag, then deactivate the old primary campus.
   await page.getByRole('button', { name: 'Make primary: North Campus' }).click();
-  await closeToasts(page);
   await expect(cardOf(page, 'North Campus').getByText('Primary', { exact: true })).toBeVisible();
+  // The pressed button is gone; focus is on the campus's heading, not dropped to the page.
+  const heading = (name: string) => page.getByRole('heading', { level: 2, name, exact: true });
+  await expect(heading('North Campus')).toBeFocused();
+  await closeToasts(page);
   await expect(page.getByRole('button', { name: 'Deactivate North Campus' })).toHaveCount(0);
   await page.getByRole('button', { name: `Deactivate ${main}` }).click();
   const question = page.getByRole('dialog', { name: `Deactivate ${main}?` });
   await question.getByRole('button', { name: 'Deactivate' }).click();
   await expect(question).toHaveCount(0);
+  await expect(cardOf(page, main).getByText('Inactive', { exact: true })).toBeVisible();
+  await expect(heading(main)).toBeFocused();
+  await closeToasts(page);
+  await expect(page.getByRole('button', { name: `Reactivate ${main}` })).toBeVisible();
+
+  // Reactivating moves focus to the heading too, then deactivate it again for the switcher.
+  await page.getByRole('button', { name: `Reactivate ${main}` }).click();
+  await expect(cardOf(page, main).getByText('Active', { exact: true })).toBeVisible();
+  await expect(heading(main)).toBeFocused();
+  await closeToasts(page);
+  await page.getByRole('button', { name: `Deactivate ${main}` }).click();
+  await question.getByRole('button', { name: 'Deactivate' }).click();
+  await expect(question).toHaveCount(0);
   await closeToasts(page);
   await expect(cardOf(page, main).getByText('Inactive', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: `Reactivate ${main}` })).toBeVisible();
 
   // The campus switcher offers only the active campus.
   await page.goto('/en/dashboard');
@@ -174,6 +189,29 @@ test('a second campus can become primary, and the old primary can then be deacti
     'true',
   );
   await expect(page.getByRole('menuitemradio')).toHaveCount(1);
+});
+
+test('removing the logo asks first, and Cancel keeps it', async ({ page, playwright }) => {
+  await ownerPage(page, playwright);
+  await uploadLogo(page.request);
+
+  await page.goto('/en/settings/school-profile');
+  const logo = page.getByRole('img', { name: 'School logo' });
+  await expect(logo).toBeVisible();
+
+  await page.getByRole('button', { name: 'Remove', exact: true }).click();
+  const question = page.getByRole('dialog', { name: 'Remove the logo?' });
+  await expect(question).toBeVisible();
+  await question.getByRole('button', { name: 'Cancel' }).click();
+  await expect(question).toHaveCount(0);
+  await expect(logo).toBeVisible();
+
+  await page.getByRole('button', { name: 'Remove', exact: true }).click();
+  await question.getByRole('button', { name: 'Remove logo' }).click();
+  await expect(question).toHaveCount(0);
+  await expect(logo).toHaveCount(0);
+  await expect(page.getByText('No logo yet')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Upload logo' })).toBeVisible();
 });
 
 test.describe('read-only access', () => {
@@ -238,7 +276,11 @@ test.describe('read-only access', () => {
         'You can view the school profile. Ask someone who manages settings to change it.',
       ),
     ).toBeVisible();
-    await expect(own.getByText(school.schoolName).first()).toBeVisible();
+    // The name is shown as the School name field's value, not just somewhere on the page.
+    const nameRow = own
+      .locator('#main dl > div')
+      .filter({ has: own.getByRole('term').getByText('School name', { exact: true }) });
+    await expect(nameRow.getByRole('definition')).toHaveText(school.schoolName);
     await expect(own.getByRole('img', { name: 'School logo' })).toBeVisible();
     for (const name of ['Save changes', 'Upload logo', 'Replace', 'Remove']) {
       await expect(own.getByRole('button', { name })).toHaveCount(0);
@@ -271,7 +313,7 @@ test.describe('read-only access', () => {
     await member.context.close();
   });
 
-  test('a plain Teacher has no Settings group, and a typed address is refused', async ({
+  test('a plain Teacher has no Settings group, and a typed Settings address is refused', async ({
     page,
     browser,
     baseURL,
@@ -295,6 +337,9 @@ test.describe('read-only access', () => {
         own.getByRole('heading', { level: 2, name: "You don't have access to this page" }),
         path,
       ).toBeVisible();
+      // Refused: the page shows none of the Settings content, so nothing to read or change.
+      await expect(own.locator('#main').getByRole('textbox'), path).toHaveCount(0);
+      await expect(own.locator('#main').getByRole('term'), path).toHaveCount(0);
     }
     await member.context.close();
   });
