@@ -59,17 +59,20 @@ describe('the Settings group', () => {
 });
 
 describe('comingSoonSections', () => {
-  it('lists the single-segment module pages, not the dashboard or the settings pages', () => {
+  it('lists the single-segment module pages, not the dashboard, the settings or the built pages', () => {
     expect(comingSoonSections).toEqual([
       'students',
       'admissions',
       'parents',
       'staff',
-      'classes',
-      'subjects',
       'timetable',
       'fees',
       'users-roles',
     ]);
+  });
+
+  it('no longer holds Classes and Subjects, which have pages of their own', () => {
+    expect(comingSoonSections).not.toContain('classes');
+    expect(comingSoonSections).not.toContain('subjects');
   });
 });

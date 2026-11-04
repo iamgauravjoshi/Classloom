@@ -1249,5 +1249,170 @@
         "campuses": "Add the main campus's address"
       }
     }
+  },
+  "academics": {
+    "metaTitle": "Classes & sections",
+    "title": "Classes & sections",
+    "description": "The sections, streams, houses and rooms your school uses.",
+    "tabs": {
+      "label": "Classes and sections views",
+      "sections": "Sections",
+      "streams": "Streams",
+      "houses": "Houses",
+      "rooms": "Rooms"
+    },
+    "sectionsStub": {
+      "title": "Sections",
+      "body": "The sections of each class will be listed here."
+    },
+    "common": {
+      "readOnlyNotice": "You can view these. Ask someone who manages classes to change them.",
+      "loading": "Loading",
+      "loadError": "This list couldn't be loaded.",
+      "retry": "Try again",
+      "archived": "Archived",
+      "edit": "Edit",
+      "editLabel": "Edit {name}",
+      "archive": "Archive",
+      "archiveLabel": "Archive {name}",
+      "restore": "Restore",
+      "restoreLabel": "Restore {name}",
+      "delete": "Delete",
+      "deleteLabel": "Delete {name}",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "saving": "Saving",
+      "fixErrors": "Check the highlighted fields.",
+      "nameTaken": "Another one already has this name.",
+      "archiveTitle": "Archive {name}?",
+      "archiving": "Archiving",
+      "deleteTitle": "Delete {name}?",
+      "deleting": "Deleting",
+      "created": "{name} has been added.",
+      "saved": "{name} has been saved.",
+      "archivedToast": "{name} has been archived.",
+      "restoredToast": "{name} has been restored.",
+      "deletedToast": "{name} has been deleted.",
+      "limitReached": "You've reached the limit of {limit}, counting archived ones. Delete one you no longer need to add another."
+    },
+    "streams": {
+      "title": "Streams",
+      "description": "Streams such as Science and Commerce divide classes XI and XII. While any stream is active, every XI and XII section needs one.",
+      "empty": "No streams yet",
+      "emptyBody": "Add streams if your school teaches classes XI and XII in streams. Schools without them can leave this empty.",
+      "add": "Add stream",
+      "starter": "Add {names}",
+      "starterAdding": "Adding streams",
+      "starterAdded": "Added {names}.",
+      "archiveBody": "Sections and class subjects that use it keep it, but it can't be chosen for new ones. You can restore it later.",
+      "deleteBody": "This can't be undone. A stream that sections or class subjects use can't be deleted; archive it instead.",
+      "form": {
+        "createTitle": "Add stream",
+        "editTitle": "Rename {name}",
+        "description": "A stream's name, such as Science or Commerce.",
+        "name": "Stream name",
+        "nameError": "Enter a name of 2 to 40 characters.",
+        "create": "Add stream"
+      }
+    },
+    "houses": {
+      "title": "Houses",
+      "description": "Houses group students across classes for sports and events. Each has a colour.",
+      "empty": "No houses yet",
+      "emptyBody": "Add your school's houses, each with its colour.",
+      "add": "Add house",
+      "colours": {
+        "RED": "Red",
+        "BLUE": "Blue",
+        "GREEN": "Green",
+        "YELLOW": "Yellow",
+        "ORANGE": "Orange",
+        "PURPLE": "Purple",
+        "PINK": "Pink",
+        "TEAL": "Teal",
+        "BROWN": "Brown",
+        "GREY": "Grey"
+      },
+      "archiveBody": "It stays on record, but can't be chosen for students. You can restore it later.",
+      "deleteBody": "This can't be undone.",
+      "form": {
+        "createTitle": "Add house",
+        "editTitle": "Edit {name}",
+        "description": "A house's name and colour.",
+        "name": "House name",
+        "nameError": "Enter a name of 2 to 40 characters.",
+        "colour": "Colour",
+        "colourError": "Choose a colour.",
+        "chooseColour": "Choose a colour",
+        "create": "Add house"
+      }
+    },
+    "rooms": {
+      "title": "Rooms on {campus}",
+      "titleNoCampus": "Rooms",
+      "description": "Classrooms, labs and halls on this campus. To see another campus's rooms, switch campus in the sidebar.",
+      "noCampus": "There is no active campus to show rooms for.",
+      "empty": "No rooms on {campus} yet",
+      "emptyBody": "Add the rooms your sections meet in, so each section can be given its room.",
+      "add": "Add room",
+      "types": {
+        "CLASSROOM": "Classroom",
+        "LAB": "Lab",
+        "COMPUTER_LAB": "Computer lab",
+        "LIBRARY": "Library",
+        "HALL": "Hall",
+        "OTHER": "Other"
+      },
+      "seats": "{count, plural, one {# seat} other {# seats}}",
+      "floor": "Floor: {floor}",
+      "archiveBody": "Sections already in this room keep it, but it can't be chosen for new sections. You can restore it later.",
+      "deleteBody": "This can't be undone. A room that sections use can't be deleted; archive it instead.",
+      "form": {
+        "createTitle": "Add room",
+        "editTitle": "Edit {name}",
+        "description": "A room on {campus}.",
+        "name": "Room name",
+        "nameError": "Enter a name of 1 to 40 characters.",
+        "type": "Type",
+        "typeError": "Choose a type.",
+        "capacity": "Capacity",
+        "capacityHint": "How many students it seats.",
+        "capacityError": "Enter a capacity from 1 to 500.",
+        "floor": "Floor",
+        "floorHint": "Optional. For example, Ground or 2.",
+        "floorError": "Use 20 characters or fewer.",
+        "create": "Add room"
+      }
+    },
+    "errors": {
+      "classesNotSet": "Set the school's lowest and highest class in the school profile first.",
+      "classOutOfRange": "This class is outside the classes set in the school profile.",
+      "nameTaken": "Another one already has this name. Choose a different name.",
+      "inUse": "This is still in use. Archive it instead, or remove it from what uses it first.",
+      "inUseBy": "This is still used by {uses}. Archive it instead, or remove it from those first.",
+      "inUseParts": {
+        "sections": "{count, plural, one {# section} other {# sections}}",
+        "classSubjects": "{count, plural, one {# class subject} other {# class subjects}}"
+      },
+      "academicsLimit": "You've reached the most allowed, counting archived ones. Delete one you no longer need.",
+      "academicsLimitOf": "You've reached the limit of {limit}, counting archived ones. Delete one you no longer need.",
+      "academicYearLocked": "This academic year is closed, so its sections can't be changed.",
+      "roomCampusMismatch": "This room is on another campus. Choose a room on the section's campus.",
+      "roomArchived": "This room is archived. Restore it or choose another.",
+      "teacherUnavailable": "This person can't be class teacher. Choose an active member of the school.",
+      "teacherTaken": "This teacher already leads a section this year.",
+      "teacherTakenBy": "This teacher is already class teacher of {sectionName} this year.",
+      "streamRequired": "Choose a stream. Classes XI and XII need one while the school has active streams.",
+      "streamNotAllowed": "Only classes XI and XII have streams.",
+      "streamArchived": "This stream is archived. Restore it before adding it to a class.",
+      "sectionsExist": "This year and campus already have sections, so nothing was copied.",
+      "nothingToCopy": "The previous year has no sections on this campus to copy.",
+      "subjectArchived": "This subject is archived. Restore it before adding it to a class.",
+      "permissionDenied": "You don't have permission to do this.",
+      "notFound": "This no longer exists. Refresh the page to see the latest list.",
+      "rateLimited": "Too many attempts. Wait a moment and try again.",
+      "network": "We couldn't reach Classloom. Check your connection and try again.",
+      "generic": "Something went wrong. Try again."
+    }
   }
 }

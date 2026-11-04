@@ -312,6 +312,173 @@ for (const theme of ['light', 'dark'] as const) {
       });
     });
 
+    test.describe('classes page: streams, houses and rooms', () => {
+      // The tabs change the school's streams, houses and rooms, so each test gets a school.
+      test.use({ storageState: { cookies: [], origins: [] } });
+
+      /** A write through the web app's `/api` proxy, as the signed-in page would send it. */
+      const send = async (page: Page, path: string, data: unknown, status: number) => {
+        const response = await page.request.post(`${WEB_ORIGIN}/api${path}`, {
+          data,
+          headers: { origin: WEB_ORIGIN },
+        });
+        expect(response.status(), await response.text()).toBe(status);
+        return (await response.json().catch(() => ({}))) as { id: string };
+      };
+
+      const ownSchool = async (page: Page, playwright: PlaywrightWorkerArgs['playwright']) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+        return own;
+      };
+
+      const tabs = (page: Page) =>
+        page.getByRole('navigation', { name: 'Classes and sections views' });
+
+      test('/en/classes?tab=streams has no WCAG 2.1 AA violations, empty, listed and in dialogs', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+
+        // No streams yet: the empty state with the starter-streams helper.
+        await page.goto('/en/classes?tab=streams');
+        await expect(
+          page.getByRole('heading', { level: 1, name: 'Classes & sections' }),
+        ).toBeVisible();
+        await expect(tabs(page).getByRole('link', { name: 'Streams' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        );
+        await expect(page.getByText('No streams yet')).toBeVisible();
+        const helper = page.getByRole('button', { name: 'Add Science, Commerce and Humanities' });
+        await expect(helper).toBeVisible();
+        await expectNoViolations(page);
+
+        // The helper adds the three; one is then archived.
+        await helper.click();
+        for (const name of ['Science', 'Commerce', 'Humanities']) {
+          await expect(page.getByRole('heading', { level: 3, name })).toBeVisible();
+        }
+        await expect(helper).toHaveCount(0);
+        await page.getByRole('button', { name: 'Archive Commerce' }).click();
+        const archive = page.getByRole('dialog', { name: 'Archive Commerce?' });
+        await expect(archive).toBeVisible();
+        await expectNoViolations(page);
+        await archive.getByRole('button', { name: 'Archive', exact: true }).click();
+        await expect(archive).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Restore Commerce' })).toBeVisible();
+        await expect(page.getByText('Archived', { exact: true })).toBeVisible();
+        await expectNoViolations(page);
+
+        // The add dialog, refused for a name already used.
+        await page.getByRole('button', { name: 'Add stream' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Add stream' });
+        await expect(dialog.getByLabel('Stream name')).toBeFocused();
+        await dialog.getByLabel('Stream name').fill('science');
+        await dialog.getByRole('button', { name: 'Add stream' }).click();
+        await expect(dialog.getByText('Another one already has this name.')).toBeVisible();
+        // The pointer still rests on the submit button; its hover shade is not what is measured.
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+      });
+
+      test('/en/classes?tab=houses has no WCAG 2.1 AA violations, with every colour swatch', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const colours = [
+          'RED',
+          'BLUE',
+          'GREEN',
+          'YELLOW',
+          'ORANGE',
+          'PURPLE',
+          'PINK',
+          'TEAL',
+          'BROWN',
+          'GREY',
+        ];
+
+        await page.goto('/en/classes?tab=houses');
+        await expect(page.getByText('No houses yet')).toBeVisible();
+        await expectNoViolations(page);
+
+        let archivedId = '';
+        for (const colour of colours) {
+          const name = `${colour[0]}${colour.slice(1).toLowerCase()} House`;
+          const house = await send(page, '/academics/houses', { name, colour }, 201);
+          if (colour === 'GREY') archivedId = house.id;
+        }
+        await send(page, `/academics/houses/${archivedId}/archive`, {}, 200);
+        await page.goto('/en/classes?tab=houses');
+        await expect(page.getByRole('heading', { level: 3, name: 'Teal House' })).toBeVisible();
+        // The colour is named in words, never shown by the swatch alone.
+        await expect(page.getByText('Brown', { exact: true })).toBeVisible();
+        await expect(page.getByText('Archived', { exact: true })).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Edit Red House' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Edit Red House' });
+        await expect(dialog.getByLabel('House name')).toHaveValue('Red House');
+        await dialog.getByLabel('House name').fill('R');
+        await dialog.getByRole('button', { name: 'Save changes' }).click();
+        await expect(dialog.getByText('Enter a name of 2 to 40 characters.')).toBeVisible();
+        // The pointer still rests on the submit button; its hover shade is not what is measured.
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+      });
+
+      test('/en/classes?tab=rooms has no WCAG 2.1 AA violations, filtered by the campus', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const listed = await page.request.get(`${WEB_ORIGIN}/api/school/campuses`);
+        const { campuses } = (await listed.json()) as {
+          campuses: { id: string; isPrimary: boolean }[];
+        };
+        const primary = campuses.find((campus) => campus.isPrimary)!;
+        const north = await send(page, '/school/campuses', { name: 'North Campus' }, 201);
+
+        await page.goto('/en/classes?tab=rooms');
+        await expect(page.getByText(/^No rooms on .+ yet$/)).toBeVisible();
+        await expectNoViolations(page);
+
+        const room = (campusId: string, name: string, extra: object = {}) =>
+          send(
+            page,
+            '/academics/rooms',
+            { campusId, name, type: 'CLASSROOM', capacity: 40, ...extra },
+            201,
+          );
+        await room(primary.id, 'Room 101', { floor: 'Ground' });
+        const lab = await room(primary.id, 'Physics Lab', { type: 'LAB', capacity: 30 });
+        await send(page, `/academics/rooms/${lab.id}/archive`, {}, 200);
+        await room(north.id, 'North Hall', { type: 'HALL', capacity: 300 });
+
+        await page.goto('/en/classes?tab=rooms');
+        await expect(page.getByRole('heading', { level: 3, name: 'Room 101' })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 3, name: 'Physics Lab' })).toBeVisible();
+        // The other campus's rooms are not listed.
+        await expect(page.getByRole('heading', { level: 3, name: 'North Hall' })).toHaveCount(0);
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Add room' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Add room' });
+        await expect(dialog.getByLabel('Room name')).toBeFocused();
+        await dialog.getByLabel('Capacity').fill('900');
+        await dialog.getByRole('button', { name: 'Add room' }).click();
+        await expect(dialog.getByText('Enter a capacity from 1 to 500.')).toBeVisible();
+        // The pointer still rests on the submit button; its hover shade is not what is measured.
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+      });
+    });
+
     test.describe('setup wizard, checklist and switchers', () => {
       // Each test changes its school's setup, so each gets a school of its own.
       test.use({ storageState: { cookies: [], origins: [] } });
