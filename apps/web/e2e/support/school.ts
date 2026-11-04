@@ -1,6 +1,8 @@
 import { randomInt } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-import { type APIRequestContext, expect } from '@playwright/test';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 import { generateSync } from 'otplib';
 
 import { latestEmailTo, mailIds, verificationLink } from './mailpit';
@@ -175,4 +177,81 @@ export async function relaxOwnerTwoFactor(request: APIRequestContext): Promise<v
     code: codeFor(secret, 30_000),
   });
   expect(disabled.status(), await disabled.text()).toBe(204);
+}
+
+/** An academic year's dates (YYYY-MM-DD) and its default label (`2026–27`, with an en dash). */
+export interface YearDates {
+  label: string;
+  startsOn: string;
+  endsOn: string;
+}
+
+/** The April-to-March academic year today (in IST) falls in, as the year form pre-fills it. */
+export function currentAcademicYear(): YearDates {
+  const [y, m] = new Date(Date.now() + 330 * 60_000)
+    .toISOString()
+    .slice(0, 7)
+    .split('-')
+    .map(Number);
+  const start = m! >= 4 ? y! : y! - 1;
+  return {
+    label: `${start}–${String(start + 1).slice(2)}`,
+    startsOn: `${start}-04-01`,
+    endsOn: `${start + 1}-03-31`,
+  };
+}
+
+/**
+ * Creates the school's current academic year (today's April-to-March year, with the default terms)
+ * through the API, from a request context signed in as someone who manages settings.
+ */
+export async function setUpCurrentYear(
+  request: APIRequestContext,
+  termCount: 2 | 3 = 2,
+): Promise<YearDates> {
+  const year = currentAcademicYear();
+  const created = await post(request, '/school/academic-years', {
+    startsOn: year.startsOn,
+    endsOn: year.endsOn,
+    termCount,
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  return year;
+}
+
+/** A small JPEG photo (1024x768), shared with the API's image-intake tests. */
+export const LOGO_JPEG = {
+  name: 'logo.jpg',
+  mimeType: 'image/jpeg',
+  buffer: readFileSync(
+    fileURLToPath(
+      new URL('../../../api/test/fixtures/images/landscape-1024x768.jpg', import.meta.url),
+    ),
+  ),
+};
+
+/** Uploads `LOGO_JPEG` as the school's logo, from a request context that manages settings. */
+export async function uploadLogo(request: APIRequestContext): Promise<void> {
+  const uploaded = await request.put(`${WEB_ORIGIN}/api/school/logo`, {
+    multipart: { file: LOGO_JPEG },
+    headers: { origin: WEB_ORIGIN },
+  });
+  expect(uploaded.status(), await uploaded.text()).toBe(200);
+}
+
+/**
+ * Closes every toast on the page. A toast sits over the bottom of the screen, where the next
+ * button often is, and hovering it (as a click on what lies beneath does) pauses its timer, so it
+ * would never leave. Hovering the stack spreads it out, so each close button can be clicked in
+ * turn. Call it once the change that announced the toast is visible: the toast comes with it.
+ */
+export async function closeToasts(page: Page): Promise<void> {
+  // A closed toast stays in the page while it slides out; it is no longer in the way.
+  const open = page.locator('[data-slot="toast"]:not([data-ending-style])');
+  await expect(async () => {
+    const close = open.getByRole('button', { name: 'Close toast' });
+    // One may leave by itself between the count and the click: the next pass finds the rest.
+    if ((await close.count()) > 0) await close.first().click({ timeout: 2_000 });
+    expect(await open.count()).toBe(0);
+  }).toPass({ timeout: 10_000 });
 }
