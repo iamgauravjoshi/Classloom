@@ -1448,6 +1448,102 @@
         "create": "Add room"
       }
     },
+    "subjectsPage": {
+      "metaTitle": "Subjects",
+      "title": "Subjects",
+      "description": "The subjects your school teaches, and which classes take them.",
+      "tabs": {
+        "label": "Subjects views",
+        "subjects": "Subjects",
+        "classSubjects": "Class subjects"
+      }
+    },
+    "subjects": {
+      "title": "Subjects",
+      "description": "Each subject's name, its board code and whether it's scholastic or co-scholastic. Archived subjects stay in the classes that have them, but can't be added to others.",
+      "readOnlyNotice": "You can view these. Ask someone who manages subjects to change them.",
+      "empty": "No subjects yet",
+      "emptyBody": "Start from your board's usual subjects, then add any others your school teaches.",
+      "emptyReadOnly": "No subjects have been added yet.",
+      "add": "Add subject",
+      "more": "More subject actions",
+      "starter": "Add your board's starter subjects",
+      "showArchived": "Show archived subjects ({count})",
+      "allArchived": "Every subject is archived. Turn on \"Show archived subjects\" to see them.",
+      "types": {
+        "SCHOLASTIC": "Scholastic",
+        "CO_SCHOLASTIC": "Co-scholastic"
+      },
+      "code": "Code: {code}",
+      "noCode": "No code",
+      "archiveBody": "Classes that take it keep it, but it can't be added to other classes. You can restore it later.",
+      "deleteBody": "This can't be undone. A subject that classes take can't be deleted; archive it instead.",
+      "form": {
+        "createTitle": "Add subject",
+        "editTitle": "Edit {name}",
+        "description": "A subject's name, its board code if it has one, and its type.",
+        "name": "Subject name",
+        "nameError": "Enter a name of 2 to 60 characters.",
+        "code": "Code",
+        "codeHint": "Optional. The board's subject code, such as 041.",
+        "codeError": "Use up to 10 letters, digits or hyphens.",
+        "type": "Type",
+        "create": "Add subject"
+      }
+    },
+    "starter": {
+      "title": "Add your board's starter subjects",
+      "description": "Untick the subjects your school doesn't teach. You can edit or archive any of them later.",
+      "listLabel": "{type} subjects",
+      "alreadyAdded": "Already added",
+      "code": "Code {code}",
+      "tickAll": "Tick all",
+      "untickAll": "Untick all",
+      "submit": "{count, plural, =0 {Add subjects} one {Add # subject} other {Add # subjects}}",
+      "adding": "Adding subjects",
+      "noneTicked": "Tick at least one subject to add.",
+      "allAdded": "Every starter subject has already been added.",
+      "added": "{count, plural, =0 {No subjects were added.} one {# subject added.} other {# subjects added.}}",
+      "skipped": "{count, plural, one {# already existed and was skipped.} other {# already existed and were skipped.}}"
+    },
+    "classSubjects": {
+      "title": "Class subjects",
+      "description": "Which subjects each class takes, and whether each is compulsory or optional. Save one class's changes before changing another.",
+      "classesNotSet": "Set the school's lowest and highest class in the school profile before choosing class subjects.",
+      "classesNotSetAsk": "Ask an administrator to set the classes your school offers in the school profile.",
+      "classesNotSetLink": "Open the school profile",
+      "noSubjects": "Add subjects first, then choose which classes take them.",
+      "noSubjectsLink": "Go to subjects",
+      "stream": "Stream for classes XI and XII",
+      "allStreams": "All streams",
+      "archivedStream": "{name} (archived)",
+      "streamHint": "Subjects under \"All streams\" apply to every stream. Choose a stream to add subjects only its students take.",
+      "region": "Class subjects grid",
+      "caption": "Subjects by class. Each cell shows whether the class takes the subject, and how.",
+      "class": "Class",
+      "kinds": {
+        "COMPULSORY": "Compulsory",
+        "OPTIONAL": "Optional",
+        "NONE": "Not taught"
+      },
+      "cellLabel": "{subject}, {class}: {state}",
+      "cycleHint": "Each press changes it: not taught, then compulsory, then optional.",
+      "cantAdd": "Archived, so it can't be added to this class.",
+      "classStream": "{class}, {stream}",
+      "count": "{count, plural, =0 {No subjects} one {# subject} other {# subjects}}",
+      "outsideRange": "Outside your classes",
+      "outsideRangeHint": "Classes marked \"Outside your classes\" are no longer in the school profile. Their subjects are shown, but can't be changed.",
+      "unsaved": "Unsaved",
+      "unsavedBar": "{class} has unsaved changes.",
+      "save": "Save {class}",
+      "discard": "Discard changes",
+      "saved": "Subjects for {class} have been saved.",
+      "refusedRow": "{subject}: {message}",
+      "guardTitle": "Discard unsaved changes?",
+      "guardBody": "Your changes to {class} haven't been saved.",
+      "guardLeave": "Discard changes",
+      "guardStay": "Keep editing"
+    },
     "errors": {
       "classesNotSet": "Set the school's lowest and highest class in the school profile first.",
       "classOutOfRange": "This class is outside the classes set in the school profile.",

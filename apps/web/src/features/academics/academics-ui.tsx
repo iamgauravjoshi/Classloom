@@ -37,7 +37,7 @@ export const TRIGGER_CLASS = cn(
 );
 
 /** The namespaces under `academics` whose lists share this layout. */
-export type AcademicsListKind = 'streams' | 'houses' | 'rooms';
+export type AcademicsListKind = 'streams' | 'houses' | 'rooms' | 'subjects';
 
 /** Active first, then by name. */
 export const sortItems = <T extends AcademicsItem>(items: readonly T[]): T[] =>
@@ -62,11 +62,14 @@ export function TabIntro({
   title,
   description,
   canEdit,
+  readOnlyNotice,
 }: {
   headingId: string;
   title: string;
   description: string;
   canEdit: boolean;
+  /** The read-only notice, when the page's own wording differs from the classes one. */
+  readOnlyNotice?: string;
 }) {
   const t = useTranslations('academics.common');
   return (
@@ -77,7 +80,7 @@ export function TabIntro({
       <p className="text-muted-foreground">{description}</p>
       {!canEdit ? (
         <Alert className="mt-2">
-          <AlertDescription>{t('readOnlyNotice')}</AlertDescription>
+          <AlertDescription>{readOnlyNotice ?? t('readOnlyNotice')}</AlertDescription>
         </Alert>
       ) : null}
     </div>
@@ -209,6 +212,11 @@ interface ItemListProps<T extends AcademicsItem> {
   remove: (id: string) => Promise<unknown>;
   /** Refetches the list after a change. */
   onChanged: () => void;
+  /**
+   * Where focus goes after Archive when the archived row leaves the list (archived ones hidden);
+   * by default the row's own heading.
+   */
+  archiveFocusId?: string;
 }
 
 /**
@@ -228,6 +236,7 @@ export function ItemList<T extends AcademicsItem>({
   restore,
   remove,
   onChanged,
+  archiveFocusId,
 }: ItemListProps<T>) {
   const t = useTranslations('academics.common');
   const tKind = useTranslations(`academics.${kind}`);
@@ -272,8 +281,9 @@ export function ItemList<T extends AcademicsItem>({
     try {
       if (action === 'archive') {
         await archive(item.id);
-        focusAfterUpdate.current = itemHeadingId(item.id);
-        focusOnClose.current = itemHeadingId(item.id);
+        const target = archiveFocusId ?? itemHeadingId(item.id);
+        focusAfterUpdate.current = target;
+        focusOnClose.current = target;
       } else {
         await remove(item.id);
         focusOnClose.current = headingId;
@@ -303,73 +313,76 @@ export function ItemList<T extends AcademicsItem>({
           <AlertDescription role="alert">{listError}</AlertDescription>
         </Alert>
       ) : null}
-      {/* One list: rows divided by rules on small screens, a grid of cards from `md`. */}
-      <ul className="bg-card divide-y rounded-xl border md:grid md:grid-cols-2 md:gap-4 md:divide-y-0 md:border-0 md:bg-transparent xl:grid-cols-3">
-        {sortItems(items).map((item) => (
-          <li
-            key={item.id}
-            className="md:bg-card flex min-w-0 flex-col gap-3 p-4 md:rounded-xl md:border md:p-5 md:shadow-xs"
-          >
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h3
-                id={itemHeadingId(item.id)}
-                tabIndex={-1}
-                className={cn(
-                  'text-h6 min-w-0 break-words outline-none',
-                  item.status === 'ARCHIVED' && 'text-muted-foreground',
-                )}
-              >
-                {item.name}
-              </h3>
-              {badges?.(item)}
-              {item.status === 'ARCHIVED' ? <ArchivedBadge /> : null}
-            </div>
-            {details?.(item)}
-            {canEdit ? (
-              <div className="flex flex-wrap gap-2 md:mt-auto">
-                <Button
-                  variant="outline"
-                  className={BUTTON_CLASS}
-                  aria-label={t('editLabel', { name: item.name })}
-                  onClick={() => onEdit(item)}
+      {/* One list: rows divided by rules on small screens, a grid of cards from `md`. The list
+          stays mounted while empty, so its confirm dialog survives the last delete. */}
+      {items.length > 0 ? (
+        <ul className="bg-card divide-y rounded-xl border md:grid md:grid-cols-2 md:gap-4 md:divide-y-0 md:border-0 md:bg-transparent xl:grid-cols-3">
+          {sortItems(items).map((item) => (
+            <li
+              key={item.id}
+              className="md:bg-card flex min-w-0 flex-col gap-3 p-4 md:rounded-xl md:border md:p-5 md:shadow-xs"
+            >
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h3
+                  id={itemHeadingId(item.id)}
+                  tabIndex={-1}
+                  className={cn(
+                    'text-h6 min-w-0 break-words outline-none',
+                    item.status === 'ARCHIVED' && 'text-muted-foreground',
+                  )}
                 >
-                  {t('edit')}
-                </Button>
-                {item.status === 'ACTIVE' ? (
-                  <Button
-                    variant="outline"
-                    className={BUTTON_CLASS}
-                    disabled={pending}
-                    aria-label={t('archiveLabel', { name: item.name })}
-                    onClick={() => open('archive', item)}
-                  >
-                    {t('archive')}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className={BUTTON_CLASS}
-                    disabled={pending}
-                    aria-label={t('restoreLabel', { name: item.name })}
-                    onClick={() => void runRestore(item)}
-                  >
-                    {t('restore')}
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  className={cn(BUTTON_CLASS, 'text-danger-strong')}
-                  disabled={pending}
-                  aria-label={t('deleteLabel', { name: item.name })}
-                  onClick={() => open('delete', item)}
-                >
-                  {t('delete')}
-                </Button>
+                  {item.name}
+                </h3>
+                {badges?.(item)}
+                {item.status === 'ARCHIVED' ? <ArchivedBadge /> : null}
               </div>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+              {details?.(item)}
+              {canEdit ? (
+                <div className="flex flex-wrap gap-2 md:mt-auto">
+                  <Button
+                    variant="outline"
+                    className={BUTTON_CLASS}
+                    aria-label={t('editLabel', { name: item.name })}
+                    onClick={() => onEdit(item)}
+                  >
+                    {t('edit')}
+                  </Button>
+                  {item.status === 'ACTIVE' ? (
+                    <Button
+                      variant="outline"
+                      className={BUTTON_CLASS}
+                      disabled={pending}
+                      aria-label={t('archiveLabel', { name: item.name })}
+                      onClick={() => open('archive', item)}
+                    >
+                      {t('archive')}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className={BUTTON_CLASS}
+                      disabled={pending}
+                      aria-label={t('restoreLabel', { name: item.name })}
+                      onClick={() => void runRestore(item)}
+                    >
+                      {t('restore')}
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className={cn(BUTTON_CLASS, 'text-danger-strong')}
+                    disabled={pending}
+                    aria-label={t('deleteLabel', { name: item.name })}
+                    onClick={() => open('delete', item)}
+                  >
+                    {t('delete')}
+                  </Button>
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <ConfirmDialog
         open={confirming !== null}

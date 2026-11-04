@@ -646,6 +646,162 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.getByRole('button', { name: /^Add section/ })).toHaveCount(0);
         await expectNoViolations(page);
       });
+
+      test.describe('subjects page', () => {
+        const subjectTabs = (page: Page) =>
+          page.getByRole('navigation', { name: 'Subjects views' });
+
+        test('/en/subjects has no WCAG 2.1 AA violations, empty, in the starter picker and listed', async ({
+          page,
+          playwright,
+        }) => {
+          await ownSchool(page, playwright);
+
+          // No subjects yet: the starter offer.
+          await page.goto('/en/subjects');
+          await expect(page.getByRole('heading', { level: 1, name: 'Subjects' })).toBeVisible();
+          await expect(
+            subjectTabs(page).getByRole('link', { name: 'Subjects', exact: true }),
+          ).toHaveAttribute('aria-current', 'page');
+          await expect(page.getByText('No subjects yet')).toBeVisible();
+          const offer = page.getByRole('button', { name: "Add your board's starter subjects" });
+          await expectNoViolations(page);
+
+          // The picker: every CBSE starter subject ticked; one is unticked before adding.
+          await offer.click();
+          const picker = page.getByRole('dialog', { name: "Add your board's starter subjects" });
+          await expect(picker.getByRole('checkbox', { name: /^Physics/ })).toBeChecked();
+          await picker.getByRole('checkbox', { name: /^Psychology/ }).click();
+          await expect(picker.getByRole('checkbox', { name: /^Psychology/ })).not.toBeChecked();
+          await expectNoViolations(page);
+          await picker.getByRole('button', { name: /^Add \d+ subjects$/ }).click();
+          await expect(picker).toHaveCount(0);
+          await expect(page.getByRole('heading', { level: 3, name: 'Physics' })).toBeVisible();
+          await expect(
+            page.getByRole('heading', { level: 2, name: 'Subjects', exact: true }),
+          ).toBeFocused();
+
+          // Listed, with an archived one shown on request.
+          const listed = await page.request.get(`${WEB_ORIGIN}/api/academics/subjects`);
+          const { subjects } = (await listed.json()) as {
+            subjects: { id: string; name: string }[];
+          };
+          const biology = subjects.find((s) => s.name === 'Biology')!;
+          await send(page, `/academics/subjects/${biology.id}/archive`, {}, 200);
+          await page.goto('/en/subjects');
+          await expect(page.getByRole('heading', { level: 3, name: 'Biology' })).toHaveCount(0);
+          await page.getByRole('switch', { name: 'Show archived subjects (1)' }).click();
+          await expect(page.getByRole('heading', { level: 3, name: 'Biology' })).toBeVisible();
+          await expect(page.getByText('Code: 044')).toBeVisible();
+          await expect(page.getByText('Co-scholastic').first()).toBeVisible();
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+
+          // From the menu, the picker marks what is already added.
+          await page.getByRole('button', { name: 'More subject actions' }).click();
+          await page.getByRole('menuitem', { name: "Add your board's starter subjects" }).click();
+          await expect(picker.getByRole('checkbox', { name: /^Physics/ })).toBeDisabled();
+          await expect(picker.getByText('Already added').first()).toBeVisible();
+          await expect(picker.getByRole('checkbox', { name: /^Psychology/ })).toBeEnabled();
+          await expectNoViolations(page);
+          await page.keyboard.press('Escape');
+          await expect(picker).toHaveCount(0);
+
+          // The add form, refused for a code with spaces.
+          await page.getByRole('button', { name: 'Add subject' }).click();
+          const dialog = page.getByRole('dialog', { name: 'Add subject' });
+          await dialog.getByLabel('Subject name').fill('Sanskrit');
+          await dialog.getByLabel('Code').fill('1 2');
+          await dialog.getByRole('button', { name: 'Add subject' }).click();
+          await expect(dialog.getByText('Use up to 10 letters, digits or hyphens.')).toBeVisible();
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+        });
+
+        test('/en/subjects?tab=class-subjects has no WCAG 2.1 AA violations, wide and at 375 px', async ({
+          page,
+          playwright,
+        }) => {
+          await ownSchool(page, playwright);
+          await setClassRange(page, 'IX', 'XII');
+          const science = await send(page, '/academics/streams', { name: 'Science' }, 201);
+          await send(page, '/academics/streams', { name: 'Commerce' }, 201);
+          const subject = (name: string, code?: string) =>
+            send(page, '/academics/subjects', { name, code, type: 'SCHOLASTIC' }, 201);
+          const english = await subject('English Core', '301');
+          const physics = await subject('Physics', '042');
+          await subject('Accountancy', '055');
+          const maths = await subject('Mathematics', '041');
+          const put = async (level: string, rows: unknown[]) => {
+            const response = await page.request.put(
+              `${WEB_ORIGIN}/api/academics/class-subjects/${level}`,
+              { data: { rows }, headers: { origin: WEB_ORIGIN } },
+            );
+            expect(response.status(), await response.text()).toBe(200);
+          };
+          await put('IX', [{ subjectId: maths.id, streamId: null, kind: 'COMPULSORY' }]);
+          await put('XI', [
+            { subjectId: english.id, streamId: null, kind: 'COMPULSORY' },
+            { subjectId: physics.id, streamId: science.id, kind: 'COMPULSORY' },
+          ]);
+
+          // Wide: a table of classes against subjects, with the stream selector.
+          await page.setViewportSize({ width: 1280, height: 900 });
+          await page.goto('/en/subjects?tab=class-subjects');
+          await expect(
+            subjectTabs(page).getByRole('link', { name: 'Class subjects' }),
+          ).toHaveAttribute('aria-current', 'page');
+          const grid = page.getByRole('region', { name: 'Class subjects grid' });
+          await expect(grid).toBeVisible();
+          await expect(page.getByLabel('Stream for classes XI and XII')).toBeVisible();
+          await expect(
+            grid.getByRole('button', { name: 'Mathematics, Class IX: Compulsory' }),
+          ).toBeVisible();
+          await expectNoViolations(page);
+
+          // A change waits to be saved.
+          await grid.getByRole('button', { name: 'Physics, Class X: Not taught' }).click();
+          await expect(
+            grid.getByRole('button', { name: 'Physics, Class X: Compulsory' }),
+          ).toBeVisible();
+          await expect(page.getByText('Class X has unsaved changes.')).toBeVisible();
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+
+          // The Science stream's own rows; the all-streams row for English is not among them.
+          await page.getByLabel('Stream for classes XI and XII').click();
+          await page.getByRole('option', { name: 'Science' }).click();
+          await expect(
+            grid.getByRole('button', { name: 'Physics, Class XI, Science: Compulsory' }),
+          ).toBeVisible();
+          await expect(
+            grid.getByRole('button', { name: 'English Core, Class XI, Science: Not taught' }),
+          ).toBeVisible();
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+
+          await page.getByRole('button', { name: 'Save Class X' }).click();
+          await expect(page.getByText('Class X has unsaved changes.')).toHaveCount(0);
+
+          // At 375 px: one accordion per class, and nothing wider than the screen.
+          await page.setViewportSize({ width: 375, height: 812 });
+          await page.goto('/en/subjects?tab=class-subjects');
+          await expect(grid).toBeHidden();
+          await page.getByRole('button', { name: 'Class XI', exact: true }).click();
+          await expect(
+            page.getByRole('button', { name: 'English Core, Class XI: Compulsory' }),
+          ).toBeVisible();
+          await page.getByRole('button', { name: 'Class X', exact: true }).click();
+          await expect(
+            page.getByRole('button', { name: 'Physics, Class X: Compulsory' }),
+          ).toBeVisible();
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+          ).toBe(true);
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+        });
+      });
     });
 
     test.describe('setup wizard, checklist and switchers', () => {
