@@ -34,13 +34,14 @@ import {
 import type { Request } from 'express';
 import { createZodDto } from 'nestjs-zod';
 
+import { withNullableProperties } from '../../core/http/nullable-openapi';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuth } from '../auth/request-auth';
 import { MembersService } from './members.service';
 import { RequirePermission } from './require-permission.decorator';
 
 class MemberDto extends createZodDto(memberSchema) {}
-class MembersPageDto extends createZodDto(membersPageSchema) {}
+class MembersPageDto extends withNullableProperties(createZodDto(membersPageSchema)) {}
 class ListMembersQueryDto extends createZodDto(listMembersQuerySchema) {}
 class SetMemberRolesRequestDto extends createZodDto(setMemberRolesRequestSchema) {}
 

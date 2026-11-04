@@ -423,9 +423,34 @@ describe('school profile and logo API', () => {
       expect(await audits(s.tenantId, 'school.logo_changed')).toHaveLength(0);
     });
 
+    it('gives 503 (not 500) when the put stalls past the 5 s transaction window and then fails', async () => {
+      const s = await school();
+      vi.spyOn(storage, 'put').mockImplementation(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 6000));
+        throw new StorageUnavailableError('put');
+      });
+      const res = await upload(s.admin.cookie, jpeg);
+      expect(res.status).toBe(503);
+      expect(bodyOf(res).type).toBe('storage-unavailable');
+      expect(await owner.file.count({ where: { tenantId: s.tenantId } })).toBe(0);
+    });
+
+    it('saves the logo when a slow put outlasts the 5 s transaction window', async () => {
+      const s = await school();
+      const realPut = storage.put.bind(storage);
+      vi.spyOn(storage, 'put').mockImplementation(async (...args) => {
+        await new Promise((resolve) => setTimeout(resolve, 6000));
+        return realPut(...args);
+      });
+      const res = await upload(s.admin.cookie, jpeg);
+      expect(res.status).toBe(200);
+      const row = await owner.schoolProfile.findUniqueOrThrow({ where: { tenantId: s.tenantId } });
+      expect(row.logoFileId).not.toBeNull();
+    });
+
     it('removes the stored object when the transaction rolls back after storing it', async () => {
       const s = await school();
-      const stored = vi.spyOn(files, 'store');
+      const stored = vi.spyOn(files, 'put');
       const removed = vi.spyOn(files, 'removeObject');
       vi.spyOn(app.get(AuditService), 'record').mockRejectedValueOnce(new Error('audit down'));
       const res = await upload(s.admin.cookie, jpeg);

@@ -276,6 +276,25 @@ describe('school onboarding schema and migration', () => {
         await expect(applyMigrations(url)).rejects.toThrow(
           /1 school\(s\) without exactly one primary campus/,
         );
+
+        // Nothing of the migration is left behind: it aborted as one transaction.
+        const after = new Client({ connectionString: url });
+        await after.connect();
+        try {
+          const profiles = await after.query<{ t: string | null }>(
+            `SELECT to_regclass('school_profiles')::text AS t`,
+          );
+          expect(profiles.rows[0]!.t).toBeNull();
+          const gist = await after.query(`SELECT 1 FROM pg_extension WHERE extname = 'btree_gist'`);
+          expect(gist.rowCount).toBe(0);
+          const columns = await after.query<{ column_name: string }>(
+            `SELECT column_name FROM information_schema.columns
+              WHERE table_name = 'campuses' AND column_name IN ('address_line1', 'pin_code')`,
+          );
+          expect(columns.rows).toEqual([]);
+        } finally {
+          await after.end();
+        }
       } finally {
         await owner.query(`DROP DATABASE ${database} WITH (FORCE)`);
       }

@@ -24,12 +24,13 @@ import {
 import type { Request } from 'express';
 import { createZodDto } from 'nestjs-zod';
 
+import { withNullableProperties } from '../../core/http/nullable-openapi';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuth } from '../auth/request-auth';
 import { InvitationsService } from './invitations.service';
 import { RequirePermission } from './require-permission.decorator';
 
-class InvitationDto extends createZodDto(invitationSchema) {}
+class InvitationDto extends withNullableProperties(createZodDto(invitationSchema)) {}
 class InvitationsResponseDto extends createZodDto(invitationsResponseSchema) {}
 class CreateInvitationRequestDto extends createZodDto(createInvitationRequestSchema) {}
 

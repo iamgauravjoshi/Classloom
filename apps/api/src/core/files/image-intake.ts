@@ -65,6 +65,8 @@ export class ImageIntake {
     const sniffed = sniffFormat(input);
     if (!sniffed) throw new ImageRejectedError('type');
 
+    // failOn 'error' is stricter than 'truncated' (sharp's levels run none < truncated < error <
+    // warning), so a truncated JPEG or PNG is refused as well (see the truncated fixtures).
     const options = { limitInputPixels: LIMIT_INPUT_PIXELS, failOn: 'error' } as const;
     // Header only: sharp reads the dimensions without decoding pixels, and refuses a header that
     // declares more than LIMIT_INPUT_PIXELS.

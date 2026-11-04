@@ -7,12 +7,16 @@ import type { FilePurpose } from '../../generated/prisma/enums';
 import { FILE_STORAGE, type FileStorage, StorageUnavailableError } from './file-storage';
 import type { LogoImage } from './image-intake';
 
-export interface StoreFileInput {
+export interface PutFileInput {
   tenantId: string;
   purpose: FilePurpose;
   image: LogoImage;
-  /** Null for the system and the CLI. */
-  userId: string | null;
+}
+
+/** An object already in storage, waiting for its `files` row. */
+export interface StoredObject extends PutFileInput {
+  fileId: string;
+  storageKey: string;
 }
 
 /** `tenants/<tenantId>/<purpose>/<fileId>.png`, built only from ids the API generated. */
@@ -20,49 +24,51 @@ export function storageKeyFor(tenantId: string, purpose: FilePurpose, fileId: st
   return `tenants/${tenantId}/${purpose.toLowerCase()}/${fileId}.png`;
 }
 
+/**
+ * Stores files in two steps so no storage call ever runs inside a database transaction (spec
+ * sections 5 and 11): `put` uploads the object before the transaction opens, `insertRow` writes
+ * its `files` row inside it. A caller whose transaction fails removes the object again.
+ */
 @Injectable()
 export class FilesService {
   private readonly logger = new Logger(FilesService.name);
 
   constructor(@Inject(FILE_STORAGE) private readonly storage: FileStorage) {}
 
-  /**
-   * Puts the object first, then inserts the `files` row with `tx` (the caller's tenant
-   * transaction). A failed put throws StorageUnavailableError before any row is written; if the
-   * insert fails, the object just written is removed again.
-   */
-  async store(
-    tx: Prisma.TransactionClient,
-    { tenantId, purpose, image, userId }: StoreFileInput,
-  ): Promise<{ fileId: string; storageKey: string }> {
+  /** Uploads the object under a fresh id. Any failure is a StorageUnavailableError. */
+  async put(input: PutFileInput): Promise<StoredObject> {
     const fileId = randomUUID();
-    const storageKey = storageKeyFor(tenantId, purpose, fileId);
+    const storageKey = storageKeyFor(input.tenantId, input.purpose, fileId);
     try {
-      await this.storage.put(storageKey, image.data, 'image/png');
+      await this.storage.put(storageKey, input.image.data, 'image/png');
     } catch (error) {
       if (error instanceof StorageUnavailableError) throw error;
       throw new StorageUnavailableError('put', { cause: error });
     }
-    try {
-      await tx.file.create({
-        data: {
-          id: fileId,
-          tenantId,
-          purpose,
-          storageKey,
-          contentType: 'image/png',
-          byteSize: image.data.length,
-          width: image.width,
-          height: image.height,
-          sha256: new Uint8Array(image.sha256),
-          createdByUserId: userId,
-        },
-      });
-    } catch (error) {
-      await this.removeObject(storageKey);
-      throw error;
-    }
-    return { fileId, storageKey };
+    return { ...input, fileId, storageKey };
+  }
+
+  /** Inserts the `files` row for an object `put` stored, with `tx` (the tenant transaction). */
+  async insertRow(
+    tx: Prisma.TransactionClient,
+    { fileId, tenantId, purpose, storageKey, image }: StoredObject,
+    /** Null for the system and the CLI. */
+    userId: string | null,
+  ): Promise<void> {
+    await tx.file.create({
+      data: {
+        id: fileId,
+        tenantId,
+        purpose,
+        storageKey,
+        contentType: 'image/png',
+        byteSize: image.data.length,
+        width: image.width,
+        height: image.height,
+        sha256: new Uint8Array(image.sha256),
+        createdByUserId: userId,
+      },
+    });
   }
 
   /** Deletes an object; a failure is logged (the object is left behind), never thrown. */

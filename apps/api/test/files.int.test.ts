@@ -39,10 +39,12 @@ describe('core files module (RustFS)', () => {
   let image: LogoImage;
   const tenantId = randomUUID();
 
-  const store = () =>
-    withTenant(prisma, tenantId, (tx) =>
-      files.store(tx, { tenantId, purpose: 'SCHOOL_LOGO', image, userId: null }),
-    );
+  /** The two steps a caller takes: the put first, then the row inside a tenant transaction. */
+  const store = async () => {
+    const stored = await files.put({ tenantId, purpose: 'SCHOOL_LOGO', image });
+    await withTenant(prisma, tenantId, (tx) => files.insertRow(tx, stored, null));
+    return stored;
+  };
 
   beforeAll(async () => {
     infra = await startTestInfra({ storage: true });
@@ -73,7 +75,7 @@ describe('core files module (RustFS)', () => {
     expect(await storage.ping()).toBe(true);
   });
 
-  it('stores the object, then the row, under tenants/<tenantId>/school_logo/<fileId>.png', async () => {
+  it('puts the object, then inserts the row, under tenants/<tenantId>/school_logo/<fileId>.png', async () => {
     const { fileId, storageKey } = await store();
     expect(storageKey).toBe(`tenants/${tenantId}/school_logo/${fileId}.png`);
     expect(await readAll(await storage.get(storageKey))).toEqual(image.data);
@@ -109,7 +111,7 @@ describe('core files module (RustFS)', () => {
       await infra.storage!.stop();
     });
 
-    it('store throws StorageUnavailableError and inserts no row', async () => {
+    it('put throws StorageUnavailableError, so no row is ever inserted', async () => {
       const before = await owner.file.count({ where: { tenantId } });
       await expect(store()).rejects.toBeInstanceOf(StorageUnavailableError);
       expect(await owner.file.count({ where: { tenantId } })).toBe(before);

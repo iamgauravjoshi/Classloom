@@ -81,3 +81,7 @@ const full = await noise(256, 256).png({ compressionLevel: 0 }).toBuffer();
 await writeFile(out('truncated.png'), full.subarray(0, Math.floor(full.length / 2)));
 
 await writeFile(out('header-30000x30000.png'), pngBombHeader());
+
+// The first half of a valid noisy baseline JPEG: libjpeg only warns about the missing data.
+const fullJpeg = await noise(256, 256).jpeg({ quality: 90 }).toBuffer();
+await writeFile(out('truncated.jpg'), fullJpeg.subarray(0, Math.floor(fullJpeg.length / 2)));

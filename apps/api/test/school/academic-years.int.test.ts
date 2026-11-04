@@ -221,6 +221,22 @@ describe('academic years API', () => {
       expect(problem(res).type).toBe('academic-year-label-taken');
     });
 
+    it('refuses a planned year before the current year with 409 academic-year-overlap', async () => {
+      const s = await school();
+      await create(s.admin.cookie, APR_2027);
+      const res = await post(BASE, s.admin.cookie).send(APR_2026);
+      expect(res.status).toBe(409);
+      expect(problem(res).type).toBe('academic-year-overlap');
+      expect(await yearRows(s.tenantId)).toHaveLength(1);
+    });
+
+    it('accepts the planned year that starts the day after the current year ends', async () => {
+      const s = await school();
+      await create(s.admin.cookie, APR_2026);
+      const next = await create(s.admin.cookie, APR_2027);
+      expect(next).toMatchObject({ status: 'PLANNED', startsOn: '2027-04-01' });
+    });
+
     it("refuses a Teacher's create with 403", async () => {
       const s = await school();
       const res = await post(BASE, s.teacher.cookie).send(APR_2026);
@@ -325,6 +341,50 @@ describe('academic years API', () => {
       });
       expect(res.status).toBe(409);
       expect(problem(res).type).toBe('academic-year-label-taken');
+    });
+
+    const CAL_2027 = {
+      startsOn: '2027-01-01',
+      endsOn: '2027-12-31',
+      terms: [
+        { name: 'Term 1', startsOn: '2027-01-01', endsOn: '2027-06-30' },
+        { name: 'Term 2', startsOn: '2027-07-01', endsOn: '2027-12-31' },
+      ],
+    };
+
+    it('moves an automatic label with the dates when no label is sent', async () => {
+      const s = await school();
+      const y = await create(s.admin.cookie, APR_2026);
+      const res = await patch(`${BASE}/${y.id}`, s.admin.cookie).send(CAL_2027);
+      expect(res.status).toBe(200);
+      expect(year(res).label).toBe('2027');
+    });
+
+    it('keeps a custom label when the dates move and no label is sent', async () => {
+      const s = await school();
+      const y = await create(s.admin.cookie, { ...APR_2026, label: 'Session 26' });
+      const res = await patch(`${BASE}/${y.id}`, s.admin.cookie).send(CAL_2027);
+      expect(res.status).toBe(200);
+      expect(year(res).label).toBe('Session 26');
+    });
+
+    it('refuses moving the planned year before the current year with 409, changing nothing', async () => {
+      const s = await school();
+      await create(s.admin.cookie, APR_2027);
+      const next = await create(s.admin.cookie, {
+        startsOn: '2028-04-01',
+        endsOn: '2029-03-31',
+        termCount: 2,
+      });
+      const res = await patch(`${BASE}/${next.id}`, s.admin.cookie).send({
+        startsOn: '2026-04-01',
+        endsOn: '2027-03-31',
+        terms: THREE_TERMS_2026.map(({ seq: _seq, ...t }) => t),
+      });
+      expect(res.status).toBe(409);
+      expect(problem(res).type).toBe('academic-year-overlap');
+      const rows = await owner.academicYear.findUnique({ where: { id: next.id } });
+      expect(rows?.startsOn.toISOString().slice(0, 10)).toBe('2028-04-01');
     });
 
     it("gives 404 for another school's year", async () => {

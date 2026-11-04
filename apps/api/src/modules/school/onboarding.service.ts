@@ -25,6 +25,7 @@ export class OnboardingService {
   get(auth: Actor): Promise<OnboardingResponse> {
     return withTenant(this.prisma, auth.tenantId, async (tx) => {
       const profile = await tx.schoolProfile.findFirst({
+        where: { tenantId: auth.tenantId },
         select: {
           udiseCode: true,
           addressLine1: true,
@@ -36,9 +37,11 @@ export class OnboardingService {
         },
       });
       if (!profile) throw new Error('School profile row missing for the current tenant');
-      const hasCurrentYear = (await tx.academicYear.count({ where: { status: 'CURRENT' } })) > 0;
+      const hasCurrentYear =
+        (await tx.academicYear.count({ where: { tenantId: auth.tenantId, status: 'CURRENT' } })) >
+        0;
       const primaryCampus = (await tx.campus.findFirst({
-        where: { isPrimary: true },
+        where: { tenantId: auth.tenantId, isPrimary: true },
         select: { addressLine1: true, pinCode: true },
       })) ?? { addressLine1: null, pinCode: null };
 

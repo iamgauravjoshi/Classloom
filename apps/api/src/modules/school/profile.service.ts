@@ -77,8 +77,9 @@ export class ProfileService {
    * only that school's row). Every school has exactly one profile row, made at registration and
    * by the onboarding migration, so a missing row is an invariant break (500), never upserted.
    */
-  async load(tx: Prisma.TransactionClient): Promise<SchoolProfile> {
+  async load(tx: Prisma.TransactionClient, tenantId: string): Promise<SchoolProfile> {
     const row = await tx.schoolProfile.findFirst({
+      where: { tenantId },
       include: { tenant: { select: { name: true, board: true, code: true } } },
     });
     if (!row) throw new Error('School profile row missing for the current tenant');
@@ -110,7 +111,7 @@ export class ProfileService {
   }
 
   get(auth: Actor): Promise<SchoolProfile> {
-    return withTenant(this.prisma, auth.tenantId, (tx) => this.load(tx));
+    return withTenant(this.prisma, auth.tenantId, (tx) => this.load(tx, auth.tenantId));
   }
 
   /**
@@ -121,7 +122,7 @@ export class ProfileService {
   update(auth: Actor, input: UpdateSchoolProfileRequest, meta: SchoolMeta): Promise<SchoolProfile> {
     return withTenant(this.prisma, auth.tenantId, async (tx) => {
       await lockProfile(tx, auth.tenantId);
-      const current = await this.load(tx);
+      const current = await this.load(tx, auth.tenantId);
       const before: Record<string, unknown> = {};
       const after: Record<string, unknown> = {};
       for (const key of EDITABLE_KEYS) {
@@ -151,7 +152,7 @@ export class ProfileService {
         actor: auth,
         meta,
       });
-      return this.load(tx);
+      return this.load(tx, auth.tenantId);
     });
   }
 
@@ -166,19 +167,20 @@ export class ProfileService {
       throw error instanceof ImageRejectedError ? new LogoInvalidException(error.reason) : error;
     });
 
-    const pending: { storageKey?: string } = {};
+    // Storage is called before the transaction opens, never inside its 5 s window.
+    const stored = await this.files
+      .put({ tenantId: auth.tenantId, purpose: 'SCHOOL_LOGO', image })
+      .catch((error: unknown) => {
+        throw error instanceof StorageUnavailableError ? new StorageUnavailableException() : error;
+      });
+    const { fileId } = stored;
+
     let result: { profile: SchoolProfile; replacedKey: string | null };
     try {
       result = await withTenant(this.prisma, auth.tenantId, async (tx) => {
         await lockProfile(tx, auth.tenantId);
         const previous = await this.currentLogo(tx, auth.tenantId);
-        const { fileId, storageKey } = await this.files.store(tx, {
-          tenantId: auth.tenantId,
-          purpose: 'SCHOOL_LOGO',
-          image,
-          userId: auth.userId,
-        });
-        pending.storageKey = storageKey;
+        await this.files.insertRow(tx, stored, auth.userId);
         await tx.schoolProfile.update({
           where: { tenantId: auth.tenantId },
           data: { logoFileId: fileId },
@@ -193,11 +195,13 @@ export class ProfileService {
           actor: auth,
           meta,
         });
-        return { profile: await this.load(tx), replacedKey: previous?.storageKey ?? null };
+        return {
+          profile: await this.load(tx, auth.tenantId),
+          replacedKey: previous?.storageKey ?? null,
+        };
       });
     } catch (error) {
-      if (pending.storageKey) await this.files.removeObject(pending.storageKey);
-      if (error instanceof StorageUnavailableError) throw new StorageUnavailableException();
+      await this.files.removeObject(stored.storageKey);
       throw error;
     }
     if (result.replacedKey) await this.files.removeObject(result.replacedKey);

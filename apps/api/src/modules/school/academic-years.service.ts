@@ -112,8 +112,9 @@ export class AcademicYearsService {
 
     return this.write(auth, async (tx) => {
       await lockYears(tx, auth.tenantId);
-      const hasCurrent = (await tx.academicYear.count({ where: { status: 'CURRENT' } })) > 0;
-      const status = hasCurrent ? 'PLANNED' : 'CURRENT';
+      const currentYear = await findCurrent(tx, auth.tenantId);
+      const status = currentYear ? 'PLANNED' : 'CURRENT';
+      if (currentYear) assertAfterCurrent(input.startsOn, currentYear.endsOn);
       const row = await tx.academicYear.create({
         data: {
           tenantId: auth.tenantId,
@@ -144,9 +145,10 @@ export class AcademicYearsService {
   }
 
   /**
-   * Replaces the dates and terms (and the label, when sent; otherwise it is kept). Refused for a
-   * `CLOSED` year. No change writes nothing; otherwise one `academic_year.updated` event holds
-   * only the changed fields.
+   * Replaces the dates and terms, and the label when sent (otherwise an automatic label follows
+   * the new dates and a custom one is kept). A planned year must start after the current year
+   * ends. Refused for a `CLOSED` year. No change writes nothing; otherwise one
+   * `academic_year.updated` event holds only the changed fields.
    */
   update(
     auth: Actor,
@@ -159,9 +161,15 @@ export class AcademicYearsService {
       const current = toYear(await this.load(tx, id));
       if (current.status === 'CLOSED') throw new AcademicYearLockedException();
       assertTermsTile(input, input.terms);
+      if (current.status === 'PLANNED') {
+        const currentYear = await findCurrent(tx, auth.tenantId);
+        if (currentYear) assertAfterCurrent(input.startsOn, currentYear.endsOn);
+      }
 
+      // No label sent: an automatic label follows the new dates, a custom one is kept.
+      const automatic = current.label === yearLabel(current.startsOn, current.endsOn);
       const next = {
-        label: input.label ?? current.label,
+        label: input.label ?? (automatic ? yearLabel(input.startsOn, input.endsOn) : current.label),
         startsOn: input.startsOn,
         endsOn: input.endsOn,
         terms: termValues(input.terms),
@@ -320,6 +328,23 @@ export class AcademicYearsService {
 async function lockYears(tx: Prisma.TransactionClient, tenantId: string): Promise<void> {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`academic_years:${tenantId}`}, 0))`;
   await tx.$executeRaw`SELECT id FROM academic_years WHERE tenant_id = ${tenantId}::uuid FOR UPDATE`;
+}
+
+/** The school's `CURRENT` year's end date, or null. Call only under `lockYears`. */
+async function findCurrent(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+): Promise<{ endsOn: string } | null> {
+  const row = await tx.academicYear.findFirst({
+    where: { tenantId, status: 'CURRENT' },
+    select: { endsOn: true },
+  });
+  return row ? { endsOn: fromDate(row.endsOn) } : null;
+}
+
+/** A `PLANNED` year must start after the `CURRENT` year ends (ruling T5b), else 409 overlap. */
+function assertAfterCurrent(startsOn: string, currentEndsOn: string): void {
+  if (startsOn <= currentEndsOn) throw new AcademicYearOverlapException();
 }
 
 /** The unique indexes of `academic_years` this service maps, by name (see the migration). */

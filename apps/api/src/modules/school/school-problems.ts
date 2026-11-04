@@ -101,7 +101,7 @@ export class CampusInactiveException extends conflict('campus-inactive', {
 const LOGO_MESSAGES: Record<ImageRejectionReason, string> = {
   type: 'Upload a PNG, JPEG or WebP image.',
   size: 'The image must be 2 MB or smaller.',
-  dimensions: 'The image must be at least 64 pixels on each side.',
+  dimensions: 'The image must be between 64 pixels on each side and 25 megapixels.',
   decode: 'The image could not be read. Try another file.',
 };
 

@@ -68,6 +68,10 @@ describe('ImageIntake.toLogoPng', () => {
     expect((await rejection(await fixture('truncated.png'))).reason).toBe('decode');
   });
 
+  it('rejects a truncated JPEG as undecodable', async () => {
+    expect((await rejection(await fixture('truncated.jpg'))).reason).toBe('decode');
+  });
+
   it('rejects a header declaring 30000x30000 quickly, without decoding it', async () => {
     const started = performance.now();
     const { reason } = await rejection(await fixture('header-30000x30000.png'));

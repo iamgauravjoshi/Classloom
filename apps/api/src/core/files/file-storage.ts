@@ -68,7 +68,9 @@ export class S3FileStorage implements FileStorage, OnModuleInit, OnModuleDestroy
       credentials: { accessKeyId: env.S3_ACCESS_KEY, secretAccessKey: env.S3_SECRET_KEY },
       // Fail fast while storage is down instead of holding the request open.
       maxAttempts: 2,
-      requestHandler: { connectionTimeout: 2000, requestTimeout: 10_000 },
+      // Two attempts of at most 2 s to connect and 5 s to answer: a stalled put becomes a 503
+      // within about 15 s. Storage is never called inside a database transaction.
+      requestHandler: { connectionTimeout: 2000, requestTimeout: 5000 },
     });
   }
 
