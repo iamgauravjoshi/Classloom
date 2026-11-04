@@ -104,6 +104,7 @@ export function CampusForm({
   onCancel,
   onDirtyChange,
   renderActions,
+  refreshPage = true,
   formId,
 }: {
   campus?: Campus;
@@ -115,6 +116,11 @@ export function CampusForm({
   renderActions?: (state: { pending: boolean }) => ReactNode;
   /** The form element's id, for a submit button placed outside it (`form=`). */
   formId?: string;
+  /**
+   * Whether a save also refreshes the server-rendered page (default). The wizard says no: a
+   * refresh after it has moved to `?step=` would mount it afresh and lose what is typed next.
+   */
+  refreshPage?: boolean;
 }) {
   const t = useTranslations('schoolSettings.campuses.form');
   const tErrors = useTranslations('schoolSettings.errors');
@@ -162,7 +168,7 @@ export function CampusForm({
         : await create.mutateAsync({ data: body });
       void queryClient.invalidateQueries({ queryKey: getListCampusesQueryKey() });
       void queryClient.invalidateQueries({ queryKey: getGetOnboardingQueryKey() });
-      router.refresh();
+      if (refreshPage) router.refresh();
       toast.add({
         title: campus ? t('saved') : t('created', { name: saved.name }),
         type: 'success',

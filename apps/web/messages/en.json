@@ -995,7 +995,13 @@
       "removing": "Removing",
       "uploaded": "The logo has been updated.",
       "removed": "The logo has been removed.",
-      "chooseFile": "Choose a logo image"
+      "chooseFile": "Choose a logo image",
+      "removeDialog": {
+        "title": "Remove the logo?",
+        "body": "The sidebar and documents will show no logo until a new one is uploaded.",
+        "action": "Remove logo",
+        "cancel": "Cancel"
+      }
     },
     "errors": {
       "academicYearOverlap": "These dates overlap another academic year. Choose dates that don't.",
@@ -1012,7 +1018,7 @@
       "logoInvalid": "This image can't be used as a logo. Try another file.",
       "logoType": "Upload a PNG, JPEG or WebP image.",
       "logoSize": "The image must be 2 MB or smaller.",
-      "logoDimensions": "The image must be at least 64 pixels on each side.",
+      "logoDimensions": "The image must be between 64 pixels on each side and 25 megapixels.",
       "logoDecode": "The image couldn't be read. Try another file.",
       "permissionDenied": "You don't have permission to change school settings.",
       "rateLimited": "You've made too many changes. Try again later.",

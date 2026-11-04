@@ -17,11 +17,22 @@ export function formatYmd(ymd: string): string {
   return `${d}/${m}/${y}`;
 }
 
-/** `D/M/YYYY` or `DD/MM/YYYY` read as `YYYY-MM-DD`; null unless it is a real calendar day. */
+/**
+ * `D/M/YYYY` or `DD/MM/YYYY` read as `YYYY-MM-DD`; null unless it is a real calendar day. The
+ * date fields open a numeric keypad, which has no "/" on some phones, so `-` and `.` separate
+ * too, and eight digits alone are read as DDMMYYYY.
+ */
 export function parseDisplayDate(text: string): string | null {
-  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text.trim());
-  if (!match) return null;
-  const [d, m, y] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const trimmed = text.trim();
+  const separated = /^(\d{1,2})([/.-])(\d{1,2})\2(\d{4})$/.exec(trimmed);
+  const digits = /^(\d{2})(\d{2})(\d{4})$/.exec(trimmed);
+  const parts = separated
+    ? [separated[1], separated[3], separated[4]]
+    : digits
+      ? [digits[1], digits[2], digits[3]]
+      : null;
+  if (!parts) return null;
+  const [d, m, y] = parts.map(Number) as [number, number, number];
   const date = new Date(Date.UTC(y, m - 1, d));
   if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) {
     return null;

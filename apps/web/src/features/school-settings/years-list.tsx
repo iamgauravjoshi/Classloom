@@ -27,7 +27,7 @@ import { IconCalendarPlus } from '@tabler/icons-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { type ReactNode, useState } from 'react';
+import { type ComponentProps, type ReactNode, useState } from 'react';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { useLastShown } from '../iam/iam-ui';
@@ -47,6 +47,8 @@ export interface ConfirmDialogProps {
   errorText: string | null;
   onConfirm: () => void;
   onClose: () => void;
+  /** Where focus goes when the dialog closes; by default, back to what opened it. */
+  finalFocus?: ComponentProps<typeof DialogContent>['finalFocus'];
 }
 
 /** A yes-or-no question before a change, with the refusal shown inside it. */
@@ -62,6 +64,7 @@ export function ConfirmDialog({
   errorText,
   onConfirm,
   onClose,
+  finalFocus,
 }: ConfirmDialogProps) {
   return (
     <Dialog
@@ -70,7 +73,11 @@ export function ConfirmDialog({
         if (!next && !pending) onClose();
       }}
     >
-      <DialogContent showCloseButton={!pending} className="gap-5 sm:max-w-md">
+      <DialogContent
+        showCloseButton={!pending}
+        finalFocus={finalFocus}
+        className="gap-5 sm:max-w-md"
+      >
         <div className="flex flex-col gap-2 pr-8">
           <DialogTitle className="text-h6">{title}</DialogTitle>
           <DialogDescription render={<div />}>{body}</DialogDescription>

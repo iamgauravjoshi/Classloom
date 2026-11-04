@@ -73,6 +73,7 @@ export function AcademicYearForm({
   onCancel,
   onDirtyChange,
   renderActions,
+  refreshPage = true,
 }: {
   initial?: AcademicYearFormInitial;
   onSaved: (year: AcademicYearDto) => void;
@@ -81,6 +82,11 @@ export function AcademicYearForm({
   onDirtyChange?: (dirty: boolean) => void;
   /** Replaces the Cancel and save buttons (the wizard's step actions); a submit button saves. */
   renderActions?: (state: { pending: boolean }) => ReactNode;
+  /**
+   * Whether a save also refreshes the server-rendered page (default). The wizard says no: a
+   * refresh after it has moved to `?step=` would mount it afresh and lose what is typed next.
+   */
+  refreshPage?: boolean;
 }) {
   const t = useTranslations('schoolSettings.academicYears.form');
   const tErrors = useTranslations('schoolSettings.errors');
@@ -134,7 +140,7 @@ export function AcademicYearForm({
         : await create.mutateAsync({ data: checked.body });
       void queryClient.invalidateQueries({ queryKey: getListAcademicYearsQueryKey() });
       void queryClient.invalidateQueries({ queryKey: getGetOnboardingQueryKey() });
-      router.refresh();
+      if (refreshPage) router.refresh();
       toast.add({
         title: editingId ? t('saved') : t('created', { label: saved.label }),
         type: 'success',
@@ -161,6 +167,7 @@ export function AcademicYearForm({
           id={fieldId(name)}
           className={CONTROL_CLASS}
           autoComplete="off"
+          inputMode="numeric"
           maxLength={10}
           value={state[name]}
           aria-invalid={Boolean(problem)}
@@ -291,6 +298,7 @@ export function AcademicYearForm({
                     id={fieldId(name)}
                     className={CONTROL_CLASS}
                     autoComplete="off"
+                    inputMode={field === 'name' ? undefined : 'numeric'}
                     maxLength={field === 'name' ? 60 : 10}
                     aria-label={t(full, { n })}
                     value={row[field]}

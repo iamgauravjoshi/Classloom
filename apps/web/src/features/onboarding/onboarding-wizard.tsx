@@ -38,9 +38,19 @@ export function OnboardingWizard({ initialStep }: { initialStep: WizardStep }) {
   const start = useStartOnboarding();
   const [step, setStep] = useState<WizardStep>(initialStep);
   const [dirty, setDirty] = useState(false);
+  // Whether the step has changed since the page opened: only then does its heading take focus.
+  const [moved, setMoved] = useState(false);
+  // A link to another `?step=` while the wizard is open (the year switcher's "Set up academic
+  // year", say) changes the prop without mounting the wizard again: follow it.
+  const [shownInitialStep, setShownInitialStep] = useState(initialStep);
+  if (initialStep !== shownInitialStep) {
+    setShownInitialStep(initialStep);
+    setStep(initialStep);
+    setDirty(false);
+    setMoved(true);
+  }
   const { guard, dialog } = useLeaveGuard(dirty);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const moved = useRef(false);
   const startSent = useRef(false);
 
   const refreshChecklist = useCallback(
@@ -57,14 +67,14 @@ export function OnboardingWizard({ initialStep }: { initialStep: WizardStep }) {
 
   // A new step's heading takes focus, so a screen reader hears where it is.
   useEffect(() => {
-    if (moved.current) headingRef.current?.focus();
-  }, [step]);
+    if (moved) headingRef.current?.focus();
+  }, [step, moved]);
 
   const index = WIZARD_STEPS.indexOf(step);
   const isLast = index === WIZARD_STEPS.length - 1;
 
   function show(next: WizardStep) {
-    moved.current = true;
+    setMoved(true);
     setDirty(false);
     setStep(next);
     window.history.replaceState(null, '', `?step=${next}`);
@@ -151,6 +161,7 @@ export function OnboardingWizard({ initialStep }: { initialStep: WizardStep }) {
           onBack={index > 0 ? () => guard(() => go(-1)) : undefined}
           onSkip={() => guard(() => go(1))}
           onDone={() => go(1)}
+          onDoneAsking={() => guard(() => go(1))}
           onDirtyChange={setDirty}
           isLast={isLast}
         />

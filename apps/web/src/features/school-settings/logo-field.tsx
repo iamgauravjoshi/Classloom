@@ -15,12 +15,14 @@ import { type ChangeEvent, useId, useRef, useState } from 'react';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { checkLogoFile, type SchoolErrorKey, schoolErrorMessage } from './school-errors';
+import { ConfirmDialog } from './years-list';
 
 const LOCAL_KEYS = { type: 'logoType', size: 'logoSize' } as const;
 
 /**
- * The school's logo: a preview with Upload (or Replace) and Remove. The type and the 2 MB size are
- * checked here first; the server still decides, and every refusal it gives has its own message.
+ * The school's logo: a preview with Upload (or Replace) and Remove, which asks first. The type and
+ * the 2 MB size are checked here first; the server still decides, and every refusal it gives has
+ * its own message.
  */
 export function LogoField({ logoUrl, canEdit }: { logoUrl: string | null; canEdit: boolean }) {
   const t = useTranslations('schoolSettings.logo');
@@ -30,6 +32,8 @@ export function LogoField({ logoUrl, canEdit }: { logoUrl: string | null; canEdi
   const remove = useRemoveSchoolLogo();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<SchoolErrorKey | null>(null);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [removeError, setRemoveError] = useState<SchoolErrorKey | null>(null);
   const id = useId();
   const titleId = `${id}-title`;
   const hintId = `${id}-hint`;
@@ -61,12 +65,14 @@ export function LogoField({ logoUrl, canEdit }: { logoUrl: string | null; canEdi
   async function onRemove() {
     if (busy) return;
     setError(null);
+    setRemoveError(null);
     try {
       await remove.mutateAsync();
       await refresh();
+      setConfirmingRemove(false);
       toast.add({ title: t('removed'), type: 'success' });
     } catch (caught) {
-      setError(schoolErrorMessage(caught));
+      setRemoveError(schoolErrorMessage(caught));
     }
   }
 
@@ -132,14 +138,13 @@ export function LogoField({ logoUrl, canEdit }: { logoUrl: string | null; canEdi
                 variant="outline"
                 className={BUTTON_CLASS}
                 disabled={busy}
-                onClick={() => void onRemove()}
+                onClick={() => {
+                  setRemoveError(null);
+                  setConfirmingRemove(true);
+                }}
               >
-                {remove.isPending ? (
-                  <Spinner aria-hidden="true" />
-                ) : (
-                  <IconTrash aria-hidden="true" />
-                )}
-                {remove.isPending ? t('removing') : t('remove')}
+                <IconTrash aria-hidden="true" />
+                {t('remove')}
               </Button>
             ) : null}
           </div>
@@ -150,6 +155,19 @@ export function LogoField({ logoUrl, canEdit }: { logoUrl: string | null; canEdi
           {tErrors(error)}
         </p>
       ) : null}
+      <ConfirmDialog
+        open={confirmingRemove}
+        title={t('removeDialog.title')}
+        body={t('removeDialog.body')}
+        action={t('removeDialog.action')}
+        pendingLabel={t('removing')}
+        cancelLabel={t('removeDialog.cancel')}
+        destructive
+        pending={remove.isPending}
+        errorText={removeError ? tErrors(removeError) : null}
+        onConfirm={() => void onRemove()}
+        onClose={() => setConfirmingRemove(false)}
+      />
     </section>
   );
 }

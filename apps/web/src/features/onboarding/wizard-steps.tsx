@@ -15,7 +15,7 @@ import { cn } from '@classloom/ui/lib/utils';
 import { IconPlus } from '@tabler/icons-react';
 import { useIsMutating } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { type ReactNode, useId, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { AcademicYearForm } from '../school-settings/academic-year-form';
@@ -31,6 +31,8 @@ export interface StepProps {
   onSkip: () => void;
   /** On after a save (on the last step, to the dashboard). */
   onDone: () => void;
+  /** Like `onDone`, but asks first, as leaving does: other edits on the step are unsaved. */
+  onDoneAsking: () => void;
   /** Whether the step's form holds unsaved edits (the leave guard). */
   onDirtyChange: (dirty: boolean) => void;
   isLast: boolean;
@@ -50,8 +52,34 @@ export function StepActions({
   primary: ReactNode;
 }) {
   const t = useTranslations('onboarding.actions');
+  const ref = useRef<HTMLDivElement>(null);
+  // Publishes how far the bar's top sits above the bottom of the screen (its height while it
+  // sticks there; more on a short page, where it sits higher), so toasts rise above it below md
+  // (globals.css). Removed when the bar goes.
+  useEffect(() => {
+    const bar = ref.current;
+    if (!bar) return;
+    const root = document.documentElement;
+    const update = () => {
+      const clearance = Math.max(0, window.innerHeight - bar.getBoundingClientRect().top);
+      root.style.setProperty('--step-actions-height', `${Math.round(clearance)}px`);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(bar);
+    observer.observe(document.body);
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update);
+      root.style.removeProperty('--step-actions-height');
+    };
+  }, []);
   return (
     <div
+      ref={ref}
       data-slot="step-actions"
       className={cn(
         'bg-background border-border sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-end gap-2 border-t px-4 pt-3',
@@ -205,6 +233,7 @@ export function YearStep(step: StepProps) {
         <p className="text-muted-foreground">{t('editing', { label: current.label })}</p>
       ) : null}
       <AcademicYearForm
+        refreshPage={false}
         // A new form when the current year appears or changes, so it starts from it.
         key={current?.id ?? 'new'}
         initial={initial}
@@ -232,6 +261,11 @@ export function CampusesStep(step: StepProps) {
   const [adding, setAdding] = useState(false);
   const [primaryDirty, setPrimaryDirty] = useState(false);
   const [addDirty, setAddDirty] = useState(false);
+  // Read when the primary campus's save lands, which may be after a render or two.
+  const addDirtyRef = useRef(false);
+  useEffect(() => {
+    addDirtyRef.current = addDirty;
+  }, [addDirty]);
   const [added, setAdded] = useState<CampusDto[]>([]);
 
   const formId = useId();
@@ -261,6 +295,7 @@ export function CampusesStep(step: StepProps) {
       ) : null}
       {adding ? (
         <CampusForm
+          refreshPage={false}
           onSaved={(campus) => {
             setAdded((list) => [...list, campus]);
             setAdding(false);
@@ -311,10 +346,13 @@ export function CampusesStep(step: StepProps) {
           {t('primaryHeading', { name: primary.name })}
         </h3>
         <CampusForm
+          refreshPage={false}
           key={primary.id}
           formId={formId}
           campus={primary}
-          onSaved={step.onDone}
+          // "Save and finish" saves this form only; a half-filled "Add another campus" form is
+          // not thrown away without asking.
+          onSaved={() => (addDirtyRef.current ? step.onDoneAsking() : step.onDone())}
           onDirtyChange={(dirty) => {
             setPrimaryDirty(dirty);
             report(dirty, addDirty);

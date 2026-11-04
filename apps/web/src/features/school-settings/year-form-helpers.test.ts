@@ -22,6 +22,13 @@ describe('display dates', () => {
     expect(parseDisplayDate(' 1/4/2026 ')).toBe('2026-04-01');
   });
 
+  it('reads digits alone, as a numeric keypad without "/" types them', () => {
+    expect(parseDisplayDate('31032027')).toBe('2027-03-31');
+    expect(parseDisplayDate('31-03-2027')).toBe('2027-03-31');
+    expect(parseDisplayDate('1.4.2026')).toBe('2026-04-01');
+    expect(parseDisplayDate('3132027')).toBeNull();
+  });
+
   it('refuses text that is not a real day', () => {
     expect(parseDisplayDate('31/02/2027')).toBeNull();
     expect(parseDisplayDate('01/04/27')).toBeNull();

@@ -106,3 +106,11 @@ describe('checkLogoFile', () => {
     expect(checkLogoFile(file('image/png', 2 * 1024 * 1024 + 1))).toBe('size');
   });
 });
+
+describe('logo dimension copy', () => {
+  it('names both limits, since a 25 MP+ image gets the same reason as a tiny one', () => {
+    expect(errorMessages.logoDimensions).toBe(
+      'The image must be between 64 pixels on each side and 25 megapixels.',
+    );
+  });
+});

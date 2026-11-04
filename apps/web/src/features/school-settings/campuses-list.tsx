@@ -25,7 +25,7 @@ import { IconPlus } from '@tabler/icons-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { useLastShown } from '../iam/iam-ui';
@@ -34,6 +34,16 @@ import { schoolErrorMessage } from './school-errors';
 import { ConfirmDialog } from './years-list';
 
 const MAX_CAMPUSES = 20;
+
+/** The id of a campus's heading, which takes focus after an action on that campus. */
+const headingIdOf = (campusId: string) => `campus-heading-${campusId}`;
+
+/** Focuses the campus's heading; false when it didn't take focus (an open dialog keeps it). */
+function focusCampusHeading(campusId: string): boolean {
+  const heading = document.getElementById(headingIdOf(campusId));
+  heading?.focus();
+  return heading !== null && document.activeElement === heading;
+}
 
 const stateName = (code: string) => INDIAN_STATES.find((s) => s.code === code)?.name ?? code;
 
@@ -71,6 +81,16 @@ export function CampusesList({ campuses, canEdit }: { campuses: Campus[]; canEdi
   // While a dialog fades out it keeps the wording it opened with.
   const shownForm = useLastShown(form);
   const shownDeactivating = useLastShown(deactivating);
+  // After Make primary, Deactivate or Reactivate the button pressed is gone (or the card moved),
+  // so focus goes to the campus's heading instead of falling to the page (WCAG 2.4.3). The list
+  // re-sorts when the refetch lands, so the heading is focused again then.
+  const focusAfterUpdate = useRef<string | null>(null);
+  // The campus just deactivated, until its dialog has closed.
+  const deactivated = useRef<string | null>(null);
+  useEffect(() => {
+    const id = focusAfterUpdate.current;
+    if (id && focusCampusHeading(id)) focusAfterUpdate.current = null;
+  }, [campuses]);
 
   const sorted = [...campuses].sort(
     (a, b) =>
@@ -92,6 +112,8 @@ export function CampusesList({ campuses, canEdit }: { campuses: Campus[]; canEdi
     try {
       if (action === 'makePrimary') await makePrimary.mutateAsync({ id: campus.id });
       else await reactivate.mutateAsync({ id: campus.id });
+      focusAfterUpdate.current = campus.id;
+      focusCampusHeading(campus.id);
       refresh();
       toast.add({
         title: t(action === 'makePrimary' ? 'madePrimary' : 'reactivated', { name: campus.name }),
@@ -106,6 +128,8 @@ export function CampusesList({ campuses, canEdit }: { campuses: Campus[]; canEdi
     if (!deactivating) return;
     try {
       await deactivate.mutateAsync({ id: deactivating.id });
+      focusAfterUpdate.current = deactivating.id;
+      deactivated.current = deactivating.id;
       refresh();
       toast.add({ title: t('deactivated', { name: deactivating.name }), type: 'success' });
       setDeactivating(null);
@@ -144,7 +168,13 @@ export function CampusesList({ campuses, canEdit }: { campuses: Campus[]; canEdi
             className="md:bg-card flex min-w-0 flex-col gap-3 p-4 md:rounded-xl md:border md:p-5 md:shadow-xs"
           >
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h2 className="text-h6 min-w-0 break-words">{campus.name}</h2>
+              <h2
+                id={headingIdOf(campus.id)}
+                tabIndex={-1}
+                className="text-h6 min-w-0 break-words outline-none"
+              >
+                {campus.name}
+              </h2>
               {campus.isPrimary ? (
                 <Badge variant="outline" className="bg-primary-tint text-primary-strong h-6 px-2.5">
                   {t('primary')}
@@ -257,6 +287,13 @@ export function CampusesList({ campuses, canEdit }: { campuses: Campus[]; canEdi
         destructive
         pending={deactivate.isPending}
         errorText={deactivateError}
+        // Closed after a deactivation, the dialog hands focus to that campus's heading (the
+        // Deactivate button that opened it is gone); cancelled, back to the button.
+        finalFocus={() => {
+          const id = deactivated.current;
+          deactivated.current = null;
+          return (id && document.getElementById(headingIdOf(id))) || true;
+        }}
         onConfirm={() => void confirmDeactivate()}
         onClose={() => setDeactivating(null)}
       />
