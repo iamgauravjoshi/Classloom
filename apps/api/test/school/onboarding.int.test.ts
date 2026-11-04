@@ -116,6 +116,7 @@ describe('onboarding checklist API', () => {
         { key: 'logo', done: false },
         { key: 'academicYear', done: false },
         { key: 'campuses', done: false },
+        { key: 'academics', done: false },
       ],
       startedAt: null,
       dismissedAt: null,

@@ -45,7 +45,14 @@ export class OnboardingService {
         select: { addressLine1: true, pinCode: true },
       })) ?? { addressLine1: null, pinCode: null };
 
-      const items = checklistOf({ profile, hasCurrentYear, primaryCampus });
+      // academics: Task 5
+      const items = checklistOf({
+        profile,
+        hasCurrentYear,
+        primaryCampus,
+        hasCurrentYearSection: false,
+        hasClassSubject: false,
+      });
       return {
         visible:
           auth.permissions.has(MANAGE) &&

@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import { yearLengthOk } from './academic-calendar';
 import { emailField } from './fields';
+import { ONBOARDING_ITEMS } from './onboarding';
 import { BOARDS, INDIAN_STATES } from './tenancy';
 
 /* ------------------------------------------------------------------ */
@@ -349,7 +350,7 @@ export const onboardingResponseSchema = z.object({
   visible: z.boolean(),
   items: z.array(
     z.object({
-      key: z.enum(['profile', 'logo', 'academicYear', 'campuses']),
+      key: z.enum(ONBOARDING_ITEMS),
       done: z.boolean(),
     }),
   ),
