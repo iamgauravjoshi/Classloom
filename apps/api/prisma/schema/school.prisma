@@ -151,10 +151,11 @@ model AcademicYear {
   createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  terms  AcademicTerm[]
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  terms    AcademicTerm[]
+  sections Section[]
 
-  /// Target of academic_terms' composite foreign key (keeps a term inside one school).
+  /// Target of the composite foreign keys from academic_terms and sections.
   @@unique([id, tenantId])
   @@index([tenantId])
   @@map("academic_years")

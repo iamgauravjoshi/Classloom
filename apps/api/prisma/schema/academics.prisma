@@ -1,0 +1,205 @@
+// Academic structure: streams, subjects, the subjects each class takes, houses, rooms and the
+// sections of each academic year. Spec: docs/superpowers/specs/2026-11-04-academics-design.md,
+// sections 4 and 9.
+//
+// Every model here is tenant-owned and row-level secured (forced RLS, listed in
+// TENANT_SCOPED_MODELS). Added in the migration SQL, as Prisma cannot express them: CHECK
+// constraints on every field rule of section 4 (lengths, ranges, the subject code pattern, a
+// trimmed section name, and no stream on a junior class); the case-insensitive unique indexes on
+// lower(name); the partial unique index `sections_class_teacher_key` (one section per teacher per
+// year); `class_subjects_key` with NULLS NOT DISTINCT; and composite foreign keys that keep every
+// reference inside one school (foreign key checks bypass row-level security). Where a relation
+// below names only `id`, the database key is composite all the same:
+//   - sections (room_id, campus_id, tenant_id) -> rooms (id, campus_id, tenant_id), ON DELETE SET
+//     NULL (room_id): a section's room is always on the section's own campus;
+//   - sections (class_teacher_membership_id, tenant_id) -> memberships (id, tenant_id), ON DELETE
+//     SET NULL (class_teacher_membership_id).
+// "Restrict" is NO ACTION in the database (checked at the end of the statement), so deleting a
+// whole school still cascades through every table, as for membership_roles in the IAM migration.
+
+/// Values match SUBJECT_TYPES in @classloom/contracts.
+enum SubjectType {
+  SCHOLASTIC
+  CO_SCHOLASTIC
+}
+
+/// Values match ROOM_TYPES in @classloom/contracts.
+enum RoomType {
+  CLASSROOM
+  LAB
+  COMPUTER_LAB
+  LIBRARY
+  HALL
+  OTHER
+}
+
+/// Values match HOUSE_COLOURS in @classloom/contracts.
+enum HouseColour {
+  RED
+  BLUE
+  GREEN
+  YELLOW
+  ORANGE
+  PURPLE
+  PINK
+  TEAL
+  BROWN
+  GREY
+}
+
+/// Values match ACADEMIC_STATUSES in @classloom/contracts.
+enum AcademicStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+/// Values match CLASS_SUBJECT_KINDS in @classloom/contracts.
+enum ClassSubjectKind {
+  COMPULSORY
+  OPTIONAL
+}
+
+/// A stream a senior class (XI, XII) is split into, e.g. Science.
+model Stream {
+  id        String         @id @default(uuid(7)) @db.Uuid
+  tenantId  String         @map("tenant_id") @db.Uuid
+  /// 2-40 characters; unique per school ignoring case.
+  name      String
+  status    AcademicStatus @default(ACTIVE)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sections      Section[]
+  classSubjects ClassSubject[]
+
+  /// Target of the composite foreign keys from sections and class_subjects.
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("streams")
+}
+
+/// A subject the school teaches.
+model Subject {
+  id        String         @id @default(uuid(7)) @db.Uuid
+  tenantId  String         @map("tenant_id") @db.Uuid
+  /// 2-60 characters; unique per school ignoring case.
+  name      String
+  /// 1-10 letters, digits and `-`. A label, not unique (boards reuse codes across levels).
+  code      String?
+  type      SubjectType
+  status    AcademicStatus @default(ACTIVE)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classSubjects ClassSubject[]
+
+  /// Target of class_subjects' composite foreign key.
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("subjects")
+}
+
+/// A subject a class takes. (tenant_id, class_level, stream_id, subject_id) is unique, with a null
+/// stream counted as its own value (`class_subjects_key`, NULLS NOT DISTINCT).
+model ClassSubject {
+  id         String           @id @default(uuid(7)) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  /// Inside the profile range (checked by the API).
+  classLevel ClassLevel       @map("class_level")
+  /// Only for XI and XII; null means every stream of the class (or a junior class).
+  streamId   String?          @map("stream_id") @db.Uuid
+  subjectId  String           @map("subject_id") @db.Uuid
+  kind       ClassSubjectKind
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stream  Stream? @relation(fields: [streamId, tenantId], references: [id, tenantId], onDelete: NoAction)
+  subject Subject @relation(fields: [subjectId, tenantId], references: [id, tenantId], onDelete: NoAction)
+
+  @@index([tenantId])
+  @@index([streamId])
+  @@index([subjectId])
+  @@map("class_subjects")
+}
+
+/// A house pupils are grouped into.
+model House {
+  id        String         @id @default(uuid(7)) @db.Uuid
+  tenantId  String         @map("tenant_id") @db.Uuid
+  /// 2-40 characters; unique per school ignoring case.
+  name      String
+  colour    HouseColour
+  status    AcademicStatus @default(ACTIVE)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("houses")
+}
+
+/// A room on a campus.
+model Room {
+  id        String         @id @default(uuid(7)) @db.Uuid
+  tenantId  String         @map("tenant_id") @db.Uuid
+  campusId  String         @map("campus_id") @db.Uuid
+  /// 1-40 characters; unique per campus ignoring case.
+  name      String
+  type      RoomType
+  /// 1-500.
+  capacity  Int            @db.SmallInt
+  /// At most 20 characters ("Ground", "2").
+  floor     String?
+  status    AcademicStatus @default(ACTIVE)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campus   Campus    @relation(fields: [campusId, tenantId], references: [id, tenantId], onDelete: NoAction)
+  sections Section[]
+
+  /// Target of sections' composite foreign key (keeps a section's room on its own campus).
+  @@unique([id, campusId, tenantId])
+  @@index([tenantId])
+  @@map("rooms")
+}
+
+/// A section of a class in one academic year on one campus, e.g. "VI A".
+model Section {
+  id                       String     @id @default(uuid(7)) @db.Uuid
+  tenantId                 String     @map("tenant_id") @db.Uuid
+  academicYearId           String     @map("academic_year_id") @db.Uuid
+  campusId                 String     @map("campus_id") @db.Uuid
+  /// Inside the profile range (checked by the API).
+  classLevel               ClassLevel @map("class_level")
+  /// Only for XI and XII; required there when the school has an active stream (API).
+  streamId                 String?    @map("stream_id") @db.Uuid
+  /// 1-20 characters, trimmed; unique per year, campus and class ignoring case.
+  name                     String
+  /// 1-200.
+  capacity                 Int        @db.SmallInt
+  /// On the section's own campus (composite key, see the header). Cleared if the room is deleted.
+  roomId                   String?    @map("room_id") @db.Uuid
+  /// One section per teacher per year. Cleared if the membership is deleted.
+  classTeacherMembershipId String?    @map("class_teacher_membership_id") @db.Uuid
+  createdAt                DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  campus       Campus       @relation(fields: [campusId, tenantId], references: [id, tenantId], onDelete: NoAction)
+  stream       Stream?      @relation(fields: [streamId, tenantId], references: [id, tenantId], onDelete: NoAction)
+  room         Room?        @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  classTeacher Membership?  @relation(fields: [classTeacherMembershipId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([campusId])
+  @@index([streamId])
+  @@index([roomId])
+  @@index([classTeacherMembershipId])
+  @@map("sections")
+}

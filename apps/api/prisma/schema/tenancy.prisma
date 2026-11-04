@@ -108,6 +108,12 @@ model Tenant {
   files              File[]
   academicYears      AcademicYear[]
   academicTerms      AcademicTerm[]
+  streams            Stream[]
+  subjects           Subject[]
+  classSubjects      ClassSubject[]
+  houses             House[]
+  rooms              Room[]
+  sections           Section[]
 
   @@map("tenants")
 }
@@ -137,8 +143,12 @@ model Campus {
   createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rooms    Room[]
+  sections Section[]
 
+  /// Target of the composite foreign keys from rooms and sections (keeps them inside one school).
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@map("campuses")
 }
@@ -186,10 +196,12 @@ model Membership {
   createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessions Session[]
-  roles    MembershipRole[]
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions       Session[]
+  roles          MembershipRole[]
+  /// Sections this member is class teacher of (at most one per academic year).
+  classTeacherOf Section[]
 
   @@unique([tenantId, userId])
   /// Target of membership_roles' composite foreign key (keeps it inside one school).

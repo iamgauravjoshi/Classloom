@@ -15,6 +15,12 @@ export const TENANT_SCOPED_MODELS: ReadonlySet<
   | 'File'
   | 'AcademicYear'
   | 'AcademicTerm'
+  | 'Stream'
+  | 'Subject'
+  | 'ClassSubject'
+  | 'House'
+  | 'Room'
+  | 'Section'
 > = new Set([
   'Campus',
   'Membership',
@@ -27,6 +33,12 @@ export const TENANT_SCOPED_MODELS: ReadonlySet<
   'File',
   'AcademicYear',
   'AcademicTerm',
+  'Stream',
+  'Subject',
+  'ClassSubject',
+  'House',
+  'Room',
+  'Section',
 ] as const);
 
 export type TenantScopedModel =
