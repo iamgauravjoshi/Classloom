@@ -2,6 +2,7 @@
 
 import {
   type CampusDto,
+  getListClassTeacherOptionsQueryKey,
   getListSectionsQueryKey,
   type SectionDto,
   useDeleteSection,
@@ -135,7 +136,12 @@ function YearSections({
   const rangeSet = range.lowest !== null && range.highest !== null;
   const sections = data?.sections ?? [];
   const groups = groupByClass(sections, range);
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: getListSectionsQueryKey() });
+  // A section added, copied or deleted takes or frees a class teacher, so the picker's options
+  // (which mark who already leads a section) are refreshed with the list.
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: getListSectionsQueryKey() });
+    void queryClient.invalidateQueries({ queryKey: getListClassTeacherOptionsQueryKey() });
+  };
 
   async function confirmDelete() {
     if (!deleting) return;
