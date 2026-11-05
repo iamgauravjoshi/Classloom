@@ -816,15 +816,23 @@ for (const theme of ['light', 'dark'] as const) {
           await page.mouse.move(0, 0);
           await expectNoViolations(page);
 
-          // The Science stream's own rows; the all-streams row for English is not among them.
+          // The Science stream's own rows. English is compulsory for all streams: named so, and
+          // not a button here.
           await page.getByLabel('Stream for classes XI and XII').click();
           await page.getByRole('option', { name: 'Science' }).click();
           await expect(
             grid.getByRole('button', { name: 'Physics, Class XI, Science: Compulsory' }),
           ).toBeVisible();
           await expect(
-            grid.getByRole('button', { name: 'English Core, Class XI, Science: Not taught' }),
-          ).toBeVisible();
+            grid.getByText(
+              'English Core, Class XI, Science: Compulsory (all streams) Set for all streams, ' +
+                `so it's changed under "All streams".`,
+              { exact: true },
+            ),
+          ).toBeAttached();
+          await expect(
+            grid.getByRole('button', { name: /^English Core, Class XI, Science:/ }),
+          ).toHaveCount(0);
           await page.mouse.move(0, 0);
           await expectNoViolations(page);
 

@@ -402,9 +402,15 @@ test('the CBSE starter subjects are mapped to class XI, and the checklist item t
   await expect(
     await cell(page, 'Class XI, Science', 'Physics, Class XI, Science: Compulsory'),
   ).toBeVisible();
+  // English Core is compulsory for every stream: Science's view shows it, but can't change it.
   await expect(
-    await cell(page, 'Class XI, Science', 'English Core, Class XI, Science: Not taught'),
-  ).toBeVisible();
+    page
+      .getByText('English Core, Class XI, Science: Compulsory (all streams)')
+      .filter({ visible: true }),
+  ).toHaveCount(1);
+  await expect(page.getByRole('button', { name: /^English Core, Class XI, Science:/ })).toHaveCount(
+    0,
+  );
 
   // 4. The checklist's academics item is done.
   await page.goto('/en/dashboard');
@@ -491,6 +497,70 @@ async function seedAcademics(request: APIRequestContext) {
   );
   return year;
 }
+
+test('the starter-streams helper offers only the missing streams', async ({ page, playwright }) => {
+  await ownerPage(page, playwright);
+  // The school has science already, in another case, and archived.
+  const created = await page.request.post(`${WEB_ORIGIN}/api/academics/streams`, {
+    data: { name: 'science' },
+    headers: { origin: WEB_ORIGIN },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  const archived = await page.request.post(`${WEB_ORIGIN}/api/academics/streams/${id}/archive`, {
+    headers: { origin: WEB_ORIGIN },
+  });
+  expect(archived.status(), await archived.text()).toBe(200);
+
+  await page.goto('/en/classes?tab=streams');
+  await expect(page.getByRole('heading', { level: 3, name: 'science', exact: true })).toBeVisible();
+  const helper = page.getByRole('button', { name: 'Add Commerce and Humanities', exact: true });
+  await helper.click();
+  await expect(page.getByText('Added Commerce and Humanities.')).toBeVisible();
+  for (const name of ['Commerce', 'Humanities']) {
+    await expect(page.getByRole('heading', { level: 3, name, exact: true })).toBeVisible();
+  }
+  // All three are there: the helper is gone, and the tab's heading has focus.
+  await expect(helper).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: /^Add (Science|Commerce|Humanities)/ }),
+  ).toHaveCount(0);
+  await expect(page.locator('#streams-heading')).toBeFocused();
+});
+
+test('deleting the last stream, house, room or subject leaves focus on the tab heading', async ({
+  page,
+  playwright,
+}) => {
+  await ownerPage(page, playwright);
+  const post = async (path: string, data: object) => {
+    const res = await page.request.post(`${WEB_ORIGIN}/api${path}`, {
+      data,
+      headers: { origin: WEB_ORIGIN },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+  };
+  await post('/academics/streams', { name: 'Science' });
+  await post('/academics/houses', { name: 'Tagore House', colour: 'BLUE' });
+  await addRoom(page.request, { name: 'Room 101' });
+  await post('/academics/subjects', { name: 'Mathematics', type: 'SCHOLASTIC' });
+
+  for (const [path, name, heading, empty] of [
+    ['/en/classes?tab=streams', 'Science', 'streams-heading', 'No streams yet'],
+    ['/en/classes?tab=houses', 'Tagore House', 'houses-heading', 'No houses yet'],
+    ['/en/classes?tab=rooms', 'Room 101', 'rooms-heading', /^No rooms on /],
+    ['/en/subjects', 'Mathematics', 'subjects-heading', 'No subjects yet'],
+  ] as const) {
+    await page.goto(path);
+    await page.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: `Delete ${name}?` });
+    await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByText(empty), path).toBeVisible();
+    await expect(page.locator(`#${heading}`), path).toBeFocused();
+    await closeToasts(page);
+  }
+});
 
 test.describe('read-only access', () => {
   /** Joins the owner's school under `roleName` from a browser of its own, signed in. */
