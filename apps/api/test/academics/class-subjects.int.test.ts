@@ -115,6 +115,8 @@ describe('class subjects API', () => {
     const res = await put(none.s, 'VI', [{ ...row, subjectId: none.english.id }]);
     expect(res.status).toBe(409);
     expect(problem(res).type).toBe('classes-not-set');
+    // An empty list only deletes, so it is allowed even without a range.
+    expect((await put(none.s, 'VI', [])).status).toBe(200);
   });
 
   it('refuses an unknown class level with 400', async () => {
@@ -214,9 +216,34 @@ describe('class subjects API', () => {
       rows: [],
     });
     expect(list.some((c) => c.classLevel === 'XII')).toBe(false);
-    const res = await put(s, 'XI', []);
+    const res = await put(s, 'XI', [{ ...row, kind: 'OPTIONAL' }]);
     expect(res.status).toBe(422);
     expect(problem(res).type).toBe('class-out-of-range');
+    expect(await stored(s.tenantId, 'XI')).toEqual([row]);
+  });
+
+  it('lets an empty list delete the rows of a class outside a narrowed range', async () => {
+    const { s, english } = await setup();
+    const row = { subjectId: english.id, streamId: null, kind: 'COMPULSORY' };
+    expect((await put(s, 'XI', [row])).status).toBe(200);
+    await h.owner.schoolProfile.update({
+      where: { tenantId: s.tenantId },
+      data: { highestClass: 'X' },
+    });
+    const res = await put(s, 'XI', []);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ classLevel: 'XI', outsideRange: true, rows: [] });
+    expect(await stored(s.tenantId, 'XI')).toEqual([]);
+    const events = await h.audits(s.tenantId, 'class_level');
+    expect(events.map((e) => e.action)).toEqual([
+      'class_subjects.updated',
+      'class_subjects.updated',
+    ]);
+    expect(events[1]!.before).toEqual({ classLevel: 'XI', rows: [row] });
+    expect(events[1]!.after).toEqual({ classLevel: 'XI', rows: [] });
+    // The class leaves the list once it has no rows.
+    const list = classes(await h.get(BASE, s.admin.cookie));
+    expect(list.some((c) => c.classLevel === 'XI')).toBe(false);
   });
 
   it('lists in-range classes in order, with empty ones', async () => {

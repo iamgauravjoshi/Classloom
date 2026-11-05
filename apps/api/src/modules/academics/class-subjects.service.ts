@@ -94,9 +94,10 @@ export class ClassSubjectsService {
 
   /**
    * Replaces the class's rows. The class must be in the profile range (409 `classes-not-set`,
-   * 422 `class-out-of-range`); only XI and XII rows name a stream (422 `stream-not-allowed`);
-   * a subject or stream must be this school's and active, or already in this class (422
-   * `subject-archived`, `stream-archived`). A subject or stream deleted meanwhile is a 422 too.
+   * 422 `class-out-of-range`) unless `rows` is empty, which only deletes; only XI and XII rows
+   * name a stream (422 `stream-not-allowed`); a subject or stream must be this school's and
+   * active, or already in this class (422 `subject-archived`, `stream-archived`). A subject or
+   * stream deleted meanwhile is a 422 too.
    * The same rows again write nothing; otherwise one `class_subjects.updated` row holds the
    * before and after lists.
    */
@@ -112,7 +113,9 @@ export class ClassSubjectsService {
       async (tx) => {
         const lockKey = `class-subjects:${auth.tenantId}:${level}`;
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
-        ClassRange.assertWritable(await ClassRange.load(tx, auth.tenantId), level);
+        const range = await ClassRange.load(tx, auth.tenantId);
+        // An empty list only deletes, which stays allowed outside the range (spec section 8).
+        if (rows.length > 0) ClassRange.assertWritable(range, level);
 
         const check = checkClassSubjectRows(level, rows);
         if (!check.ok) {
@@ -133,7 +136,10 @@ export class ClassSubjectsService {
         });
         await this.assertUsable(tx, rows, current);
 
-        const result = { classLevel: level, outsideRange: false };
+        const result = {
+          classLevel: level,
+          outsideRange: !isInRange(level, range.lowest, range.highest),
+        };
         if (sameRows(current, rows)) return { ...result, rows: await this.rowsOf(tx, level) };
 
         await tx.classSubject.deleteMany({ where: { classLevel: level } });
