@@ -510,5 +510,36 @@ describe('academic years API', () => {
         ['academic_year.deleted', next.id],
       ]);
     });
+
+    it('refuses DELETE on a PLANNED year with sections with 409 in-use, keeping them', async () => {
+      const s = await school();
+      await create(s.admin.cookie, APR_2026);
+      const next = await create(s.admin.cookie, APR_2027);
+      const campus = await owner.campus.findFirstOrThrow({
+        where: { tenantId: s.tenantId, isPrimary: true },
+      });
+      // As copy forward leaves them: two sections already in the planned year.
+      await owner.section.createMany({
+        data: ['A', 'B'].map((name) => ({
+          tenantId: s.tenantId,
+          academicYearId: next.id,
+          campusId: campus.id,
+          classLevel: 'I' as const,
+          name,
+          capacity: 40,
+        })),
+      });
+      const before = await audits(s.tenantId);
+      const res = await del(`${BASE}/${next.id}`, s.admin.cookie);
+      expect(res.status).toBe(409);
+      expect(res.body).toMatchObject({ type: 'in-use', counts: { sections: 2 } });
+      expect(await owner.section.count({ where: { academicYearId: next.id } })).toBe(2);
+      expect(await owner.academicYear.findUnique({ where: { id: next.id } })).not.toBeNull();
+      expect(await audits(s.tenantId)).toHaveLength(before.length);
+
+      await owner.section.deleteMany({ where: { academicYearId: next.id } });
+      expect((await del(`${BASE}/${next.id}`, s.admin.cookie)).status).toBe(204);
+      expect(await owner.academicYear.findUnique({ where: { id: next.id } })).toBeNull();
+    });
   });
 });
