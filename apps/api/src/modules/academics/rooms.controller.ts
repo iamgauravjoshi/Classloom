@@ -47,9 +47,7 @@ import { RoomsService } from './rooms.service';
 class RoomDto extends withNullableProperties(createZodDto(roomSchema)) {}
 class RoomsResponseDto extends withNullableProperties(createZodDto(roomsResponseSchema)) {}
 class CreateRoomRequestDto extends createZodDto(createRoomRequestSchema) {}
-class UpdateRoomRequestDto extends createZodDto(
-  updateRoomRequestSchema.omit({ status: true }).strict(),
-) {}
+class UpdateRoomRequestDto extends createZodDto(updateRoomRequestSchema.strict()) {}
 class ListRoomsQueryDto extends createZodDto(
   z.object({ campusId: z.uuid().optional(), status: z.enum(ACADEMIC_STATUSES).optional() }),
 ) {}

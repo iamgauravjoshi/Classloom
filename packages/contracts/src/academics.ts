@@ -165,7 +165,6 @@ export const createStreamRequestSchema = z.object({ name: name(2, 40) });
 export type CreateStreamRequest = z.infer<typeof createStreamRequestSchema>;
 export const updateStreamRequestSchema = z.object({
   name: name(2, 40).optional(),
-  status: status.optional(),
 });
 export type UpdateStreamRequest = z.infer<typeof updateStreamRequestSchema>;
 export const streamsResponseSchema = z.object({ streams: z.array(streamSchema) });
@@ -201,7 +200,6 @@ export const updateSubjectRequestSchema = z.object({
   name: name(2, 60).optional(),
   code: subjectCode.optional(),
   type: z.enum(SUBJECT_TYPES).optional(),
-  status: status.optional(),
 });
 export type UpdateSubjectRequest = z.infer<typeof updateSubjectRequestSchema>;
 export const subjectsResponseSchema = z.object({ subjects: z.array(subjectSchema) });
@@ -294,7 +292,6 @@ export type CreateHouseRequest = z.infer<typeof createHouseRequestSchema>;
 export const updateHouseRequestSchema = z.object({
   name: name(2, 40).optional(),
   colour: z.enum(HOUSE_COLOURS).optional(),
-  status: status.optional(),
 });
 export type UpdateHouseRequest = z.infer<typeof updateHouseRequestSchema>;
 export const housesResponseSchema = z.object({ houses: z.array(houseSchema) });
@@ -331,7 +328,6 @@ export const updateRoomRequestSchema = z.object({
   type: z.enum(ROOM_TYPES).optional(),
   capacity: roomCapacity.optional(),
   floor: nullableText(20).optional(),
-  status: status.optional(),
 });
 export type UpdateRoomRequest = z.infer<typeof updateRoomRequestSchema>;
 export const roomsResponseSchema = z.object({ rooms: z.array(roomSchema) });

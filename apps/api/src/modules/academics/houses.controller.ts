@@ -44,9 +44,7 @@ import { HousesService } from './houses.service';
 class HouseDto extends withNullableProperties(createZodDto(houseSchema)) {}
 class HousesResponseDto extends withNullableProperties(createZodDto(housesResponseSchema)) {}
 class CreateHouseRequestDto extends createZodDto(createHouseRequestSchema) {}
-class UpdateHouseRequestDto extends createZodDto(
-  updateHouseRequestSchema.omit({ status: true }).strict(),
-) {}
+class UpdateHouseRequestDto extends createZodDto(updateHouseRequestSchema.strict()) {}
 
 const NOT_FOUND = 'No such house in this school';
 const NO_SESSION = 'No valid session';

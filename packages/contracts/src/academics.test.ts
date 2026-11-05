@@ -8,6 +8,10 @@ import {
   STARTER_STREAMS,
   STARTER_SUBJECTS,
   starterSubjectsRequestSchema,
+  updateHouseRequestSchema,
+  updateRoomRequestSchema,
+  updateStreamRequestSchema,
+  updateSubjectRequestSchema,
 } from './academics';
 import { BOARDS } from './tenancy';
 
@@ -127,5 +131,17 @@ describe('classSubjectRowSchema', () => {
     expect(
       classSubjectRowSchema.safeParse({ subjectId: 'a', streamId: null, kind: 'OPTIONAL' }).success,
     ).toBe(false);
+  });
+});
+
+describe('update request schemas', () => {
+  it.each([
+    ['stream', updateStreamRequestSchema],
+    ['subject', updateSubjectRequestSchema],
+    ['house', updateHouseRequestSchema],
+    ['room', updateRoomRequestSchema],
+  ] as const)('%s has no status: it changes only through archive and restore', (_, schema) => {
+    expect(Object.keys(schema.shape)).not.toContain('status');
+    expect(schema.strict().safeParse({ status: 'ARCHIVED' }).success).toBe(false);
   });
 });

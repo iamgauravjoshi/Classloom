@@ -62,7 +62,7 @@ class CreateSubjectRequestDto extends withNullableProperties(
 ) {}
 /** Status changes only through archive and restore: a `status` here is a 400. */
 class UpdateSubjectRequestDto extends withNullableProperties(
-  createZodDto(updateSubjectRequestSchema.omit({ status: true }).strict()),
+  createZodDto(updateSubjectRequestSchema.strict()),
 ) {}
 
 const NOT_FOUND = 'No such subject in this school';

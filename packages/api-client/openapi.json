@@ -2291,7 +2291,7 @@
             "description": "No such year in this school"
           },
           "409": {
-            "description": "The year is not planned (type academic-year-locked)"
+            "description": "The year is not planned (type academic-year-locked), or has sections (type in-use, with counts { sections })"
           }
         },
         "security": [
