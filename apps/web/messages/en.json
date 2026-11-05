@@ -1246,7 +1246,8 @@
         "profile": "Fill in the school profile",
         "logo": "Upload the school logo",
         "academicYear": "Set up the academic year",
-        "campuses": "Add the main campus's address"
+        "campuses": "Add the main campus's address",
+        "academics": "Add sections and class subjects"
       }
     }
   },
@@ -1533,6 +1534,13 @@
       "count": "{count, plural, =0 {No subjects} one {# subject} other {# subjects}}",
       "outsideRange": "Outside your classes",
       "outsideRangeHint": "Classes marked \"Outside your classes\" are no longer in the school profile. Their subjects are shown, but can't be changed.",
+      "outsideRangeCell": "Can't be changed, as the class is outside your classes.",
+      "removeAll": "Remove all",
+      "removeAllLabel": "Remove all subjects from {class}",
+      "removeAllTitle": "Remove all subjects from {class}?",
+      "removeAllBody": "{class} is no longer in the school profile. Its subjects are removed, and it leaves this list. This can't be undone.",
+      "removingAll": "Removing",
+      "removedAll": "Subjects removed from {class}.",
       "unsaved": "Unsaved",
       "unsavedBar": "{class} has unsaved changes.",
       "save": "Save {class}",

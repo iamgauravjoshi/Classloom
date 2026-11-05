@@ -19,10 +19,11 @@ import { useId, useState } from 'react';
 import { Link } from '@/i18n/navigation';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
+import { checklistHref, checklistProgress } from './checklist-items';
 
 /**
  * The dashboard's setup checklist (spec §9): a progress count, each item linking to its wizard
- * step, and "Dismiss". It shows only while the API says `visible` (someone who manages settings,
+ * step (or, for academics, the classes page), and "Dismiss". It shows only while the API says `visible` (someone who manages settings,
  * something left to do, not dismissed). The server's answer is the starting data.
  */
 export function ChecklistCard({ initial }: { initial: OnboardingResponseDto }) {
@@ -34,8 +35,7 @@ export function ChecklistCard({ initial }: { initial: OnboardingResponseDto }) {
   const id = useId();
 
   if (!data.visible) return null;
-  const doneCount = data.items.filter((item) => item.done).length;
-  const total = data.items.length;
+  const { done: doneCount, total } = checklistProgress(data.items);
 
   async function onDismiss() {
     setFailed(false);
@@ -94,7 +94,7 @@ export function ChecklistCard({ initial }: { initial: OnboardingResponseDto }) {
             {data.items.map((item) => (
               <li key={item.key}>
                 <Link
-                  href={`/onboarding?step=${item.key}`}
+                  href={checklistHref(item.key)}
                   className="hover:bg-muted focus-visible:ring-ring/50 flex min-h-11 items-center gap-3 rounded-lg px-2 py-2 outline-none focus-visible:ring-[3px]"
                 >
                   {item.done ? (

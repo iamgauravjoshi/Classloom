@@ -326,7 +326,12 @@ function ClassSections({
   const headingId = classHeadingId(group.classLevel);
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-3">
+    <section
+      aria-labelledby={headingId}
+      // Outside the range, the region says so: its sections can be deleted but not edited.
+      aria-describedby={group.outsideRange ? `${headingId}-badge ${headingId}-state` : undefined}
+      className="flex flex-col gap-3"
+    >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -335,6 +340,7 @@ function ClassSections({
             </h3>
             {group.outsideRange ? (
               <Badge
+                id={`${headingId}-badge`}
                 variant="outline"
                 className="border-warning-strong/40 bg-warning-tint text-warning-strong h-6 px-2.5"
               >
@@ -342,7 +348,7 @@ function ClassSections({
               </Badge>
             ) : null}
           </div>
-          <p className="text-muted-foreground text-sm">
+          <p id={`${headingId}-state`} className="text-muted-foreground text-sm">
             {group.outsideRange && editable
               ? t('outsideRangeHint')
               : t('count', { count: group.sections.length })}

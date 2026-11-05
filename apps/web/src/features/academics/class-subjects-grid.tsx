@@ -31,12 +31,14 @@ import { cn } from '@classloom/ui/lib/utils';
 import { IconCheck, IconChevronDown, IconCircleDashed } from '@tabler/icons-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 
 import { Link } from '@/i18n/navigation';
 
 import { BUTTON_CLASS } from '../auth/auth-ui';
+import { useLastShown } from '../iam/iam-ui';
 import { useLeaveGuard } from '../onboarding/leave-guard';
+import { ConfirmDialog } from '../school-settings/years-list';
 import { useAcademicsErrorText } from './academics-errors';
 import { ArchivedBadge, ListState, TabIntro, TRIGGER_CLASS } from './academics-ui';
 import {
@@ -110,6 +112,12 @@ export function ClassSubjectsGrid({
   const [draft, setDraft] = useState<{ level: ClassLevel; map: CellMap } | null>(null);
   const [stream, setStream] = useState<string>(ALL);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // "Remove all" for a class outside the range: the class asked about, and the dialog's error.
+  const tCommon = useTranslations('academics.common');
+  const [removing, setRemoving] = useState<ClassLevel | null>(null);
+  const shownRemoving = useLastShown(removing);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const removedFocus = useRef(false);
 
   const saved = useMemo(
     () => toCellMap(classRowsOf(classSubjects.data?.classes ?? [])),
@@ -238,6 +246,23 @@ export function ClassSubjectsGrid({
     focusClass(level);
   }
 
+  /** Clears a class outside the range (an empty list is the one write it allows). */
+  async function removeAll() {
+    if (!removing) return;
+    const level = removing;
+    setRemoveError(null);
+    try {
+      await replace.mutateAsync({ classLevel: level, data: { rows: [] } });
+      await queryClient.invalidateQueries({ queryKey: getListClassSubjectsQueryKey() });
+      // The class leaves the list with its rows, so the tab's heading takes focus.
+      removedFocus.current = true;
+      setRemoving(null);
+      toast.add({ title: t('removedAll', { class: tClass(level) }), type: 'success' });
+    } catch (error) {
+      setRemoveError(errorText(error));
+    }
+  }
+
   const cellProps = (row: GridRow, subject: SubjectDto) => {
     const level = row.classLevel;
     const streamId = streamFor(level);
@@ -245,11 +270,12 @@ export function ClassSubjectsGrid({
     const addable = canAddCell(saved, level, streamId, subject.id, archived);
     return {
       kind,
-      label: t('cellLabel', {
-        subject: subject.name,
-        class: classLabel(level),
-        state: t(`kinds.${kind ?? 'NONE'}`),
-      }),
+      label:
+        t('cellLabel', {
+          subject: subject.name,
+          class: classLabel(level),
+          state: t(`kinds.${kind ?? 'NONE'}`),
+        }) + (row.outsideRange ? ` ${t('outsideRangeCell')}` : ''),
       editable: canEdit && !row.outsideRange && (kind !== undefined || addable),
       blocked: canEdit && !row.outsideRange && kind === undefined && !addable,
       busy: replace.isPending,
@@ -277,6 +303,20 @@ export function ClassSubjectsGrid({
       >
         {t('outsideRange')}
       </Badge>
+    ) : null;
+  const removeAllButton = (row: GridRow) =>
+    canEdit && row.outsideRange ? (
+      <Button
+        variant="outline"
+        className={cn(BUTTON_CLASS, 'self-start')}
+        aria-label={t('removeAllLabel', { class: tClass(row.classLevel) })}
+        onClick={() => {
+          setRemoveError(null);
+          setRemoving(row.classLevel);
+        }}
+      >
+        {t('removeAll')}
+      </Button>
     ) : null;
   const subjectMeta = (subject: SubjectDto) => (
     <>
@@ -416,6 +456,9 @@ export function ClassSubjectsGrid({
                         {outsideBadge(row)}
                         {unsavedBadge(row.classLevel)}
                       </span>
+                      {row.outsideRange && canEdit ? (
+                        <span className="mt-2 flex">{removeAllButton(row)}</span>
+                      ) : null}
                     </th>
                     {columns.map((subject) => (
                       <td key={subject.id} className="px-2 py-1.5 text-center">
@@ -455,6 +498,9 @@ export function ClassSubjectsGrid({
                     {outsideBadge(row)}
                     {unsavedBadge(row.classLevel)}
                   </p>
+                  {row.outsideRange && canEdit ? (
+                    <div className="flex px-4 pb-3">{removeAllButton(row)}</div>
+                  ) : null}
                   <CollapsibleContent>
                     <ul className="border-border divide-y border-t">
                       {columns.map((subject) => (
@@ -508,6 +554,30 @@ export function ClassSubjectsGrid({
           ) : null}
         </div>
       ) : null}
+
+      {/* Outside the rows, so it stays mounted when the class leaves the list. */}
+      <ConfirmDialog
+        open={removing !== null}
+        title={t('removeAllTitle', { class: shownRemoving ? tClass(shownRemoving) : '' })}
+        body={
+          <span>{t('removeAllBody', { class: shownRemoving ? tClass(shownRemoving) : '' })}</span>
+        }
+        action={t('removeAll')}
+        pendingLabel={t('removingAll')}
+        cancelLabel={tCommon('cancel')}
+        destructive
+        pending={replace.isPending}
+        errorText={removeError}
+        // Removed, the button is gone with its class: focus goes to the tab's heading. Cancelled,
+        // back to the button.
+        finalFocus={() => {
+          const removed = removedFocus.current;
+          removedFocus.current = false;
+          return (removed && document.getElementById(HEADING_ID)) || true;
+        }}
+        onConfirm={() => void removeAll()}
+        onClose={() => setRemoving(null)}
+      />
 
       {dialog}
     </div>

@@ -647,6 +647,54 @@ for (const theme of ['light', 'dark'] as const) {
         await expectNoViolations(page);
       });
 
+      test('/en/classes has no WCAG 2.1 AA violations with a class outside the range', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const year = currentAcademicYear();
+        const current = await send(
+          page,
+          '/school/academic-years',
+          { startsOn: year.startsOn, endsOn: year.endsOn, termCount: 2 },
+          201,
+        );
+        await setClassRange(page, 'IX', 'XII');
+        const campusId = await primaryCampusId(page);
+        const section = (classLevel: string) =>
+          send(
+            page,
+            '/academics/sections',
+            { academicYearId: current.id, campusId, classLevel, name: 'A', capacity: 40 },
+            201,
+          );
+        await section('X');
+        await section('XII');
+        // XII leaves the range: its section stays, to be deleted but not edited.
+        await setClassRange(page, 'IX', 'XI');
+
+        await page.goto('/en/classes');
+        const outside = page.getByRole('region', { name: 'Class XII' });
+        await expect(outside).toHaveAccessibleDescription(
+          'Outside your classes This class is no longer in the school profile. Its sections can be deleted, but not edited.',
+        );
+        await expect(outside.getByRole('button', { name: 'Delete XII-A' })).toBeVisible();
+        await expect(outside.getByRole('button', { name: 'Edit XII-A' })).toHaveCount(0);
+        await expect(outside.getByRole('button', { name: /^Add section/ })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Edit X-A' })).toBeVisible();
+        await expectNoViolations(page);
+
+        // Deleted, the class leaves with its last section and the tab's heading takes focus.
+        await outside.getByRole('button', { name: 'Delete XII-A' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Delete XII-A?' });
+        await expect(dialog).toBeVisible();
+        await expectNoViolations(page);
+        await dialog.getByRole('button', { name: 'Delete' }).click();
+        await expect(dialog).toHaveCount(0);
+        await expect(outside).toHaveCount(0);
+        await expect(page.locator('#sections-heading')).toBeFocused();
+      });
+
       test.describe('subjects page', () => {
         const subjectTabs = (page: Page) =>
           page.getByRole('navigation', { name: 'Subjects views' });
@@ -801,6 +849,60 @@ for (const theme of ['light', 'dark'] as const) {
           await page.mouse.move(0, 0);
           await expectNoViolations(page);
         });
+
+        test('/en/subjects?tab=class-subjects has no WCAG 2.1 AA violations with a class outside the range', async ({
+          page,
+          playwright,
+        }) => {
+          await ownSchool(page, playwright);
+          await setClassRange(page, 'IX', 'XII');
+          const maths = await send(
+            page,
+            '/academics/subjects',
+            { name: 'Mathematics', type: 'SCHOLASTIC' },
+            201,
+          );
+          const response = await page.request.put(
+            `${WEB_ORIGIN}/api/academics/class-subjects/XII`,
+            {
+              data: { rows: [{ subjectId: maths.id, streamId: null, kind: 'COMPULSORY' }] },
+              headers: { origin: WEB_ORIGIN },
+            },
+          );
+          expect(response.status(), await response.text()).toBe(200);
+          // XII leaves the range: its subjects are shown read-only, and can only be removed.
+          await setClassRange(page, 'IX', 'XI');
+
+          await page.setViewportSize({ width: 1280, height: 900 });
+          await page.goto('/en/subjects?tab=class-subjects');
+          const grid = page.getByRole('region', { name: 'Class subjects grid' });
+          await expect(grid.getByText('Outside your classes', { exact: true })).toBeVisible();
+          await expect(
+            grid.getByText(
+              "Mathematics, Class XII: Compulsory Can't be changed, as the class is outside your classes.",
+            ),
+          ).toBeAttached();
+          await expect(grid.getByRole('button', { name: /Class XII:/ })).toHaveCount(0);
+          await expect(
+            grid.getByRole('button', { name: 'Mathematics, Class XI: Not taught' }),
+          ).toBeVisible();
+          const remove = grid.getByRole('button', { name: 'Remove all subjects from Class XII' });
+          await expectNoViolations(page);
+
+          // Cancelled, focus returns to the button; removed, to the tab's heading.
+          await remove.click();
+          const dialog = page.getByRole('dialog', { name: 'Remove all subjects from Class XII?' });
+          await expect(dialog).toBeVisible();
+          await expectNoViolations(page);
+          await dialog.getByRole('button', { name: 'Cancel' }).click();
+          await expect(dialog).toHaveCount(0);
+          await expect(remove).toBeFocused();
+          await remove.click();
+          await dialog.getByRole('button', { name: 'Remove all' }).click();
+          await expect(dialog).toHaveCount(0);
+          await expect(page.getByText('Outside your classes', { exact: true })).toHaveCount(0);
+          await expect(page.locator('#class-subjects-heading')).toBeFocused();
+        });
       });
     });
 
@@ -884,7 +986,11 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(
           page.getByRole('heading', { level: 2, name: 'Finish setting up your school' }),
         ).toBeVisible();
-        await expect(page.getByText('1 of 4 done')).toBeVisible();
+        await expect(page.getByText('1 of 5 done')).toBeVisible();
+        // The fifth item, academics, opens the classes page rather than a wizard step.
+        await expect(
+          page.getByRole('link', { name: 'Add sections and class subjects (to do)' }),
+        ).toHaveAttribute('href', '/en/classes');
         await expect(page.getByText('API online')).toBeVisible();
         await expectNoViolations(page);
       });

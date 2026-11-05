@@ -150,12 +150,16 @@ test('a new owner is sent to the wizard, completes every step and lands on a fin
   }
   await page.getByRole('button', { name: 'Save and finish' }).click();
 
-  // The dashboard: nothing left on the checklist.
+  // The dashboard: every wizard step done; only academics, which the wizard leaves to the classes
+  // page, is left on the checklist.
   await expect(page).toHaveURL(/\/en\/dashboard$/);
   expect(starts.count).toBe(1);
   await expect(page.getByText('API online')).toBeVisible();
   await expect(page.getByText(`Academic year ${year.label}`, { exact: false })).toBeVisible();
-  await expect(checklistHeading(page)).toHaveCount(0);
+  await expect(page.getByText('4 of 5 done')).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Add sections and class subjects (to do)' }),
+  ).toHaveAttribute('href', '/en/classes');
 
   // The year switcher lists the new year as current.
   await expect(page.getByRole('button', { name: `AY ${year.label}` })).toBeVisible();
@@ -204,12 +208,12 @@ test('a new owner who skips everything keeps the checklist, and the wizard never
   // Skipping the last step finishes on the dashboard, with nothing done.
   await expect(page).toHaveURL(/\/en\/dashboard$/);
   await expect(checklistHeading(page)).toBeVisible();
-  await expect(page.getByText('0 of 4 done')).toBeVisible();
+  await expect(page.getByText('0 of 5 done')).toBeVisible();
 
   // A reload doesn't open the wizard again…
   await page.reload();
   await expect(page).toHaveURL(/\/en\/dashboard$/);
-  await expect(page.getByText('0 of 4 done')).toBeVisible();
+  await expect(page.getByText('0 of 5 done')).toBeVisible();
 
   // …and neither does a new session.
   await expect(page.getByText('API online')).toBeVisible();
@@ -222,9 +226,9 @@ test('a new owner who skips everything keeps the checklist, and the wizard never
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/en\/dashboard$/);
   await expect(page.getByText('API online')).toBeVisible();
-  await expect(page.getByText('0 of 4 done')).toBeVisible();
+  await expect(page.getByText('0 of 5 done')).toBeVisible();
   await openDashboard(page);
-  await expect(page.getByText('0 of 4 done')).toBeVisible();
+  await expect(page.getByText('0 of 5 done')).toBeVisible();
 
   // A step finished in Settings counts.
   await page.goto('/en/settings/academic-years');
@@ -236,7 +240,7 @@ test('a new owner who skips everything keeps the checklist, and the wizard never
   await expect(page.getByRole('heading', { level: 2, name: label, exact: true })).toBeVisible();
 
   await openDashboard(page);
-  await expect(page.getByText('1 of 4 done')).toBeVisible();
+  await expect(page.getByText('1 of 5 done')).toBeVisible();
 
   // Dismissed, the card is gone, and stays gone.
   await page
