@@ -208,7 +208,7 @@ export function currentAcademicYear(): YearDates {
 export async function setUpCurrentYear(
   request: APIRequestContext,
   termCount: 2 | 3 = 2,
-): Promise<YearDates> {
+): Promise<YearDates & { id: string }> {
   const year = currentAcademicYear();
   const created = await post(request, '/school/academic-years', {
     startsOn: year.startsOn,
@@ -216,7 +216,94 @@ export async function setUpCurrentYear(
     termCount,
   });
   expect(created.status(), await created.text()).toBe(201);
-  return year;
+  const { id } = (await created.json()) as { id: string };
+  return { ...year, id };
+}
+
+/** The school's primary campus's id, from a signed-in request context. */
+export async function primaryCampusId(request: APIRequestContext): Promise<string> {
+  const listed = await request.get(`${WEB_ORIGIN}/api/school/campuses`);
+  expect(listed.status(), await listed.text()).toBe(200);
+  const { campuses } = (await listed.json()) as { campuses: { id: string; isPrimary: boolean }[] };
+  const primary = campuses.find((campus) => campus.isPrimary);
+  expect(primary, 'primary campus').toBeDefined();
+  return primary!.id;
+}
+
+/**
+ * Sets the school profile's class range (`NURSERY`…`XII`), keeping the rest of the profile, from a
+ * request context that manages settings.
+ */
+export async function setClassRange(
+  request: APIRequestContext,
+  lowestClass: string,
+  highestClass: string,
+): Promise<void> {
+  const read = await request.get(`${WEB_ORIGIN}/api/school/profile`);
+  expect(read.status(), await read.text()).toBe(200);
+  const {
+    code: _code,
+    logoUrl: _logo,
+    ...profile
+  } = (await read.json()) as Record<string, unknown>;
+  const saved = await request.put(`${WEB_ORIGIN}/api/school/profile`, {
+    data: { ...profile, lowestClass, highestClass },
+    headers: { origin: WEB_ORIGIN },
+  });
+  expect(saved.status(), await saved.text()).toBe(200);
+}
+
+/**
+ * Adds the starter streams (Science, Commerce and Humanities) from a request context that manages
+ * classes, and returns their ids by name.
+ */
+export async function setUpStreams(request: APIRequestContext): Promise<Record<string, string>> {
+  const added = await post(request, '/academics/streams/starter', {});
+  expect(added.status(), await added.text()).toBe(201);
+  const { created } = (await added.json()) as { created: { id: string; name: string }[] };
+  return Object.fromEntries(created.map((stream) => [stream.name, stream.id]));
+}
+
+/** Adds a classroom (on the primary campus unless `campusId` is given) and returns its id. */
+export async function addRoom(
+  request: APIRequestContext,
+  room: { name: string; capacity?: number; type?: string; campusId?: string },
+): Promise<string> {
+  const created = await post(request, '/academics/rooms', {
+    type: 'CLASSROOM',
+    capacity: 40,
+    ...room,
+    campusId: room.campusId ?? (await primaryCampusId(request)),
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  return ((await created.json()) as { id: string }).id;
+}
+
+/**
+ * Adds a section to a year (on the primary campus unless `campusId` is given) and returns its id.
+ * The class must be in the profile's class range, and a senior class needs a stream while the
+ * school has any.
+ */
+export async function addSection(
+  request: APIRequestContext,
+  section: {
+    academicYearId: string;
+    classLevel: string;
+    name: string;
+    capacity?: number;
+    streamId?: string | null;
+    roomId?: string | null;
+    classTeacherMembershipId?: string | null;
+    campusId?: string;
+  },
+): Promise<string> {
+  const created = await post(request, '/academics/sections', {
+    capacity: 40,
+    ...section,
+    campusId: section.campusId ?? (await primaryCampusId(request)),
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  return ((await created.json()) as { id: string }).id;
 }
 
 /** A small JPEG photo (1024x768), shared with the API's image-intake tests. */
