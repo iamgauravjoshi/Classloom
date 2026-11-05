@@ -33,6 +33,8 @@ export * from './classSubjectsResponseDtoClassesItem';
 export * from './classSubjectsResponseDtoClassesItemClassLevel';
 export * from './classSubjectsResponseDtoClassesItemRowsItem';
 export * from './classSubjectsResponseDtoClassesItemRowsItemKind';
+export * from './classSubjectsResponseDtoStreamsItem';
+export * from './classSubjectsResponseDtoStreamsItemStatus';
 export * from './classTeacherOptionsResponseDto';
 export * from './classTeacherOptionsResponseDtoTeachersItem';
 export * from './codeAvailabilityResponseDto';

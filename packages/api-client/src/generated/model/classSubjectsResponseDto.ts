@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.0.0
  */
 import type { ClassSubjectsResponseDtoClassesItem } from './classSubjectsResponseDtoClassesItem';
+import type { ClassSubjectsResponseDtoStreamsItem } from './classSubjectsResponseDtoStreamsItem';
 
 export interface ClassSubjectsResponseDto {
   classes: ClassSubjectsResponseDtoClassesItem[];
+  streams: ClassSubjectsResponseDtoStreamsItem[];
 }

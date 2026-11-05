@@ -5,7 +5,6 @@ import {
   type SubjectDto,
   useGetSchoolProfile,
   useListClassSubjects,
-  useListStreams,
   useListSubjects,
   useReplaceClassSubjects,
 } from '@classloom/api-client';
@@ -48,6 +47,7 @@ import {
   gridClasses,
   gridColumns,
   nextKind,
+  refusedField,
   refusedRow,
   rowsForClass,
   sameClassRows,
@@ -105,7 +105,6 @@ export function ClassSubjectsGrid({
   const hintId = useId();
   const subjects = useListSubjects();
   const classSubjects = useListClassSubjects();
-  const streams = useListStreams();
   const profile = useGetSchoolProfile({ query: { staleTime: PROFILE_STALE_MS } });
   const replace = useReplaceClassSubjects();
   const [draft, setDraft] = useState<{ level: ClassLevel; map: CellMap } | null>(null);
@@ -125,8 +124,8 @@ export function ClassSubjectsGrid({
     stay: t('guardStay'),
   });
 
-  const queries = [subjects, classSubjects, streams, profile];
-  const loaded = subjects.data && classSubjects.data && streams.data && profile.data;
+  const queries = [subjects, classSubjects, profile];
+  const loaded = subjects.data && classSubjects.data && profile.data;
   if (!loaded) {
     return (
       <div className="flex flex-col gap-6">
@@ -159,7 +158,7 @@ export function ClassSubjectsGrid({
       rowsForClass(saved, row.classLevel).flatMap((r) => (r.streamId ? [r.streamId] : [])),
     ),
   );
-  const streamOptions = streams.data.streams.filter(
+  const streamOptions = classSubjects.data.streams.filter(
     (s) => s.status === 'ACTIVE' || mappedStreams.has(s.id),
   );
   const streamItems = [
@@ -176,7 +175,7 @@ export function ClassSubjectsGrid({
   const selectedName = streamOptions.find((s) => s.id === selected)?.name ?? '';
   const archived = new Set([
     ...subjects.data.subjects.filter((s) => s.status === 'ARCHIVED').map((s) => s.id),
-    ...streams.data.streams.filter((s) => s.status === 'ARCHIVED').map((s) => s.id),
+    ...classSubjects.data.streams.filter((s) => s.status === 'ARCHIVED').map((s) => s.id),
   ]);
 
   const mapFor = (level: ClassLevel): CellMap =>
@@ -219,12 +218,14 @@ export function ClassSubjectsGrid({
       focusClass(level);
       toast.add({ title: t('saved', { class: tClass(level) }), type: 'success' });
     } catch (error) {
+      // Name what the refusal is about: the stream for a `rows.N.streamId` path, else the subject.
       const row = refusedRow(error, body);
-      const subject = row && subjects.data?.subjects.find((s) => s.id === row.subjectId);
+      const streamId = refusedField(error) === 'streamId' ? row?.streamId : null;
+      const name = streamId
+        ? classSubjects.data?.streams.find((s) => s.id === streamId)?.name
+        : row && subjects.data?.subjects.find((s) => s.id === row.subjectId)?.name;
       setSaveError(
-        subject
-          ? t('refusedRow', { subject: subject.name, message: errorText(error) })
-          : errorText(error),
+        name ? t('refusedRow', { subject: name, message: errorText(error) }) : errorText(error),
       );
     }
   }
@@ -251,6 +252,7 @@ export function ClassSubjectsGrid({
       }),
       editable: canEdit && !row.outsideRange && (kind !== undefined || addable),
       blocked: canEdit && !row.outsideRange && kind === undefined && !addable,
+      busy: replace.isPending,
       hintId,
       onToggle: () => toggle(level, subject.id),
     };
@@ -553,6 +555,7 @@ function CellControl({
   label,
   editable,
   blocked,
+  busy,
   hintId,
   onToggle,
 }: {
@@ -560,6 +563,8 @@ function CellControl({
   label: string;
   editable: boolean;
   blocked: boolean;
+  /** A save is in flight: a press now would be lost, so the cell waits. */
+  busy: boolean;
   hintId: string;
   onToggle: () => void;
 }) {
@@ -570,11 +575,12 @@ function CellControl({
         type="button"
         aria-label={label}
         aria-describedby={hintId}
+        disabled={busy}
         onClick={onToggle}
         className={cn(
           CELL_CLASS,
           faceClass(kind),
-          'focus-visible:ring-ring/50 cursor-pointer outline-none focus-visible:ring-3',
+          'focus-visible:ring-ring/50 cursor-pointer outline-none focus-visible:ring-3 disabled:cursor-wait disabled:opacity-60',
           kind === undefined && 'hover:bg-muted',
         )}
       >

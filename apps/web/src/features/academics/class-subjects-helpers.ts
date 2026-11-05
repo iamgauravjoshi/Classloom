@@ -151,3 +151,10 @@ export function refusedRow<T>(error: unknown, rows: readonly T[]): T | null {
   const match = /^rows\.(\d+)/.exec(error.problem.errors?.[0]?.path ?? '');
   return match ? (rows[Number(match[1])] ?? null) : null;
 }
+
+/** The field a save refusal's first error names (`rows.3.streamId` → `streamId`), if any. */
+export function refusedField(error: unknown): 'subjectId' | 'streamId' | null {
+  if (!(error instanceof ApiError)) return null;
+  const field = /^rows\.\d+\.(subjectId|streamId)$/.exec(error.problem.errors?.[0]?.path ?? '');
+  return (field?.[1] as 'subjectId' | 'streamId' | undefined) ?? null;
+}

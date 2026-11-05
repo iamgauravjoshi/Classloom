@@ -8,6 +8,7 @@ import {
   gridColumns,
   type LevelRow,
   nextKind,
+  refusedField,
   refusedRow,
   rowsForClass,
   sameClassRows,
@@ -162,5 +163,22 @@ describe('refusedRow', () => {
     });
     expect(refusedRow(error, rows)).toEqual(rows[1]);
     expect(refusedRow(new Error('x'), rows)).toBeNull();
+  });
+});
+
+describe('refusedField', () => {
+  const refusal = (path: string) =>
+    new ApiError(422, {
+      type: 'stream-archived',
+      title: 'Archived',
+      status: 422,
+      errors: [{ path, message: 'Archived' }],
+    });
+
+  it('names the stream for a stream refusal and the subject for a subject one', () => {
+    expect(refusedField(refusal('rows.2.streamId'))).toBe('streamId');
+    expect(refusedField(refusal('rows.0.subjectId'))).toBe('subjectId');
+    expect(refusedField(refusal('rows'))).toBeNull();
+    expect(refusedField(new Error('x'))).toBeNull();
   });
 });

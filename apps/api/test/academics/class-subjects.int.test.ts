@@ -266,5 +266,48 @@ describe('class subjects API', () => {
       const { s } = await setup();
       expect((await h.get(BASE, s.accountant.cookie)).status).toBe(403);
     });
+
+    it('gives a member with only subjects.view the rows and the streams', async () => {
+      const { s, english, science } = await setup();
+      await put(s, 'XI', [{ subjectId: english.id, streamId: science.id, kind: 'COMPULSORY' }]);
+      const role = await h.owner.role.create({
+        data: {
+          tenantId: s.tenantId,
+          name: 'Subjects reader',
+          permissions: { create: [{ permission: 'subjects.view' }] },
+        },
+      });
+      const reader = await s.person('ACCOUNTANT');
+      await h.owner.membershipRole.deleteMany({ where: { membershipId: reader.membershipId } });
+      await h.owner.membershipRole.create({
+        data: { tenantId: s.tenantId, membershipId: reader.membershipId, roleId: role.id },
+      });
+      // No classes.view: the streams list itself is refused.
+      expect((await h.get('/academics/streams', reader.cookie)).status).toBe(403);
+
+      const res = await h.get(BASE, reader.cookie);
+      expect(res.status).toBe(200);
+      const body = classSubjectsResponseSchema.parse(res.body);
+      expect(body.streams.map((x) => x.name)).toEqual(['Commerce', 'Science']);
+      expect(body.classes.find((c) => c.classLevel === 'XI')?.rows).toHaveLength(1);
+    });
+  });
+
+  it('lists active streams, and archived ones only while a row names them', async () => {
+    const { s, english, science, commerce } = await setup();
+    const arts = await h.owner.stream.create({
+      data: { tenantId: s.tenantId, name: 'Arts', status: 'ARCHIVED' },
+    });
+    await put(s, 'XI', [{ subjectId: english.id, streamId: science.id, kind: 'COMPULSORY' }]);
+    await h.owner.stream.update({ where: { id: science.id }, data: { status: 'ARCHIVED' } });
+
+    const res = await h.get(BASE, s.admin.cookie);
+    const { streams } = classSubjectsResponseSchema.parse(res.body);
+    // Active first, then by name; Arts is archived and unused.
+    expect(streams).toEqual([
+      { id: commerce.id, name: 'Commerce', status: 'ACTIVE' },
+      { id: science.id, name: 'Science', status: 'ARCHIVED' },
+    ]);
+    expect(streams.some((x) => x.id === arts.id)).toBe(false);
   });
 });

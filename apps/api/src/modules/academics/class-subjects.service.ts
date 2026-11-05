@@ -82,12 +82,20 @@ export class ClassSubjectsService {
         list.push(toRow(row));
         byLevel.set(row.classLevel, list);
       }
+      // The grid's stream selector: active streams, plus archived ones a row still names.
+      const usedStreamIds = [...new Set(rows.flatMap((r) => (r.streamId ? [r.streamId] : [])))];
+      const streams = await tx.stream.findMany({
+        where: { OR: [{ status: 'ACTIVE' }, { id: { in: usedStreamIds } }] },
+        select: { id: true, name: true, status: true },
+        orderBy: [{ status: 'asc' }, { name: 'asc' }],
+      });
       return {
         classes: CLASS_LEVELS.filter((level) => byLevel.has(level)).map((level) => ({
           classLevel: level,
           outsideRange: !isInRange(level, range.lowest, range.highest),
           rows: byLevel.get(level)!,
         })),
+        streams,
       };
     });
   }

@@ -254,9 +254,17 @@ export const classSubjectsClassSchema = z.object({
 });
 export type ClassSubjectsClass = z.infer<typeof classSubjectsClassSchema>;
 
-/** Every row, grouped by class level; outsideRange marks classes outside the profile range. */
+/** A stream as the class-subjects grid needs it (no `classes.view` needed to read it). */
+export const classSubjectsStreamSchema = z.object({ id, name: z.string(), status });
+export type ClassSubjectsStream = z.infer<typeof classSubjectsStreamSchema>;
+
+/**
+ * Every row, grouped by class level; outsideRange marks classes outside the profile range.
+ * `streams`: every ACTIVE stream, plus any ARCHIVED stream a row still names.
+ */
 export const classSubjectsResponseSchema = z.object({
   classes: z.array(classSubjectsClassSchema),
+  streams: z.array(classSubjectsStreamSchema),
 });
 export type ClassSubjectsResponse = z.infer<typeof classSubjectsResponseSchema>;
 
