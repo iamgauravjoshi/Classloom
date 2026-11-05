@@ -12,6 +12,7 @@
 // below names only `id`, the database key is composite all the same:
 //   - sections (room_id, campus_id, tenant_id) -> rooms (id, campus_id, tenant_id), ON DELETE SET
 //     NULL (room_id): a section's room is always on the section's own campus;
+//     ON UPDATE NO ACTION: a room a section uses cannot change campus (the API never moves one);
 //   - sections (class_teacher_membership_id, tenant_id) -> memberships (id, tenant_id), ON DELETE
 //     SET NULL (class_teacher_membership_id).
 // "Restrict" is NO ACTION in the database (checked at the end of the statement), so deleting a

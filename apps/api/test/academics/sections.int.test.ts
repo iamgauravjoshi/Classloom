@@ -104,6 +104,26 @@ describe('sections API', () => {
       await create(s, next, { classTeacherMembershipId: s.teacher.membershipId });
     });
 
+    it('lets only one of two concurrent creates name the same teacher (one 201, one 409)', async () => {
+      const { s, year } = await setup();
+      const north = await h.campus(s.tenantId, 'North');
+      const teacher = { classTeacherMembershipId: s.teacher.membershipId };
+      const results = await Promise.all([
+        h.post(BASE, s.admin.cookie).send(body(s, year, { classLevel: 'VI', ...teacher })),
+        h
+          .post(BASE, s.admin.cookie)
+          .send(body(s, year, { classLevel: 'VII', campusId: north, ...teacher })),
+      ]);
+      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+      const refused = results.find((r) => r.status === 409)!;
+      expect(problem(refused).type).toBe('teacher-taken');
+      expect(
+        await h.owner.section.count({
+          where: { academicYearId: year, classTeacherMembershipId: s.teacher.membershipId },
+        }),
+      ).toBe(1);
+    });
+
     it('gives 422 teacher-unavailable for a deactivated member or one of another school', async () => {
       const { s, year } = await setup();
       const other = await h.school();

@@ -6,7 +6,7 @@ import type { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
 import type { Prisma } from '../../generated/prisma/client';
 import type { RequestAuth } from '../auth/request-auth';
-import { InUseException, NameTakenException } from './academics-problems';
+import { InUseException, NameTakenException, TeacherTakenException } from './academics-problems';
 
 /** The member making the change, or the platform CLI (no user). */
 export type Actor = Pick<RequestAuth, 'tenantId'> & { userId: string | null };
@@ -47,10 +47,21 @@ const NAME_PROBLEMS = NAME_INDEXES.map(
 );
 
 /**
+ * The unique indexes a 23505 maps to a problem: the name indexes, and the one-section-per-teacher
+ * index (`sections_class_teacher_key`), a backstop behind the sections service's own check under
+ * its lock; the section's name is not known here, so the problem goes without it.
+ */
+const UNIQUE_PROBLEMS = [
+  ...NAME_PROBLEMS,
+  ['sections_class_teacher_key', () => new TeacherTakenException()] as const,
+];
+
+/**
  * One `withTenant` transaction for an academics write. A unique-name violation becomes 409
- * `name-taken` (`field: 'name'`). A foreign key violation becomes `foreignKeyProblem()` when given
- * (e.g. a 422 for a row deleted between a check and an insert); with `inUseOnForeignKey`, it (a
- * row still referenced, NO ACTION) becomes 409 `in-use`.
+ * `name-taken` (`field: 'name'`), and a unique class-teacher one 409 `teacher-taken`. A foreign key
+ * violation becomes `foreignKeyProblem()` when given (e.g. a 422 for a row deleted between a check
+ * and an insert); with `inUseOnForeignKey`, it (a row still referenced, NO ACTION) becomes 409
+ * `in-use`.
  */
 export async function academicsWrite<T>(
   prisma: PrismaService,
@@ -61,7 +72,7 @@ export async function academicsWrite<T>(
   try {
     return await withTenant(prisma, tenantId, fn);
   } catch (error) {
-    const named = uniqueViolationProblem(error, NAME_PROBLEMS);
+    const named = uniqueViolationProblem(error, UNIQUE_PROBLEMS);
     if (named) throw named;
     if (dbViolation(error)?.sqlState === '23503') {
       if (options.foreignKeyProblem) throw options.foreignKeyProblem();

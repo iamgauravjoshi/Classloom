@@ -1,7 +1,7 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 
 import type { PrismaService } from '../../core/prisma/prisma.service';
-import { InUseException, NameTakenException } from './academics-problems';
+import { InUseException, NameTakenException, TeacherTakenException } from './academics-problems';
 import { academicsWrite } from './academics-write';
 
 /** A Prisma 7 driver-adapter error with this SQLSTATE and constraint. */
@@ -26,6 +26,16 @@ describe('academicsWrite', () => {
     const error = await run(dbError('23505', 'streams_name_key')).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(NameTakenException);
     expect((error as NameTakenException).field).toBe('name');
+  });
+
+  it('maps a unique class-teacher violation to teacher-taken without a section name', async () => {
+    const error = await run(dbError('23505', 'sections_class_teacher_key')).catch(
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(TeacherTakenException);
+    const response = (error as TeacherTakenException).getResponse();
+    expect(response).toMatchObject({ type: 'teacher-taken' });
+    expect(response).not.toHaveProperty('sectionName');
   });
 
   it('leaves a foreign key violation alone without an option', async () => {

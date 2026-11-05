@@ -121,14 +121,19 @@ export class TeacherUnavailableException extends unprocessable('teacher-unavaila
   message: 'Choose an active member of this school.',
 }) {}
 
-/** 409: the teacher already leads `sectionName` this academic year. */
+/**
+ * 409: the teacher already leads `sectionName` this academic year. Without a name (the database's
+ * unique index caught a race the API's check missed) the problem carries no `sectionName`.
+ */
 export class TeacherTakenException extends ConflictException {
-  constructor(readonly sectionName: string) {
+  constructor(readonly sectionName?: string) {
     super({
       type: 'teacher-taken' satisfies AcademicsProblemType,
       title: 'This teacher already leads a section this year.',
-      message: `They are class teacher of ${sectionName}.`,
-      sectionName,
+      message: sectionName
+        ? `They are class teacher of ${sectionName}.`
+        : 'They are class teacher of another section.',
+      ...(sectionName ? { sectionName } : {}),
     });
   }
 }
@@ -142,12 +147,12 @@ export class StreamRequiredException extends unprocessable('stream-required', {
 
 export class StreamNotAllowedException extends unprocessable('stream-not-allowed', {
   title: 'This stream cannot be used here.',
-  message: 'Only classes XI and XII have streams, and only active streams can be added.',
+  message: 'Only classes XI and XII have streams.',
 }) {}
 
 export class StreamArchivedException extends unprocessable('stream-archived', {
   title: 'This stream is archived.',
-  message: 'Restore the stream before adding it to a class.',
+  message: 'Restore the stream or choose another.',
 }) {}
 
 /* ------------------------------- Sections ------------------------------- */
