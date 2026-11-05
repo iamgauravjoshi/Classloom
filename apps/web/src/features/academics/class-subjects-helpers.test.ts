@@ -2,6 +2,7 @@ import { ApiError } from '@classloom/api-client';
 import { describe, expect, it } from 'vitest';
 
 import {
+  allStreamsKind,
   canAddCell,
   classRowsOf,
   gridClasses,
@@ -135,6 +136,23 @@ describe('gridColumns', () => {
     ];
     const map = toCellMap(ROWS.filter((row) => row.subjectId !== ENGLISH));
     expect(gridColumns(subjects, map).map((s) => s.name)).toEqual(['Mathematics', 'Physics']);
+  });
+});
+
+describe('allStreamsKind', () => {
+  const map = toCellMap(ROWS);
+
+  it("gives a stream's view the kind the subject has for all streams", () => {
+    expect(allStreamsKind(map, 'XI', SCIENCE, ENGLISH)).toBe('COMPULSORY');
+    expect(allStreamsKind(map, 'XI', COMMERCE, ENGLISH)).toBe('COMPULSORY');
+    const optional = withCell(map, 'XI', null, ENGLISH, 'OPTIONAL');
+    expect(allStreamsKind(optional, 'XI', SCIENCE, ENGLISH)).toBe('OPTIONAL');
+  });
+
+  it('is undefined for a subject with no all-streams row, or in the all-streams view', () => {
+    expect(allStreamsKind(map, 'XI', SCIENCE, PHYSICS)).toBeUndefined();
+    expect(allStreamsKind(map, 'XI', null, ENGLISH)).toBeUndefined();
+    expect(allStreamsKind(map, 'XII', SCIENCE, ENGLISH)).toBeUndefined();
   });
 });
 

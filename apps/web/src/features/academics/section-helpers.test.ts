@@ -10,6 +10,7 @@ import {
   previousYearOf,
   roomTooSmall,
   sectionErrorField,
+  sectionFormReady,
 } from './section-helpers';
 
 const section = (classLevel: ClassGroup['classLevel'], name: string) => ({ classLevel, name });
@@ -182,5 +183,19 @@ describe('copyableCount', () => {
   it('is 0 when every class is outside the range, or no range is set', () => {
     expect(copyableCount(sections, { lowest: 'I', highest: 'V' })).toBe(0);
     expect(copyableCount(sections, { lowest: null, highest: null })).toBe(0);
+  });
+});
+
+describe('sectionFormReady', () => {
+  const query = (isPending: boolean) => ({ isPending });
+
+  it('waits for both the streams and the rooms, so a fast submit keeps the stream', () => {
+    expect(sectionFormReady(query(true), query(false))).toBe(false);
+    expect(sectionFormReady(query(false), query(true))).toBe(false);
+    expect(sectionFormReady(query(true), query(true))).toBe(false);
+  });
+
+  it('is ready once both have settled, loaded or failed', () => {
+    expect(sectionFormReady(query(false), query(false))).toBe(true);
   });
 });

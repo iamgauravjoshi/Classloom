@@ -129,20 +129,20 @@ function CampusRooms({ campus, canEdit }: { campus: CampusDto; canEdit: boolean 
           ) : null}
           {rooms.length === 0 ? (
             <EmptyState title={t('empty', { campus: campus.name })} body={t('emptyBody')} />
-          ) : (
-            <ItemList
-              kind="rooms"
-              items={rooms}
-              canEdit={canEdit}
-              headingId={HEADING_ID}
-              details={(room) => <RoomDetails room={room} />}
-              onEdit={(room) => setForm({ room })}
-              archive={(id) => archive.mutateAsync({ id })}
-              restore={(id) => restore.mutateAsync({ id })}
-              remove={(id) => remove.mutateAsync({ id })}
-              onChanged={refresh}
-            />
-          )}
+          ) : null}
+          {/* Mounted while empty too, so its delete dialog outlives the last item. */}
+          <ItemList
+            kind="rooms"
+            items={rooms}
+            canEdit={canEdit}
+            headingId={HEADING_ID}
+            details={(room) => <RoomDetails room={room} />}
+            onEdit={(room) => setForm({ room })}
+            archive={(id) => archive.mutateAsync({ id })}
+            restore={(id) => restore.mutateAsync({ id })}
+            remove={(id) => remove.mutateAsync({ id })}
+            onChanged={refresh}
+          />
         </>
       )}
 

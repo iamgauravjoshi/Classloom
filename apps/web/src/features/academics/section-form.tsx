@@ -41,6 +41,7 @@ import {
   roomTooSmall,
   sectionErrorField,
   type SectionField,
+  sectionFormReady,
 } from './section-helpers';
 
 type FormInput = {
@@ -111,6 +112,7 @@ export function SectionForm({
   const rooms = useListRooms({ campusId });
   const streams = useListStreams();
   const teachers = useListClassTeacherOptions({ yearId });
+  const ready = sectionFormReady(streams, rooms);
 
   const activeStreams = (streams.data?.streams ?? []).filter((s) => s.status === 'ACTIVE');
   const showStream = isSeniorClass(classLevel) && (activeStreams.length > 0 || !!section?.stream);
@@ -385,7 +387,7 @@ export function SectionForm({
         >
           {tCommon('cancel')}
         </Button>
-        <Button type="submit" className={BUTTON_CLASS} disabled={pending}>
+        <Button type="submit" className={BUTTON_CLASS} disabled={pending || !ready}>
           {pending ? <Spinner aria-hidden="true" /> : null}
           {pending ? tCommon('saving') : section ? tCommon('save') : t('create')}
         </Button>

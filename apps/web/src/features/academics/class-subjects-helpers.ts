@@ -91,6 +91,19 @@ export function withCell(
   return next;
 }
 
+/**
+ * In a stream's view (`streamId` set), the kind the class has the subject for all its streams, if
+ * it has one: every stream takes it already, so the stream's own cell shows that and isn't offered.
+ */
+export function allStreamsKind(
+  map: CellMap,
+  level: ClassLevel,
+  streamId: string | null,
+  subjectId: string,
+): ClassSubjectKind | undefined {
+  return streamId === null ? undefined : map.get(cellKey(level, null, subjectId));
+}
+
 /** A cell's next state: not taught, then compulsory, then optional, then not taught again. */
 export function nextKind(kind: ClassSubjectKind | undefined): ClassSubjectKind | undefined {
   if (kind === undefined) return 'COMPULSORY';

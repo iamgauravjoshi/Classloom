@@ -42,6 +42,7 @@ import { ConfirmDialog } from '../school-settings/years-list';
 import { useAcademicsErrorText } from './academics-errors';
 import { ArchivedBadge, ListState, TabIntro, TRIGGER_CLASS } from './academics-ui';
 import {
+  allStreamsKind,
   canAddCell,
   cellKey,
   type CellMap,
@@ -266,17 +267,23 @@ export function ClassSubjectsGrid({
   const cellProps = (row: GridRow, subject: SubjectDto) => {
     const level = row.classLevel;
     const streamId = streamFor(level);
-    const kind = mapFor(level).get(cellKey(level, streamId, subject.id));
+    const map = mapFor(level);
+    const own = map.get(cellKey(level, streamId, subject.id));
+    // In a stream's view, a subject every stream takes shows as such, and can't be set per stream.
+    const allStreams =
+      own === undefined ? allStreamsKind(map, level, streamId, subject.id) : undefined;
+    const kind = own ?? allStreams;
     const addable = canAddCell(saved, level, streamId, subject.id, archived);
     return {
       kind,
+      allStreams: allStreams !== undefined,
       label:
         t('cellLabel', {
           subject: subject.name,
           class: classLabel(level),
-          state: t(`kinds.${kind ?? 'NONE'}`),
+          state: allStreams ? t(`allStreamsKinds.${allStreams}`) : t(`kinds.${kind ?? 'NONE'}`),
         }) + (row.outsideRange ? ` ${t('outsideRangeCell')}` : ''),
-      editable: canEdit && !row.outsideRange && (kind !== undefined || addable),
+      editable: canEdit && !row.outsideRange && !allStreams && (kind !== undefined || addable),
       blocked: canEdit && !row.outsideRange && kind === undefined && !addable,
       busy: replace.isPending,
       hintId,
@@ -587,9 +594,31 @@ export function ClassSubjectsGrid({
 const CELL_CLASS =
   'inline-flex h-10 min-w-28 shrink-0 items-center justify-center gap-1.5 rounded-md border px-2.5 text-sm font-medium pointer-coarse:h-11';
 
-/** What a cell shows: an icon and a word for compulsory or optional, a dash for not taught. */
-function CellFace({ kind }: { kind: ClassSubjectKind | undefined }) {
+/**
+ * What a cell shows: an icon and a word for compulsory or optional, a dash for not taught. A
+ * stream's cell for a subject every stream takes adds "All streams" under the word.
+ */
+function CellFace({
+  kind,
+  allStreams = false,
+}: {
+  kind: ClassSubjectKind | undefined;
+  allStreams?: boolean;
+}) {
   const t = useTranslations('academics.classSubjects.kinds');
+  const tGrid = useTranslations('academics.classSubjects');
+  if (allStreams && kind) {
+    const Icon = kind === 'COMPULSORY' ? IconCheck : IconCircleDashed;
+    return (
+      <>
+        <Icon aria-hidden="true" className="size-4 shrink-0" />
+        <span className="flex flex-col text-left leading-tight">
+          <span>{t(kind)}</span>
+          <span className="text-xs font-normal">{tGrid('allStreamsTag')}</span>
+        </span>
+      </>
+    );
+  }
   if (kind === 'COMPULSORY') {
     return (
       <>
@@ -609,6 +638,10 @@ function CellFace({ kind }: { kind: ClassSubjectKind | undefined }) {
   return <span aria-hidden="true">—</span>;
 }
 
+/** A stream's cell for a subject every stream takes: set elsewhere, so quieter than its own. */
+const ALL_STREAMS_CLASS =
+  'border-border bg-muted text-foreground h-auto min-h-10 py-1 pointer-coarse:h-auto pointer-coarse:min-h-11';
+
 const faceClass = (kind: ClassSubjectKind | undefined) =>
   kind === 'COMPULSORY'
     ? 'border-primary bg-primary text-primary-foreground'
@@ -622,6 +655,7 @@ const faceClass = (kind: ClassSubjectKind | undefined) =>
  */
 function CellControl({
   kind,
+  allStreams,
   label,
   editable,
   blocked,
@@ -630,6 +664,8 @@ function CellControl({
   onToggle,
 }: {
   kind: ClassSubjectKind | undefined;
+  /** Set for all streams: shown in a stream's view, but changed only under "All streams". */
+  allStreams: boolean;
   label: string;
   editable: boolean;
   blocked: boolean;
@@ -659,13 +695,20 @@ function CellControl({
     );
   }
   return (
-    <span className={cn(CELL_CLASS, faceClass(kind), kind === undefined && 'border-transparent')}>
+    <span
+      className={cn(
+        CELL_CLASS,
+        allStreams ? ALL_STREAMS_CLASS : faceClass(kind),
+        kind === undefined && 'border-transparent',
+      )}
+    >
       <span aria-hidden="true" className="inline-flex items-center gap-1.5">
-        <CellFace kind={kind} />
+        <CellFace kind={kind} allStreams={allStreams} />
       </span>
       <span className="sr-only">
         {label}
         {blocked ? ` ${t('cantAdd')}` : ''}
+        {allStreams ? ` ${t('allStreamsNote')}` : ''}
       </span>
     </span>
   );

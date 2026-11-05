@@ -135,3 +135,15 @@ export function copyableCount(
   const inRange = new Set(classesInRange(range.lowest, range.highest));
   return sections.filter((s) => inRange.has(s.classLevel)).length;
 }
+
+/**
+ * Whether the section form may be submitted: the streams and rooms queries have settled. Until
+ * the streams load, the form doesn't know a senior class needs a stream, so a fast submit would
+ * leave the stream out.
+ */
+export function sectionFormReady(
+  streams: { isPending: boolean },
+  rooms: { isPending: boolean },
+): boolean {
+  return !streams.isPending && !rooms.isPending;
+}

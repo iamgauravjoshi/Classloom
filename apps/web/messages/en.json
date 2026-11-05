@@ -1009,6 +1009,7 @@
       "academicTermsInvalid": "The terms must cover the whole year, in order, with no gaps.",
       "academicYearLocked": "This academic year can no longer be changed.",
       "academicYearLabelTaken": "Another year already uses this label. Choose a different one.",
+      "academicYearHasSections": "This year has {count, plural, one {# section} other {# sections}}. Delete them on the Classes page first, then delete the year.",
       "campusPrimary": "The primary campus can't be deactivated. Make another campus primary first.",
       "campusLastActive": "The last active campus can't be deactivated.",
       "campusNameTaken": "A campus with this name already exists. Choose a different name.",
@@ -1062,7 +1063,7 @@
       },
       "deleteDialog": {
         "title": "Delete {label}?",
-        "body": "The planned year and its terms will be removed. This can't be undone.",
+        "body": "The planned year and its terms will be removed. A year with sections can't be deleted, so delete its sections first. This can't be undone.",
         "action": "Delete year",
         "pending": "Deleting",
         "done": "{label} was deleted."
@@ -1369,6 +1370,8 @@
       "starter": "Add {names}",
       "starterAdding": "Adding streams",
       "starterAdded": "Added {names}.",
+      "starterNoneAdded": "Nothing new was added. Already here: {names}.",
+      "starterNothingNew": "Nothing new was added.",
       "archiveBody": "Sections and class subjects that use it keep it, but it can't be chosen for new ones. You can restore it later.",
       "deleteBody": "This can't be undone. A stream that sections or class subjects use can't be deleted; archive it instead.",
       "form": {
@@ -1527,6 +1530,12 @@
         "OPTIONAL": "Optional",
         "NONE": "Not taught"
       },
+      "allStreamsKinds": {
+        "COMPULSORY": "Compulsory (all streams)",
+        "OPTIONAL": "Optional (all streams)"
+      },
+      "allStreamsTag": "All streams",
+      "allStreamsNote": "Set for all streams, so it's changed under \"All streams\".",
       "cellLabel": "{subject}, {class}: {state}",
       "cycleHint": "Each press changes it: not taught, then compulsory, then optional.",
       "cantAdd": "Archived, so it can't be added to this class.",

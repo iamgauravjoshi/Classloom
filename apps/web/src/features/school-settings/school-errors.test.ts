@@ -8,6 +8,7 @@ import {
   LOGO_REASONS,
   SCHOOL_PROBLEM_TYPES,
   schoolErrorMessage,
+  schoolErrorValues,
   schoolProblemMessage,
 } from './school-errors';
 
@@ -22,7 +23,7 @@ const problem = (type: string, status: number, extra: Partial<ProblemDetails> = 
 
 describe('schoolProblemMessage', () => {
   it('maps every spec §11 problem type to its own en.json message', () => {
-    expect(SCHOOL_PROBLEM_TYPES).toHaveLength(12);
+    expect(SCHOOL_PROBLEM_TYPES).toHaveLength(13);
     const keys = new Set<string>();
     for (const type of SCHOOL_PROBLEM_TYPES) {
       if (type === 'logo-invalid') continue;
@@ -88,6 +89,31 @@ describe('schoolErrorMessage', () => {
   it('is generic for anything else', () => {
     expect(schoolErrorMessage(new Error('x'))).toBe('generic');
     expect(schoolErrorMessage(undefined)).toBe('generic');
+  });
+});
+
+describe('a planned year with sections', () => {
+  const inUse = (sections?: number) =>
+    new ApiError(409, problem('in-use', 409, sections ? { counts: { sections } } : {}));
+
+  it('says the year has sections, with their count', () => {
+    expect(schoolErrorMessage(inUse(2))).toBe('academicYearHasSections');
+    expect(schoolErrorValues(inUse(2))).toEqual({ count: 2 });
+    expect(errorMessages.academicYearHasSections).toBe(
+      'This year has {count, plural, one {# section} other {# sections}}. Delete them on the Classes page first, then delete the year.',
+    );
+  });
+
+  it('gives no values for other problems, or 0 sections without counts', () => {
+    expect(schoolErrorValues(inUse())).toEqual({ count: 0 });
+    expect(schoolErrorValues(new ApiError(409, problem('campus-limit', 409)))).toEqual({});
+    expect(schoolErrorValues(new Error('x'))).toEqual({});
+  });
+
+  it('warns in the delete dialog that a year with sections cannot be deleted', () => {
+    expect(messages.schoolSettings.academicYears.deleteDialog.body).toBe(
+      "The planned year and its terms will be removed. A year with sections can't be deleted, so delete its sections first. This can't be undone.",
+    );
   });
 });
 

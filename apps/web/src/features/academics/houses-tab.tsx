@@ -89,26 +89,24 @@ export function HousesTab({ canEdit }: { canEdit: boolean }) {
               onClick={() => setForm({})}
             />
           ) : null}
-          {houses.length === 0 ? (
-            <EmptyState title={t('empty')} body={t('emptyBody')} />
-          ) : (
-            <ItemList
-              kind="houses"
-              items={houses}
-              canEdit={canEdit}
-              headingId={HEADING_ID}
-              details={(house) => (
-                <div>
-                  <HouseSwatch colour={house.colour} />
-                </div>
-              )}
-              onEdit={(house) => setForm({ house })}
-              archive={(id) => archive.mutateAsync({ id })}
-              restore={(id) => restore.mutateAsync({ id })}
-              remove={(id) => remove.mutateAsync({ id })}
-              onChanged={refresh}
-            />
-          )}
+          {houses.length === 0 ? <EmptyState title={t('empty')} body={t('emptyBody')} /> : null}
+          {/* Mounted while empty too, so its delete dialog outlives the last item. */}
+          <ItemList
+            kind="houses"
+            items={houses}
+            canEdit={canEdit}
+            headingId={HEADING_ID}
+            details={(house) => (
+              <div>
+                <HouseSwatch colour={house.colour} />
+              </div>
+            )}
+            onEdit={(house) => setForm({ house })}
+            archive={(id) => archive.mutateAsync({ id })}
+            restore={(id) => restore.mutateAsync({ id })}
+            remove={(id) => remove.mutateAsync({ id })}
+            onChanged={refresh}
+          />
         </>
       )}
 

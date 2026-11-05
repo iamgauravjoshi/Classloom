@@ -11,13 +11,14 @@ import {
   useRestoreStream,
   useUpdateStream,
 } from '@classloom/api-client';
-import { createStreamRequestSchema, STARTER_STREAMS } from '@classloom/contracts';
+import { createStreamRequestSchema } from '@classloom/contracts';
 import { Alert, AlertDescription } from '@classloom/ui/components/ui/alert';
 import { Button } from '@classloom/ui/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@classloom/ui/components/ui/field';
 import { Input } from '@classloom/ui/components/ui/input';
 import { Spinner } from '@classloom/ui/components/ui/spinner';
 import { toast } from '@classloom/ui/components/ui/toast';
+import { cn } from '@classloom/ui/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -28,6 +29,7 @@ import { BUTTON_CLASS, CONTROL_CLASS } from '../auth/auth-ui';
 import { useLastShown } from '../iam/iam-ui';
 import { formatList, isNameTaken, useAcademicsErrorText } from './academics-errors';
 import { AddButton, EmptyState, FormDialog, ItemList, ListState, TabIntro } from './academics-ui';
+import { missingStarterStreams, starterToast } from './stream-helpers';
 
 /** Most streams a school can have, counting archived ones (spec section 4). */
 const MAX_STREAMS = 20;
@@ -36,8 +38,9 @@ const HEADING_ID = 'streams-heading';
 type FormInput = { name: string };
 
 /**
- * The Streams tab (spec section 8): the school's streams, active first. While there are none,
- * `classes.manage` holders are offered "Add Science, Commerce and Humanities".
+ * The Streams tab (spec section 8): the school's streams, active first. While any of Science,
+ * Commerce and Humanities is missing (ignoring case, archived or not), `classes.manage` holders
+ * are offered to add the missing ones.
  */
 export function StreamsTab({ canEdit }: { canEdit: boolean }) {
   const t = useTranslations('academics.streams');
@@ -61,8 +64,12 @@ export function StreamsTab({ canEdit }: { canEdit: boolean }) {
       // The helper is gone once the list refetches; the tab's heading takes focus instead.
       document.getElementById(HEADING_ID)?.focus();
       refresh();
+      const message = starterToast(added);
       toast.add({
-        title: t('starterAdded', { names: formatList(added.created.map((stream) => stream.name)) }),
+        title:
+          message.key === 'starterNothingNew'
+            ? t(message.key)
+            : t(message.key, { names: message.names }),
         type: 'success',
       });
     } catch (error) {
@@ -71,6 +78,26 @@ export function StreamsTab({ canEdit }: { canEdit: boolean }) {
   }
 
   const streams = data?.streams ?? [];
+  const missing = missingStarterStreams(streams);
+  const starterHelper =
+    canEdit && missing.length > 0 ? (
+      <>
+        <Button
+          variant="outline"
+          className={cn(BUTTON_CLASS, 'self-start')}
+          disabled={starter.isPending}
+          onClick={() => void addStarter()}
+        >
+          {starter.isPending ? <Spinner aria-hidden="true" /> : null}
+          {starter.isPending ? t('starterAdding') : t('starter', { names: formatList(missing) })}
+        </Button>
+        {starterError ? (
+          <Alert variant="destructive">
+            <AlertDescription role="alert">{starterError}</AlertDescription>
+          </Alert>
+        ) : null}
+      </>
+    ) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -94,38 +121,23 @@ export function StreamsTab({ canEdit }: { canEdit: boolean }) {
           ) : null}
           {streams.length === 0 ? (
             <EmptyState title={t('empty')} body={t('emptyBody')}>
-              {canEdit ? (
-                <Button
-                  variant="outline"
-                  className={BUTTON_CLASS}
-                  disabled={starter.isPending}
-                  onClick={() => void addStarter()}
-                >
-                  {starter.isPending ? <Spinner aria-hidden="true" /> : null}
-                  {starter.isPending
-                    ? t('starterAdding')
-                    : t('starter', { names: formatList(STARTER_STREAMS) })}
-                </Button>
-              ) : null}
-              {starterError ? (
-                <Alert variant="destructive">
-                  <AlertDescription role="alert">{starterError}</AlertDescription>
-                </Alert>
-              ) : null}
+              {starterHelper}
             </EmptyState>
           ) : (
-            <ItemList
-              kind="streams"
-              items={streams}
-              canEdit={canEdit}
-              headingId={HEADING_ID}
-              onEdit={(stream) => setForm({ stream })}
-              archive={(id) => archive.mutateAsync({ id })}
-              restore={(id) => restore.mutateAsync({ id })}
-              remove={(id) => remove.mutateAsync({ id })}
-              onChanged={refresh}
-            />
+            starterHelper
           )}
+          {/* Mounted while empty too, so its delete dialog outlives the last item. */}
+          <ItemList
+            kind="streams"
+            items={streams}
+            canEdit={canEdit}
+            headingId={HEADING_ID}
+            onEdit={(stream) => setForm({ stream })}
+            archive={(id) => archive.mutateAsync({ id })}
+            restore={(id) => restore.mutateAsync({ id })}
+            remove={(id) => remove.mutateAsync({ id })}
+            onChanged={refresh}
+          />
         </>
       )}
 
