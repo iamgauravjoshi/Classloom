@@ -35,6 +35,7 @@ export const IAM_MODULES = [
   'reports',
   'settings',
   'iam',
+  'audit',
 ] as const;
 export type IamModule = (typeof IAM_MODULES)[number];
 
@@ -59,6 +60,7 @@ export const PERMISSION_CATALOGUE: readonly {
   { module: 'reports', actions: ['view', 'export'] },
   { module: 'settings', actions: ['view', 'manage'] },
   { module: 'iam', actions: ['view', 'manage'] },
+  { module: 'audit', actions: ['view'] },
 ];
 
 export const ALL_PERMISSIONS: readonly string[] = Object.freeze(
@@ -130,7 +132,9 @@ export const BUILT_IN_ROLE_DEFAULTS: Record<
   PRINCIPAL: {
     name: 'Principal',
     description: 'Oversees the whole school but cannot manage users or school settings.',
-    permissions: ALL_PERMISSIONS.filter((p) => p !== 'iam.manage' && p !== 'settings.manage'),
+    permissions: ALL_PERMISSIONS.filter(
+      (p) => p !== 'iam.manage' && p !== 'settings.manage' && p !== 'audit.view',
+    ),
     requiresTwoFactor: true,
   },
   ADMIN: {

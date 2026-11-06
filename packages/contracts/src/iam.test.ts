@@ -17,7 +17,7 @@ import {
 } from './iam';
 
 describe('permission catalogue', () => {
-  it('has the 17 modules and actions of the spec, in order', () => {
+  it('has the 18 modules and actions of the spec, in order', () => {
     expect(PERMISSION_CATALOGUE.map((m) => [m.module, [...m.actions]])).toEqual([
       ['dashboard', ['view']],
       ['students', ['view', 'create', 'edit', 'delete', 'export']],
@@ -36,6 +36,7 @@ describe('permission catalogue', () => {
       ['reports', ['view', 'export']],
       ['settings', ['view', 'manage']],
       ['iam', ['view', 'manage']],
+      ['audit', ['view']],
     ]);
   });
 
@@ -86,8 +87,19 @@ describe('built-in roles', () => {
   it('gives the Principal everything but iam.manage and settings.manage', () => {
     const principal = BUILT_IN_ROLE_DEFAULTS.PRINCIPAL.permissions as readonly string[];
     expect([...principal].sort()).toEqual(
-      ALL_PERMISSIONS.filter((p) => p !== 'iam.manage' && p !== 'settings.manage').sort(),
+      ALL_PERMISSIONS.filter(
+        (p) => p !== 'iam.manage' && p !== 'settings.manage' && p !== 'audit.view',
+      ).sort(),
     );
+  });
+
+  it('adds audit.view to the catalogue, Admin and not Principal', () => {
+    expect(ALL_PERMISSIONS).toContain('audit.view');
+    const principal = BUILT_IN_ROLE_DEFAULTS.PRINCIPAL.permissions as readonly string[];
+    expect(principal).not.toContain('audit.view');
+    expect(principal).not.toContain('iam.manage');
+    expect(principal).not.toContain('settings.manage');
+    expect(BUILT_IN_ROLE_DEFAULTS.ADMIN.permissions).toContain('audit.view');
   });
 
   it('expands module wildcards from the spec', () => {
