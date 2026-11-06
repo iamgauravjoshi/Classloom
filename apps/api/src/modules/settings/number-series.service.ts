@@ -101,6 +101,26 @@ async function highestIssued(tx: Prisma.TransactionClient, key: NumberSeriesKey)
   return Number(agg._max.lastValue ?? 0);
 }
 
+/**
+ * Raises the counter of every academic year of the school to at least `floor`, creating the
+ * missing ones. Years created later start at 0; they cannot have numbers from before the switch
+ * unless a caller passed a year that did not exist, which `next()`'s callers never do.
+ */
+async function raiseYearCounters(
+  tx: Prisma.TransactionClient,
+  key: NumberSeriesKey,
+  floor: number,
+): Promise<void> {
+  await tx.$executeRaw`
+    INSERT INTO number_series_counters (tenant_id, key, period, last_value)
+    SELECT tenant_id, ${key}::"NumberSeriesKey", id::text, ${BigInt(floor)}
+      FROM academic_years
+     WHERE tenant_id = current_setting('app.tenant_id')::uuid
+    ON CONFLICT (tenant_id, key, period)
+    DO UPDATE SET last_value = GREATEST(number_series_counters.last_value, EXCLUDED.last_value),
+                  updated_at = now()`;
+}
+
 /** The school's `CURRENT` year, or null. */
 async function currentYear(tx: Prisma.TransactionClient): Promise<SeriesYear | null> {
   const row = await tx.academicYear.findFirst({
@@ -212,10 +232,10 @@ export class NumberSeriesService {
    *
    * An `ACADEMIC_YEAR` series needs a year token (422 `number-pattern-invalid`,
    * `year-token-required`). Switching the reset rule never lets a number repeat: to `NEVER`, the
-   * overall counter starts at the highest number issued in any period; to `ACADEMIC_YEAR`, the
-   * current year's counter starts at least at the overall counter (409 `no-current-year` when there
-   * is no current year and the overall counter has issued numbers). `nextNumber` applies to the
-   * period of the (new) reset rule for the current year and must be above its last value.
+   * overall counter starts at the highest number issued in any period; to `ACADEMIC_YEAR`, every
+   * academic year's counter starts at least at the overall counter. `nextNumber` applies to the
+   * period of the (new) reset rule for the current year and must be above its last value (409
+   * `no-current-year` for a per-year series when the school has no current year).
    */
   update(
     auth: Actor,
@@ -253,13 +273,20 @@ export class NumberSeriesService {
       }
 
       // Switching never lets a number repeat, even after a round trip between the rules.
-      if (reset !== current.reset) {
-        const floor =
-          reset === 'NEVER' ? await highestIssued(tx, key) : await lastValue(tx, key, ALL);
-        if (reset === 'ACADEMIC_YEAR' && !period && floor > 0) throw new NoCurrentYearException();
-        if (period && floor > last) {
+      if (reset === 'NEVER' && current.reset !== 'NEVER') {
+        // The overall counter starts at the highest number issued in any year.
+        const floor = await highestIssued(tx, key);
+        if (floor > last) {
           setLast = floor;
           last = floor;
+        }
+      } else if (reset === 'ACADEMIC_YEAR' && current.reset !== 'ACADEMIC_YEAR') {
+        // While NEVER, `next()` printed numbers with whatever year its caller passed, so every
+        // year of the school (past, current and planned) starts at least at the overall counter.
+        const overall = await lastValue(tx, key, ALL);
+        if (overall > 0) {
+          await raiseYearCounters(tx, key, overall);
+          if (period && overall > last) last = overall;
         }
       }
 

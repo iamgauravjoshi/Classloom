@@ -368,17 +368,46 @@ describe('number series (Part 6a spec section 3)', () => {
       expect(back.body).toMatchObject({ reset: 'NEVER', nextNumber: 6, preview: 'A/26/0006' });
     });
 
-    it('refuses a switch to ACADEMIC_YEAR without a current year once numbers were issued', async () => {
+    it('switches to ACADEMIC_YEAR without a current year, and continues in every year', async () => {
       const s = await school(false);
       expect((await patch(s, 'ADMISSION', { pattern: 'A/{YY}/{SEQ:4}' })).status).toBe(200);
-      const fresh = await patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR' });
-      expect(fresh.status).toBe(200);
-      expect((await patch(s, 'ADMISSION', { reset: 'NEVER' })).status).toBe(200);
-      await issue(s, 'ADMISSION', year(await h.year(s.tenantId, 2025, 'CLOSED'), 2025));
+      const closed = await h.year(s.tenantId, 2025, 'CLOSED');
+      await issue(s, 'ADMISSION', year(closed, 2025));
+      await issue(s, 'ADMISSION', year(closed, 2025));
       const res = await patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR' });
-      expect(res.status).toBe(409);
-      expect((res.body as ProblemBody).type).toBe('no-current-year');
-      expect((await one(s, 'ADMISSION')).reset).toBe('NEVER');
+      expect(res.status).toBe(200);
+      expect((await issue(s, 'ADMISSION', year(closed, 2025))).value).toBe('A/25/0003');
+    });
+
+    it("continues a planned year's numbers issued while NEVER after the switch", async () => {
+      const s = await school();
+      expect((await patch(s, 'ADMISSION', { pattern: 'ADM/{YY}/{SEQ:4}' })).status).toBe(200);
+      const planned = await h.year(s.tenantId, 2027, 'PLANNED');
+      const early: string[] = [];
+      for (let i = 0; i < 5; i += 1)
+        early.push((await issue(s, 'ADMISSION', year(planned, 2027))).value);
+      expect(early).toEqual([
+        'ADM/27/0001',
+        'ADM/27/0002',
+        'ADM/27/0003',
+        'ADM/27/0004',
+        'ADM/27/0005',
+      ]);
+      expect((await patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR' })).status).toBe(200);
+      expect((await issue(s, 'ADMISSION', year(planned, 2027))).value).toBe('ADM/27/0006');
+      expect((await issue(s, 'ADMISSION', year(s.yearId))).value).toBe('ADM/26/0006');
+    });
+
+    it('continues a late issue for a past year from the highest after a round trip', async () => {
+      const s = await school();
+      const past = await h.year(s.tenantId, 2025, 'CLOSED');
+      await issue(s, 'ENQUIRY', year(past, 2025));
+      await issueMany(s, 'ENQUIRY', 7);
+      expect((await patch(s, 'ENQUIRY', { reset: 'NEVER' })).status).toBe(200);
+      expect((await issue(s, 'ENQUIRY', year(past, 2025))).value).toBe('ENQ/2025-26/0008');
+      expect((await patch(s, 'ENQUIRY', { reset: 'ACADEMIC_YEAR' })).status).toBe(200);
+      expect((await issue(s, 'ENQUIRY', year(past, 2025))).value).toBe('ENQ/2025-26/0009');
+      expect((await issue(s, 'ENQUIRY', year(s.yearId))).value).toBe('ENQ/2026-27/0009');
     });
 
     it('never repeats a number when a switch to NEVER races with issuing', async () => {
