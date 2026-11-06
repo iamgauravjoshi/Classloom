@@ -78,8 +78,8 @@ export class ProblemFilter implements ExceptionFilter {
 
 /**
  * Fields a service attached to an HttpException body: `errors[]`, a `suggestion`, and the
- * problem `type`, `title`, `retryAfter` seconds, `attemptsLeft`, `schoolCode` and `reason` for errors the
- * client acts on.
+ * problem `type`, `title`, `retryAfter` seconds, `attemptsLeft`, `schoolCode`, `reason`, `field`,
+ * `limit`, `counts` and `sectionName` for errors the client acts on.
  */
 function extrasOf(
   response: string | object,
@@ -94,11 +94,27 @@ function extrasOf(
     | 'attemptsLeft'
     | 'schoolCode'
     | 'reason'
+    | 'field'
+    | 'limit'
+    | 'counts'
+    | 'sectionName'
   >
 > {
   if (typeof response === 'string') return {};
-  const { errors, suggestion, type, title, retryAfter, attemptsLeft, schoolCode, reason } =
-    response as Record<string, unknown>;
+  const {
+    errors,
+    suggestion,
+    type,
+    title,
+    retryAfter,
+    attemptsLeft,
+    schoolCode,
+    reason,
+    field,
+    limit,
+    counts,
+    sectionName,
+  } = response as Record<string, unknown>;
   return {
     ...(Array.isArray(errors) ? { errors: errors as ProblemDetails['errors'] } : {}),
     ...(typeof suggestion === 'string' ? { suggestion } : {}),
@@ -108,7 +124,20 @@ function extrasOf(
     ...(typeof attemptsLeft === 'number' ? { attemptsLeft } : {}),
     ...(typeof schoolCode === 'string' ? { schoolCode } : {}),
     ...(typeof reason === 'string' ? { reason } : {}),
+    ...(typeof field === 'string' ? { field } : {}),
+    ...(typeof limit === 'number' ? { limit } : {}),
+    ...(isCounts(counts) ? { counts } : {}),
+    ...(typeof sectionName === 'string' ? { sectionName } : {}),
   };
+}
+
+function isCounts(value: unknown): value is Record<string, number> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((v) => typeof v === 'number')
+  );
 }
 
 function detailOf(response: string | object): string | undefined {

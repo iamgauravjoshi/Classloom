@@ -5,6 +5,7 @@ import { inviteAs, newInvitee } from './support/invitations';
 import { solidPng } from './support/png';
 import {
   createVerifiedSchool,
+  currentAcademicYear,
   signInWithCode,
   signInWithCodeKeepingRequirement,
   type VerifiedSchool,
@@ -312,6 +313,607 @@ for (const theme of ['light', 'dark'] as const) {
       });
     });
 
+    test.describe('classes page: streams, houses and rooms', () => {
+      // The tabs change the school's streams, houses and rooms, so each test gets a school.
+      test.use({ storageState: { cookies: [], origins: [] } });
+
+      /** A write through the web app's `/api` proxy, as the signed-in page would send it. */
+      const send = async (page: Page, path: string, data: unknown, status: number) => {
+        const response = await page.request.post(`${WEB_ORIGIN}/api${path}`, {
+          data,
+          headers: { origin: WEB_ORIGIN },
+        });
+        expect(response.status(), await response.text()).toBe(status);
+        return (await response.json().catch(() => ({}))) as { id: string };
+      };
+
+      const ownSchool = async (page: Page, playwright: PlaywrightWorkerArgs['playwright']) => {
+        const request = await playwright.request.newContext();
+        const own = await createVerifiedSchool(request);
+        await request.dispose();
+        await signInWithCode(page.request, own);
+        return own;
+      };
+
+      const tabs = (page: Page) =>
+        page.getByRole('navigation', { name: 'Classes and sections views' });
+
+      test('/en/classes?tab=streams has no WCAG 2.1 AA violations, empty, listed and in dialogs', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+
+        // No streams yet: the empty state with the starter-streams helper.
+        await page.goto('/en/classes?tab=streams');
+        await expect(
+          page.getByRole('heading', { level: 1, name: 'Classes & sections' }),
+        ).toBeVisible();
+        await expect(tabs(page).getByRole('link', { name: 'Streams' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        );
+        await expect(page.getByText('No streams yet')).toBeVisible();
+        const helper = page.getByRole('button', { name: 'Add Science, Commerce and Humanities' });
+        await expect(helper).toBeVisible();
+        await expectNoViolations(page);
+
+        // The helper adds the three; one is then archived.
+        await helper.click();
+        for (const name of ['Science', 'Commerce', 'Humanities']) {
+          await expect(page.getByRole('heading', { level: 3, name })).toBeVisible();
+        }
+        await expect(helper).toHaveCount(0);
+        await page.getByRole('button', { name: 'Archive Commerce' }).click();
+        const archive = page.getByRole('dialog', { name: 'Archive Commerce?' });
+        await expect(archive).toBeVisible();
+        await expectNoViolations(page);
+        await archive.getByRole('button', { name: 'Archive', exact: true }).click();
+        await expect(archive).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Restore Commerce' })).toBeVisible();
+        await expect(page.getByText('Archived', { exact: true })).toBeVisible();
+        await expectNoViolations(page);
+
+        // The add dialog, refused for a name already used.
+        await page.getByRole('button', { name: 'Add stream' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Add stream' });
+        await expect(dialog.getByLabel('Stream name')).toBeFocused();
+        await dialog.getByLabel('Stream name').fill('science');
+        await dialog.getByRole('button', { name: 'Add stream' }).click();
+        await expect(dialog.getByText('Another one already has this name.')).toBeVisible();
+        // The pointer still rests on the submit button; its hover shade is not what is measured.
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+      });
+
+      test('/en/classes?tab=houses has no WCAG 2.1 AA violations, with every colour swatch', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const colours = [
+          'RED',
+          'BLUE',
+          'GREEN',
+          'YELLOW',
+          'ORANGE',
+          'PURPLE',
+          'PINK',
+          'TEAL',
+          'BROWN',
+          'GREY',
+        ];
+
+        await page.goto('/en/classes?tab=houses');
+        await expect(page.getByText('No houses yet')).toBeVisible();
+        await expectNoViolations(page);
+
+        let archivedId = '';
+        for (const colour of colours) {
+          const name = `${colour[0]}${colour.slice(1).toLowerCase()} House`;
+          const house = await send(page, '/academics/houses', { name, colour }, 201);
+          if (colour === 'GREY') archivedId = house.id;
+        }
+        await send(page, `/academics/houses/${archivedId}/archive`, {}, 200);
+        await page.goto('/en/classes?tab=houses');
+        await expect(page.getByRole('heading', { level: 3, name: 'Teal House' })).toBeVisible();
+        // The colour is named in words, never shown by the swatch alone.
+        await expect(page.getByText('Brown', { exact: true })).toBeVisible();
+        await expect(page.getByText('Archived', { exact: true })).toBeVisible();
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Edit Red House' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Edit Red House' });
+        await expect(dialog.getByLabel('House name')).toHaveValue('Red House');
+        await dialog.getByLabel('House name').fill('R');
+        await dialog.getByRole('button', { name: 'Save changes' }).click();
+        await expect(dialog.getByText('Enter a name of 2 to 40 characters.')).toBeVisible();
+        // The pointer still rests on the submit button; its hover shade is not what is measured.
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+      });
+
+      test('/en/classes?tab=rooms has no WCAG 2.1 AA violations, filtered by the campus', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const listed = await page.request.get(`${WEB_ORIGIN}/api/school/campuses`);
+        const { campuses } = (await listed.json()) as {
+          campuses: { id: string; isPrimary: boolean }[];
+        };
+        const primary = campuses.find((campus) => campus.isPrimary)!;
+        const north = await send(page, '/school/campuses', { name: 'North Campus' }, 201);
+
+        await page.goto('/en/classes?tab=rooms');
+        await expect(page.getByText(/^No rooms on .+ yet$/)).toBeVisible();
+        await expectNoViolations(page);
+
+        const room = (campusId: string, name: string, extra: object = {}) =>
+          send(
+            page,
+            '/academics/rooms',
+            { campusId, name, type: 'CLASSROOM', capacity: 40, ...extra },
+            201,
+          );
+        await room(primary.id, 'Room 101', { floor: 'Ground' });
+        const lab = await room(primary.id, 'Physics Lab', { type: 'LAB', capacity: 30 });
+        await send(page, `/academics/rooms/${lab.id}/archive`, {}, 200);
+        await room(north.id, 'North Hall', { type: 'HALL', capacity: 300 });
+
+        await page.goto('/en/classes?tab=rooms');
+        await expect(page.getByRole('heading', { level: 3, name: 'Room 101' })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 3, name: 'Physics Lab' })).toBeVisible();
+        // The other campus's rooms are not listed.
+        await expect(page.getByRole('heading', { level: 3, name: 'North Hall' })).toHaveCount(0);
+        await expectNoViolations(page);
+
+        await page.getByRole('button', { name: 'Add room' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Add room' });
+        await expect(dialog.getByLabel('Room name')).toBeFocused();
+        await dialog.getByLabel('Capacity').fill('900');
+        await dialog.getByRole('button', { name: 'Add room' }).click();
+        await expect(dialog.getByText('Enter a capacity from 1 to 500.')).toBeVisible();
+        // The pointer still rests on the submit button; its hover shade is not what is measured.
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+      });
+
+      /** Sets the school profile's class range, keeping the rest of the profile as it is. */
+      const setClassRange = async (page: Page, lowestClass: string, highestClass: string) => {
+        const read = await page.request.get(`${WEB_ORIGIN}/api/school/profile`);
+        const {
+          code: _code,
+          logoUrl: _logo,
+          ...profile
+        } = (await read.json()) as Record<string, unknown>;
+        const response = await page.request.put(`${WEB_ORIGIN}/api/school/profile`, {
+          data: { ...profile, lowestClass, highestClass },
+          headers: { origin: WEB_ORIGIN },
+        });
+        expect(response.status(), await response.text()).toBe(200);
+      };
+
+      const primaryCampusId = async (page: Page) => {
+        const listed = await page.request.get(`${WEB_ORIGIN}/api/school/campuses`);
+        const { campuses } = (await listed.json()) as {
+          campuses: { id: string; isPrimary: boolean }[];
+        };
+        return campuses.find((campus) => campus.isPrimary)!.id;
+      };
+
+      test('/en/classes has no WCAG 2.1 AA violations, without a class range and with no sections', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const year = currentAcademicYear();
+        await send(
+          page,
+          '/school/academic-years',
+          { startsOn: year.startsOn, endsOn: year.endsOn, termCount: 2 },
+          201,
+        );
+
+        // No class range yet: a link to the school profile, and nothing to add to.
+        await page.goto('/en/classes');
+        await expect(tabs(page).getByRole('link', { name: 'Sections' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        );
+        await expect(page.getByRole('link', { name: 'Open the school profile' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Add section' })).toHaveCount(0);
+        await expectNoViolations(page);
+
+        // With a range and no earlier year: "Add your first section" and every class, empty.
+        await setClassRange(page, 'XI', 'XII');
+        await send(page, '/academics/streams', { name: 'Science' }, 201);
+        await page.goto('/en/classes');
+        await expect(page.getByText(`No sections in ${year.label} yet`)).toBeVisible();
+        await expect(page.getByRole('heading', { level: 3, name: 'Class XII' })).toBeVisible();
+        await expect(page.getByRole('button', { name: /^Copy / })).toHaveCount(0);
+        await expectNoViolations(page);
+
+        // The form for a senior class asks for a stream.
+        await page.getByRole('button', { name: 'Add your first section' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Add a section to Class XI' });
+        await expect(dialog.getByLabel('Stream')).toBeVisible();
+        await dialog.getByLabel('Section name').fill('A');
+        await dialog.getByLabel('Capacity').fill('40');
+        await dialog.getByRole('button', { name: 'Add section' }).click();
+        await expect(dialog.getByText('Choose a stream.')).toBeVisible();
+        // The pointer still rests on the submit button; its hover shade is not what is measured.
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+      });
+
+      test('/en/classes has no WCAG 2.1 AA violations, copying from last year and in the form', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const target = currentAcademicYear();
+        const start = Number(target.startsOn.slice(0, 4));
+        const previousLabel = `${start - 1}–${String(start).slice(2)}`;
+        // Last year first, so it is current while its sections are added; then this year.
+        const previous = await send(
+          page,
+          '/school/academic-years',
+          { startsOn: `${start - 1}-04-01`, endsOn: `${start}-03-31`, termCount: 2 },
+          201,
+        );
+        const current = await send(
+          page,
+          '/school/academic-years',
+          { startsOn: target.startsOn, endsOn: target.endsOn, termCount: 2 },
+          201,
+        );
+        await setClassRange(page, 'VI', 'XII');
+        const campusId = await primaryCampusId(page);
+        const science = await send(page, '/academics/streams', { name: 'Science' }, 201);
+        const room = (name: string, capacity: number) =>
+          send(page, '/academics/rooms', { campusId, name, type: 'CLASSROOM', capacity }, 201);
+        const room101 = await room('Room 101', 40);
+        const room102 = await room('Room 102', 30);
+        const options = await page.request.get(
+          `${WEB_ORIGIN}/api/academics/class-teacher-options?yearId=${previous.id}`,
+        );
+        const { teachers } = (await options.json()) as { teachers: { membershipId: string }[] };
+        const section = (classLevel: string, name: string, extra: object = {}) =>
+          send(
+            page,
+            '/academics/sections',
+            { academicYearId: previous.id, campusId, classLevel, name, capacity: 40, ...extra },
+            201,
+          );
+        await section('VI', 'A', {
+          roomId: room101.id,
+          classTeacherMembershipId: teachers[0]!.membershipId,
+        });
+        await section('VI', 'B', { roomId: room102.id });
+        await section('XI', 'A', { streamId: science.id });
+        // This year becomes current and last year closes; then a room is archived and XI leaves
+        // the range, so the copy drops them.
+        await send(page, `/school/academic-years/${current.id}/make-current`, {}, 200);
+        await send(page, `/academics/rooms/${room102.id}/archive`, {}, 200);
+        await setClassRange(page, 'VI', 'X');
+
+        await page.goto('/en/classes');
+        await expect(page.getByText(`No sections in ${target.label} yet`)).toBeVisible();
+        const copy = page.getByRole('button', { name: `Copy 2 sections from ${previousLabel}` });
+        await expect(copy).toBeVisible();
+        await expectNoViolations(page);
+
+        await copy.click();
+        await expect(
+          page.getByRole('heading', { level: 3, name: `2 sections copied from ${previousLabel}` }),
+        ).toBeFocused();
+        await expect(
+          page.getByText('Not copied, as the class is outside your classes: XI-A.'),
+        ).toBeVisible();
+        await expect(
+          page.getByText('Room left empty, as the room is archived: VI-B.'),
+        ).toBeVisible();
+        await expect(page.getByRole('heading', { level: 4, name: 'VI-A' })).toBeVisible();
+        await expect(page.getByText('Room: Room 101')).toBeVisible();
+        await page.mouse.move(0, 0);
+        await expectNoViolations(page);
+
+        // The form, warning that the room seats fewer than the section holds.
+        await page.getByRole('button', { name: 'Edit VI-A' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Edit VI-A' });
+        await expect(dialog.getByLabel('Section name')).toHaveValue('A');
+        await dialog.getByLabel('Capacity').fill('45');
+        await expect(
+          dialog.getByText(
+            "Room 101 seats 40, fewer than this section's capacity of 45. You can still save.",
+          ),
+        ).toBeVisible();
+        await expectNoViolations(page);
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0);
+
+        // Last year, now closed: read-only, with XI outside the range listed last.
+        await page.context().addCookies([{ name: 'cl_year', value: previous.id, url: WEB_ORIGIN }]);
+        await page.goto('/en/classes');
+        await expect(
+          page.getByText(`${previousLabel} is closed, so its sections can't be changed.`, {
+            exact: false,
+          }),
+        ).toBeVisible();
+        await expect(page.getByText('Outside your classes', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Edit VI-A' })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /^Add section/ })).toHaveCount(0);
+        await expectNoViolations(page);
+      });
+
+      test('/en/classes has no WCAG 2.1 AA violations with a class outside the range', async ({
+        page,
+        playwright,
+      }) => {
+        await ownSchool(page, playwright);
+        const year = currentAcademicYear();
+        const current = await send(
+          page,
+          '/school/academic-years',
+          { startsOn: year.startsOn, endsOn: year.endsOn, termCount: 2 },
+          201,
+        );
+        await setClassRange(page, 'IX', 'XII');
+        const campusId = await primaryCampusId(page);
+        const section = (classLevel: string) =>
+          send(
+            page,
+            '/academics/sections',
+            { academicYearId: current.id, campusId, classLevel, name: 'A', capacity: 40 },
+            201,
+          );
+        await section('X');
+        await section('XII');
+        // XII leaves the range: its section stays, to be deleted but not edited.
+        await setClassRange(page, 'IX', 'XI');
+
+        await page.goto('/en/classes');
+        const outside = page.getByRole('region', { name: 'Class XII' });
+        await expect(outside).toHaveAccessibleDescription(
+          'Outside your classes This class is no longer in the school profile. Its sections can be deleted, but not edited.',
+        );
+        await expect(outside.getByRole('button', { name: 'Delete XII-A' })).toBeVisible();
+        await expect(outside.getByRole('button', { name: 'Edit XII-A' })).toHaveCount(0);
+        await expect(outside.getByRole('button', { name: /^Add section/ })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Edit X-A' })).toBeVisible();
+        await expectNoViolations(page);
+
+        // Deleted, the class leaves with its last section and the tab's heading takes focus.
+        await outside.getByRole('button', { name: 'Delete XII-A' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Delete XII-A?' });
+        await expect(dialog).toBeVisible();
+        await expectNoViolations(page);
+        await dialog.getByRole('button', { name: 'Delete' }).click();
+        await expect(dialog).toHaveCount(0);
+        await expect(outside).toHaveCount(0);
+        await expect(page.locator('#sections-heading')).toBeFocused();
+      });
+
+      test.describe('subjects page', () => {
+        const subjectTabs = (page: Page) =>
+          page.getByRole('navigation', { name: 'Subjects views' });
+
+        test('/en/subjects has no WCAG 2.1 AA violations, empty, in the starter picker and listed', async ({
+          page,
+          playwright,
+        }) => {
+          await ownSchool(page, playwright);
+
+          // No subjects yet: the starter offer.
+          await page.goto('/en/subjects');
+          await expect(page.getByRole('heading', { level: 1, name: 'Subjects' })).toBeVisible();
+          await expect(
+            subjectTabs(page).getByRole('link', { name: 'Subjects', exact: true }),
+          ).toHaveAttribute('aria-current', 'page');
+          await expect(page.getByText('No subjects yet')).toBeVisible();
+          const offer = page.getByRole('button', { name: "Add your board's starter subjects" });
+          await expectNoViolations(page);
+
+          // The picker: every CBSE starter subject ticked; one is unticked before adding.
+          await offer.click();
+          const picker = page.getByRole('dialog', { name: "Add your board's starter subjects" });
+          await expect(picker.getByRole('checkbox', { name: /^Physics/ })).toBeChecked();
+          await picker.getByRole('checkbox', { name: /^Psychology/ }).click();
+          await expect(picker.getByRole('checkbox', { name: /^Psychology/ })).not.toBeChecked();
+          await expectNoViolations(page);
+          await picker.getByRole('button', { name: /^Add \d+ subjects$/ }).click();
+          await expect(picker).toHaveCount(0);
+          await expect(page.getByRole('heading', { level: 3, name: 'Physics' })).toBeVisible();
+          await expect(
+            page.getByRole('heading', { level: 2, name: 'Subjects', exact: true }),
+          ).toBeFocused();
+
+          // Listed, with an archived one shown on request.
+          const listed = await page.request.get(`${WEB_ORIGIN}/api/academics/subjects`);
+          const { subjects } = (await listed.json()) as {
+            subjects: { id: string; name: string }[];
+          };
+          const biology = subjects.find((s) => s.name === 'Biology')!;
+          await send(page, `/academics/subjects/${biology.id}/archive`, {}, 200);
+          await page.goto('/en/subjects');
+          await expect(page.getByRole('heading', { level: 3, name: 'Biology' })).toHaveCount(0);
+          await page.getByRole('switch', { name: 'Show archived subjects (1)' }).click();
+          await expect(page.getByRole('heading', { level: 3, name: 'Biology' })).toBeVisible();
+          await expect(page.getByText('Code: 044')).toBeVisible();
+          await expect(page.getByText('Co-scholastic').first()).toBeVisible();
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+
+          // From the menu, the picker marks what is already added.
+          await page.getByRole('button', { name: 'More subject actions' }).click();
+          await page.getByRole('menuitem', { name: "Add your board's starter subjects" }).click();
+          await expect(picker.getByRole('checkbox', { name: /^Physics/ })).toBeDisabled();
+          await expect(picker.getByText('Already added').first()).toBeVisible();
+          await expect(picker.getByRole('checkbox', { name: /^Psychology/ })).toBeEnabled();
+          await expectNoViolations(page);
+          await page.keyboard.press('Escape');
+          await expect(picker).toHaveCount(0);
+
+          // The add form, refused for a code with spaces.
+          await page.getByRole('button', { name: 'Add subject' }).click();
+          const dialog = page.getByRole('dialog', { name: 'Add subject' });
+          await dialog.getByLabel('Subject name').fill('Sanskrit');
+          await dialog.getByLabel('Code').fill('1 2');
+          await dialog.getByRole('button', { name: 'Add subject' }).click();
+          await expect(dialog.getByText('Use up to 10 letters, digits or hyphens.')).toBeVisible();
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+        });
+
+        test('/en/subjects?tab=class-subjects has no WCAG 2.1 AA violations, wide and at 375 px', async ({
+          page,
+          playwright,
+        }) => {
+          await ownSchool(page, playwright);
+          await setClassRange(page, 'IX', 'XII');
+          const science = await send(page, '/academics/streams', { name: 'Science' }, 201);
+          await send(page, '/academics/streams', { name: 'Commerce' }, 201);
+          const subject = (name: string, code?: string) =>
+            send(page, '/academics/subjects', { name, code, type: 'SCHOLASTIC' }, 201);
+          const english = await subject('English Core', '301');
+          const physics = await subject('Physics', '042');
+          await subject('Accountancy', '055');
+          const maths = await subject('Mathematics', '041');
+          const put = async (level: string, rows: unknown[]) => {
+            const response = await page.request.put(
+              `${WEB_ORIGIN}/api/academics/class-subjects/${level}`,
+              { data: { rows }, headers: { origin: WEB_ORIGIN } },
+            );
+            expect(response.status(), await response.text()).toBe(200);
+          };
+          await put('IX', [{ subjectId: maths.id, streamId: null, kind: 'COMPULSORY' }]);
+          await put('XI', [
+            { subjectId: english.id, streamId: null, kind: 'COMPULSORY' },
+            { subjectId: physics.id, streamId: science.id, kind: 'COMPULSORY' },
+          ]);
+
+          // Wide: a table of classes against subjects, with the stream selector.
+          await page.setViewportSize({ width: 1280, height: 900 });
+          await page.goto('/en/subjects?tab=class-subjects');
+          await expect(
+            subjectTabs(page).getByRole('link', { name: 'Class subjects' }),
+          ).toHaveAttribute('aria-current', 'page');
+          const grid = page.getByRole('region', { name: 'Class subjects grid' });
+          await expect(grid).toBeVisible();
+          await expect(page.getByLabel('Stream for classes XI and XII')).toBeVisible();
+          await expect(
+            grid.getByRole('button', { name: 'Mathematics, Class IX: Compulsory' }),
+          ).toBeVisible();
+          await expectNoViolations(page);
+
+          // A change waits to be saved.
+          await grid.getByRole('button', { name: 'Physics, Class X: Not taught' }).click();
+          await expect(
+            grid.getByRole('button', { name: 'Physics, Class X: Compulsory' }),
+          ).toBeVisible();
+          await expect(page.getByText('Class X has unsaved changes.')).toBeVisible();
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+
+          // The Science stream's own rows. English is compulsory for all streams: named so, and
+          // not a button here.
+          await page.getByLabel('Stream for classes XI and XII').click();
+          await page.getByRole('option', { name: 'Science' }).click();
+          await expect(
+            grid.getByRole('button', { name: 'Physics, Class XI, Science: Compulsory' }),
+          ).toBeVisible();
+          await expect(
+            grid.getByText(
+              'English Core, Class XI, Science: Compulsory (all streams) Set for all streams, ' +
+                `so it's changed under "All streams".`,
+              { exact: true },
+            ),
+          ).toBeAttached();
+          await expect(
+            grid.getByRole('button', { name: /^English Core, Class XI, Science:/ }),
+          ).toHaveCount(0);
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+
+          await page.getByRole('button', { name: 'Save Class X' }).click();
+          await expect(page.getByText('Class X has unsaved changes.')).toHaveCount(0);
+
+          // At 375 px: one accordion per class, and nothing wider than the screen.
+          await page.setViewportSize({ width: 375, height: 812 });
+          await page.goto('/en/subjects?tab=class-subjects');
+          await expect(grid).toBeHidden();
+          await page.getByRole('button', { name: 'Class XI', exact: true }).click();
+          await expect(
+            page.getByRole('button', { name: 'English Core, Class XI: Compulsory' }),
+          ).toBeVisible();
+          await page.getByRole('button', { name: 'Class X', exact: true }).click();
+          await expect(
+            page.getByRole('button', { name: 'Physics, Class X: Compulsory' }),
+          ).toBeVisible();
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+          ).toBe(true);
+          await page.mouse.move(0, 0);
+          await expectNoViolations(page);
+        });
+
+        test('/en/subjects?tab=class-subjects has no WCAG 2.1 AA violations with a class outside the range', async ({
+          page,
+          playwright,
+        }) => {
+          await ownSchool(page, playwright);
+          await setClassRange(page, 'IX', 'XII');
+          const maths = await send(
+            page,
+            '/academics/subjects',
+            { name: 'Mathematics', type: 'SCHOLASTIC' },
+            201,
+          );
+          const response = await page.request.put(
+            `${WEB_ORIGIN}/api/academics/class-subjects/XII`,
+            {
+              data: { rows: [{ subjectId: maths.id, streamId: null, kind: 'COMPULSORY' }] },
+              headers: { origin: WEB_ORIGIN },
+            },
+          );
+          expect(response.status(), await response.text()).toBe(200);
+          // XII leaves the range: its subjects are shown read-only, and can only be removed.
+          await setClassRange(page, 'IX', 'XI');
+
+          await page.setViewportSize({ width: 1280, height: 900 });
+          await page.goto('/en/subjects?tab=class-subjects');
+          const grid = page.getByRole('region', { name: 'Class subjects grid' });
+          await expect(grid.getByText('Outside your classes', { exact: true })).toBeVisible();
+          await expect(
+            grid.getByText(
+              "Mathematics, Class XII: Compulsory Can't be changed, as the class is outside your classes.",
+            ),
+          ).toBeAttached();
+          await expect(grid.getByRole('button', { name: /Class XII:/ })).toHaveCount(0);
+          await expect(
+            grid.getByRole('button', { name: 'Mathematics, Class XI: Not taught' }),
+          ).toBeVisible();
+          const remove = grid.getByRole('button', { name: 'Remove all subjects from Class XII' });
+          await expectNoViolations(page);
+
+          // Cancelled, focus returns to the button; removed, to the tab's heading.
+          await remove.click();
+          const dialog = page.getByRole('dialog', { name: 'Remove all subjects from Class XII?' });
+          await expect(dialog).toBeVisible();
+          await expectNoViolations(page);
+          await dialog.getByRole('button', { name: 'Cancel' }).click();
+          await expect(dialog).toHaveCount(0);
+          await expect(remove).toBeFocused();
+          await remove.click();
+          await dialog.getByRole('button', { name: 'Remove all' }).click();
+          await expect(dialog).toHaveCount(0);
+          await expect(page.getByText('Outside your classes', { exact: true })).toHaveCount(0);
+          await expect(page.locator('#class-subjects-heading')).toBeFocused();
+        });
+      });
+    });
+
     test.describe('setup wizard, checklist and switchers', () => {
       // Each test changes its school's setup, so each gets a school of its own.
       test.use({ storageState: { cookies: [], origins: [] } });
@@ -392,7 +994,11 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(
           page.getByRole('heading', { level: 2, name: 'Finish setting up your school' }),
         ).toBeVisible();
-        await expect(page.getByText('1 of 4 done')).toBeVisible();
+        await expect(page.getByText('1 of 5 done')).toBeVisible();
+        // The fifth item, academics, opens the classes page rather than a wizard step.
+        await expect(
+          page.getByRole('link', { name: 'Add sections and class subjects (to do)' }),
+        ).toHaveAttribute('href', '/en/classes');
         await expect(page.getByText('API online')).toBeVisible();
         await expectNoViolations(page);
       });

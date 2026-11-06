@@ -2291,7 +2291,7 @@
             "description": "No such year in this school"
           },
           "409": {
-            "description": "The year is not planned (type academic-year-locked)"
+            "description": "The year is not planned (type academic-year-locked), or has sections (type in-use, with counts { sections })"
           }
         },
         "security": [
@@ -2731,6 +2731,1657 @@
         "summary": "Hide the setup checklist for the whole school (only the first time is kept)",
         "tags": [
           "school"
+        ]
+      }
+    },
+    "/academics/streams": {
+      "get": {
+        "operationId": "listStreams",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "All streams, active first, then by name",
+        "tags": [
+          "academics"
+        ]
+      },
+      "post": {
+        "operationId": "createStream",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStreamRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "409": {
+            "description": "name-taken (field name) or academics-limit"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Add a stream; at most 20 per school",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/streams/starter": {
+      "post": {
+        "operationId": "addStarterStreams",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StarterStreamsAddedResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "409": {
+            "description": "academics-limit"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Add Science, Commerce and Humanities, skipping names the school already has",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/streams/{id}": {
+      "patch": {
+        "operationId": "updateStream",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStreamRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such stream in this school"
+          },
+          "409": {
+            "description": "name-taken (field name)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Rename a stream",
+        "tags": [
+          "academics"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteStream",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The stream was deleted."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such stream in this school"
+          },
+          "409": {
+            "description": "in-use, with counts { sections, classSubjects }"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Delete a stream no section or class subject uses",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/streams/{id}/archive": {
+      "post": {
+        "operationId": "archiveStream",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such stream in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Archive a stream",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/streams/{id}/restore": {
+      "post": {
+        "operationId": "restoreStream",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such stream in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Restore an archived stream",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/subjects": {
+      "get": {
+        "operationId": "listSubjects",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "All subjects, active first, then by name",
+        "tags": [
+          "academics"
+        ]
+      },
+      "post": {
+        "operationId": "createSubject",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubjectRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.manage (type permission-denied)"
+          },
+          "409": {
+            "description": "name-taken (field name) or academics-limit"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Add a subject; at most 200 per school",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/subjects/starter": {
+      "get": {
+        "operationId": "getStarterSubjects",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StarterSubjectsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The school's board starter list, with exists for names the school already has",
+        "tags": [
+          "academics"
+        ]
+      },
+      "post": {
+        "operationId": "addStarterSubjects",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StarterSubjectsRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StarterSubjectsAddedResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An item is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.manage (type permission-denied)"
+          },
+          "409": {
+            "description": "academics-limit"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Add the picked starter subjects, skipping names the school already has",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/subjects/{id}": {
+      "patch": {
+        "operationId": "updateSubject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubjectRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such subject in this school"
+          },
+          "409": {
+            "description": "name-taken (field name)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Edit a subject; fields left out are kept, \"\" or null clears the code",
+        "tags": [
+          "academics"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteSubject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The subject was deleted."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such subject in this school"
+          },
+          "409": {
+            "description": "in-use, with counts { classSubjects }"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Delete a subject no class uses",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/subjects/{id}/archive": {
+      "post": {
+        "operationId": "archiveSubject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such subject in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Archive a subject; classes keep it, but it cannot be newly added",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/subjects/{id}/restore": {
+      "post": {
+        "operationId": "restoreSubject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such subject in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Restore an archived subject",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/class-subjects": {
+      "get": {
+        "operationId": "listClassSubjects",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassSubjectsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Every class subject, grouped by class level: every class in the profile range, plus any outside it that still has rows (outsideRange)",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/class-subjects/{classLevel}": {
+      "put": {
+        "operationId": "replaceClassSubjects",
+        "parameters": [
+          {
+            "name": "classLevel",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NURSERY",
+                "LKG",
+                "UKG",
+                "I",
+                "II",
+                "III",
+                "IV",
+                "V",
+                "VI",
+                "VII",
+                "VIII",
+                "IX",
+                "X",
+                "XI",
+                "XII"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceClassSubjectsRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassSubjectsClassDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The class level or a row is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs subjects.manage (type permission-denied)"
+          },
+          "409": {
+            "description": "classes-not-set"
+          },
+          "422": {
+            "description": "class-out-of-range, stream-not-allowed (a stream on a junior class), subject-archived or stream-archived (newly added), or a row naming an unknown subject or stream, repeating one, or one deleted meanwhile"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Replace one class's subjects; streams only for XI and XII",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/houses": {
+      "get": {
+        "operationId": "listHouses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HousesResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "All houses, active first, then by name",
+        "tags": [
+          "academics"
+        ]
+      },
+      "post": {
+        "operationId": "createHouse",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHouseRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "409": {
+            "description": "name-taken (field name) or academics-limit"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Add a house; at most 20 per school",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/houses/{id}": {
+      "patch": {
+        "operationId": "updateHouse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHouseRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such house in this school"
+          },
+          "409": {
+            "description": "name-taken (field name)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Change a house's name or colour",
+        "tags": [
+          "academics"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteHouse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The house was deleted."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such house in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Delete a house",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/houses/{id}/archive": {
+      "post": {
+        "operationId": "archiveHouse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such house in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Archive a house",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/houses/{id}/restore": {
+      "post": {
+        "operationId": "restoreHouse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such house in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Restore an archived house",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/rooms": {
+      "get": {
+        "operationId": "listRooms",
+        "parameters": [
+          {
+            "name": "campusId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "ARCHIVED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A query parameter is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Rooms, optionally of one campus or status; active first, then by name",
+        "tags": [
+          "academics"
+        ]
+      },
+      "post": {
+        "operationId": "createRoom",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoomRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such campus in this school"
+          },
+          "409": {
+            "description": "name-taken (field name) or academics-limit"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Add a room on a campus; at most 500",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/rooms/{id}": {
+      "patch": {
+        "operationId": "updateRoom",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoomRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such room in this school"
+          },
+          "409": {
+            "description": "name-taken (field name)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Change a room's details",
+        "tags": [
+          "academics"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteRoom",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The room was deleted."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such room in this school"
+          },
+          "409": {
+            "description": "in-use, with counts { sections }"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Delete a room no section uses",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/rooms/{id}/archive": {
+      "post": {
+        "operationId": "archiveRoom",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such room in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Archive a room: its sections keep it, new ones cannot pick it",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/rooms/{id}/restore": {
+      "post": {
+        "operationId": "restoreRoom",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such room in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Restore an archived room",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/sections": {
+      "get": {
+        "operationId": "listSections",
+        "parameters": [
+          {
+            "name": "yearId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "campusId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "yearId and campusId must be UUIDs"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.view (type permission-denied)"
+          },
+          "404": {
+            "description": "No such academic year or campus in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Sections of a year and campus, by class level, then name",
+        "tags": [
+          "academics"
+        ]
+      },
+      "post": {
+        "operationId": "createSection",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSectionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such academic year or campus in this school"
+          },
+          "409": {
+            "description": "name-taken (field name), teacher-taken (sectionName), academics-limit, academic-year-locked: the year is CLOSED"
+          },
+          "422": {
+            "description": "classes-not-set, class-out-of-range, stream-required, stream-not-allowed, room-campus-mismatch, room-archived, teacher-unavailable, or an unknown stream or room"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Add a section to a year and campus",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/sections/copy-from-previous": {
+      "post": {
+        "operationId": "copySectionsFromPrevious",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopySectionsRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopySectionsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such academic year or campus in this school"
+          },
+          "409": {
+            "description": "sections-exist, nothing-to-copy, classes-not-set, academics-limit, academic-year-locked: the year is CLOSED"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Copy the previous year's sections on a campus into this year",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/sections/{id}": {
+      "patch": {
+        "operationId": "updateSection",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSectionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such section in this school"
+          },
+          "409": {
+            "description": "name-taken (field name), teacher-taken (sectionName), academic-year-locked: the year is CLOSED"
+          },
+          "422": {
+            "description": "classes-not-set, class-out-of-range, stream-required, stream-not-allowed, room-campus-mismatch, room-archived, teacher-unavailable, or an unknown stream or room"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Edit a section",
+        "tags": [
+          "academics"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteSection",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The section was deleted."
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such section in this school"
+          },
+          "409": {
+            "description": "academic-year-locked: the year is CLOSED"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Delete a section",
+        "tags": [
+          "academics"
+        ]
+      }
+    },
+    "/academics/class-teacher-options": {
+      "get": {
+        "operationId": "listClassTeacherOptions",
+        "parameters": [
+          {
+            "name": "yearId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassTeacherOptionsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "yearId must be a UUID"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs classes.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such academic year in this school"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Active members, with the section each already leads in the year",
+        "tags": [
+          "academics"
         ]
       }
     }
@@ -5705,7 +7356,8 @@
                     "profile",
                     "logo",
                     "academicYear",
-                    "campuses"
+                    "campuses",
+                    "academics"
                   ]
                 },
                 "done": {
@@ -5748,6 +7400,1637 @@
           "items",
           "startedAt",
           "dismissedAt"
+        ]
+      },
+      "StreamsResponseDto": {
+        "type": "object",
+        "properties": {
+          "streams": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "status",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "streams"
+        ]
+      },
+      "CreateStreamRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "StreamDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "StarterStreamsAddedResponseDto": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "status",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "created",
+          "skipped"
+        ]
+      },
+      "UpdateStreamRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          }
+        },
+        "additionalProperties": false
+      },
+      "SubjectsResponseDto": {
+        "type": "object",
+        "properties": {
+          "subjects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "SCHOLASTIC",
+                    "CO_SCHOLASTIC"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "code",
+                "type",
+                "status",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "subjects"
+        ]
+      },
+      "StarterSubjectsResponseDto": {
+        "type": "object",
+        "properties": {
+          "board": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "SCHOLASTIC",
+                    "CO_SCHOLASTIC"
+                  ]
+                },
+                "exists": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "name",
+                "code",
+                "type",
+                "exists"
+              ]
+            }
+          }
+        },
+        "required": [
+          "board",
+          "items"
+        ]
+      },
+      "StarterSubjectsRequestDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 60
+                },
+                "code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 10
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "SCHOLASTIC",
+                    "CO_SCHOLASTIC"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "StarterSubjectsAddedResponseDto": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "SCHOLASTIC",
+                    "CO_SCHOLASTIC"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "code",
+                "type",
+                "status",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "created",
+          "skipped"
+        ]
+      },
+      "CreateSubjectRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "SCHOLASTIC",
+              "CO_SCHOLASTIC"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ]
+      },
+      "SubjectDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "SCHOLASTIC",
+              "CO_SCHOLASTIC"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "code",
+          "type",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateSubjectRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "SCHOLASTIC",
+              "CO_SCHOLASTIC"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClassSubjectsResponseDto": {
+        "type": "object",
+        "properties": {
+          "classes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "classLevel": {
+                  "type": "string",
+                  "enum": [
+                    "NURSERY",
+                    "LKG",
+                    "UKG",
+                    "I",
+                    "II",
+                    "III",
+                    "IV",
+                    "V",
+                    "VI",
+                    "VII",
+                    "VIII",
+                    "IX",
+                    "X",
+                    "XI",
+                    "XII"
+                  ]
+                },
+                "outsideRange": {
+                  "type": "boolean"
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "subjectId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "streamId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "COMPULSORY",
+                          "OPTIONAL"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "subjectId",
+                      "streamId",
+                      "kind"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "classLevel",
+                "outsideRange",
+                "rows"
+              ]
+            }
+          },
+          "streams": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "status"
+              ]
+            }
+          }
+        },
+        "required": [
+          "classes",
+          "streams"
+        ]
+      },
+      "ReplaceClassSubjectsRequestDto": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "subjectId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "streamId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "COMPULSORY",
+                    "OPTIONAL"
+                  ]
+                }
+              },
+              "required": [
+                "subjectId",
+                "streamId",
+                "kind"
+              ]
+            }
+          }
+        },
+        "required": [
+          "rows"
+        ]
+      },
+      "ClassSubjectsClassDto": {
+        "type": "object",
+        "properties": {
+          "classLevel": {
+            "type": "string",
+            "enum": [
+              "NURSERY",
+              "LKG",
+              "UKG",
+              "I",
+              "II",
+              "III",
+              "IV",
+              "V",
+              "VI",
+              "VII",
+              "VIII",
+              "IX",
+              "X",
+              "XI",
+              "XII"
+            ]
+          },
+          "outsideRange": {
+            "type": "boolean"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "subjectId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "streamId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "COMPULSORY",
+                    "OPTIONAL"
+                  ]
+                }
+              },
+              "required": [
+                "subjectId",
+                "streamId",
+                "kind"
+              ]
+            }
+          }
+        },
+        "required": [
+          "classLevel",
+          "outsideRange",
+          "rows"
+        ]
+      },
+      "HousesResponseDto": {
+        "type": "object",
+        "properties": {
+          "houses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "colour": {
+                  "type": "string",
+                  "enum": [
+                    "RED",
+                    "BLUE",
+                    "GREEN",
+                    "YELLOW",
+                    "ORANGE",
+                    "PURPLE",
+                    "PINK",
+                    "TEAL",
+                    "BROWN",
+                    "GREY"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "colour",
+                "status",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "houses"
+        ]
+      },
+      "CreateHouseRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          },
+          "colour": {
+            "type": "string",
+            "enum": [
+              "RED",
+              "BLUE",
+              "GREEN",
+              "YELLOW",
+              "ORANGE",
+              "PURPLE",
+              "PINK",
+              "TEAL",
+              "BROWN",
+              "GREY"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "colour"
+        ]
+      },
+      "HouseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "colour": {
+            "type": "string",
+            "enum": [
+              "RED",
+              "BLUE",
+              "GREEN",
+              "YELLOW",
+              "ORANGE",
+              "PURPLE",
+              "PINK",
+              "TEAL",
+              "BROWN",
+              "GREY"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "colour",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateHouseRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          },
+          "colour": {
+            "type": "string",
+            "enum": [
+              "RED",
+              "BLUE",
+              "GREEN",
+              "YELLOW",
+              "ORANGE",
+              "PURPLE",
+              "PINK",
+              "TEAL",
+              "BROWN",
+              "GREY"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "RoomsResponseDto": {
+        "type": "object",
+        "properties": {
+          "rooms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "campusId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "CLASSROOM",
+                    "LAB",
+                    "COMPUTER_LAB",
+                    "LIBRARY",
+                    "HALL",
+                    "OTHER"
+                  ]
+                },
+                "capacity": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "floor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "campusId",
+                "name",
+                "type",
+                "capacity",
+                "floor",
+                "status",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "rooms"
+        ]
+      },
+      "CreateRoomRequestDto": {
+        "type": "object",
+        "properties": {
+          "campusId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CLASSROOM",
+              "LAB",
+              "COMPUTER_LAB",
+              "LIBRARY",
+              "HALL",
+              "OTHER"
+            ]
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "campusId",
+          "name",
+          "type",
+          "capacity"
+        ]
+      },
+      "RoomDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "campusId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CLASSROOM",
+              "LAB",
+              "COMPUTER_LAB",
+              "LIBRARY",
+              "HALL",
+              "OTHER"
+            ]
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "floor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "campusId",
+          "name",
+          "type",
+          "capacity",
+          "floor",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateRoomRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CLASSROOM",
+              "LAB",
+              "COMPUTER_LAB",
+              "LIBRARY",
+              "HALL",
+              "OTHER"
+            ]
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "SectionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "academicYearId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "campusId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "classLevel": {
+                  "type": "string",
+                  "enum": [
+                    "NURSERY",
+                    "LKG",
+                    "UKG",
+                    "I",
+                    "II",
+                    "III",
+                    "IV",
+                    "V",
+                    "VI",
+                    "VII",
+                    "VIII",
+                    "IX",
+                    "X",
+                    "XI",
+                    "XII"
+                  ]
+                },
+                "outsideRange": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "capacity": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "stream": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "room": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "classTeacher": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "membershipId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "active": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "membershipId",
+                        "name",
+                        "active"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "academicYearId",
+                "campusId",
+                "classLevel",
+                "outsideRange",
+                "name",
+                "capacity",
+                "stream",
+                "room",
+                "classTeacher",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "sections"
+        ]
+      },
+      "CreateSectionRequestDto": {
+        "type": "object",
+        "properties": {
+          "academicYearId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "campusId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "classLevel": {
+            "type": "string",
+            "enum": [
+              "NURSERY",
+              "LKG",
+              "UKG",
+              "I",
+              "II",
+              "III",
+              "IV",
+              "V",
+              "VI",
+              "VII",
+              "VIII",
+              "IX",
+              "X",
+              "XI",
+              "XII"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "streamId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "roomId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classTeacherMembershipId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "academicYearId",
+          "campusId",
+          "classLevel",
+          "name",
+          "capacity"
+        ]
+      },
+      "SectionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "academicYearId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "campusId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "classLevel": {
+            "type": "string",
+            "enum": [
+              "NURSERY",
+              "LKG",
+              "UKG",
+              "I",
+              "II",
+              "III",
+              "IV",
+              "V",
+              "VI",
+              "VII",
+              "VIII",
+              "IX",
+              "X",
+              "XI",
+              "XII"
+            ]
+          },
+          "outsideRange": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "stream": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classTeacher": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "membershipId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "membershipId",
+                  "name",
+                  "active"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "academicYearId",
+          "campusId",
+          "classLevel",
+          "outsideRange",
+          "name",
+          "capacity",
+          "stream",
+          "room",
+          "classTeacher",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CopySectionsRequestDto": {
+        "type": "object",
+        "properties": {
+          "yearId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "campusId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "yearId",
+          "campusId"
+        ]
+      },
+      "CopySectionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "dropped": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "section": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string",
+                  "enum": [
+                    "room",
+                    "teacher",
+                    "stream",
+                    "class"
+                  ]
+                }
+              },
+              "required": [
+                "section",
+                "field"
+              ]
+            }
+          }
+        },
+        "required": [
+          "created",
+          "dropped"
+        ]
+      },
+      "UpdateSectionRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "streamId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "roomId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classTeacherMembershipId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClassTeacherOptionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "teachers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "membershipId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "sectionName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "membershipId",
+                "name",
+                "sectionName"
+              ]
+            }
+          }
+        },
+        "required": [
+          "teachers"
         ]
       }
     }

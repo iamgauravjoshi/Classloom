@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { onboardingResponseSchema } from '@classloom/contracts';
+import { onboardingResponseSchema, STARTER_SUBJECTS } from '@classloom/contracts';
 import type { INestApplication, INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import request from 'supertest';
@@ -29,9 +29,12 @@ const PROFILE = {
   city: 'Dehradun',
   state: 'UK',
   pinCode: '248001',
+  lowestClass: 'I',
+  highestClass: 'XII',
 };
 
 const checklist = (res: request.Response) => onboardingResponseSchema.parse(res.body);
+const idOf = (res: request.Response) => (res.body as { id: string }).id;
 const doneOf = (res: request.Response) =>
   Object.fromEntries(checklist(res).items.map((i) => [i.key, i.done]));
 
@@ -105,7 +108,7 @@ describe('onboarding checklist API', () => {
     await infra?.stop();
   });
 
-  it("shows a new school's owner four open items, and start sets startedAt once", async () => {
+  it("shows a new school's owner five open items, and start sets startedAt once", async () => {
     const s = await school();
     const first = await get(s.owner);
     expect(first.status).toBe(200);
@@ -116,6 +119,7 @@ describe('onboarding checklist API', () => {
         { key: 'logo', done: false },
         { key: 'academicYear', done: false },
         { key: 'campuses', done: false },
+        { key: 'academics', done: false },
       ],
       startedAt: null,
       dismissedAt: null,
@@ -138,6 +142,7 @@ describe('onboarding checklist API', () => {
       logo: false,
       academicYear: false,
       campuses: false,
+      academics: false,
     });
 
     const logo = await send('put', '/school/logo', s.owner).attach('file', jpeg, 'logo.jpg');
@@ -157,10 +162,66 @@ describe('onboarding checklist API', () => {
     await send('patch', url, s.owner).send({ addressLine1: '12 Rajpur Road' }).expect(200);
     expect(doneOf(await get(s.owner))).toMatchObject({ campuses: false });
     await send('patch', url, s.owner).send({ pinCode: '248001' }).expect(200);
+    expect(doneOf(await get(s.owner))).toMatchObject({ campuses: true, academics: false });
+    expect(checklist(await get(s.owner)).visible).toBe(true);
+
+    // Academics needs a section in the current year and a class subject.
+    const yearId = (year.body as { id: string }).id;
+    await send('post', '/academics/sections', s.owner)
+      .send({
+        academicYearId: yearId,
+        campusId: s.primaryId,
+        classLevel: 'VI',
+        name: 'A',
+        capacity: 40,
+      })
+      .expect(201);
+    expect(doneOf(await get(s.owner))).toMatchObject({ academics: false });
+    const subject = await send('post', '/academics/subjects', s.owner)
+      .send({ name: 'Mathematics', type: 'SCHOLASTIC' })
+      .expect(201);
+    expect(doneOf(await get(s.owner))).toMatchObject({ academics: false });
+    await send('put', '/academics/class-subjects/VI', s.owner)
+      .send({ rows: [{ subjectId: idOf(subject), streamId: null, kind: 'COMPULSORY' }] })
+      .expect(200);
 
     const all = checklist(await get(s.owner));
     expect(all.items.every((i) => i.done)).toBe(true);
     expect(all.visible).toBe(false);
+  });
+
+  it('counts only sections of the current year for the academics item', async () => {
+    const s = await school();
+    await send('put', '/school/profile', s.owner).send(PROFILE).expect(200);
+    const planned = await owner.academicYear.create({
+      data: {
+        tenantId: s.tenantId,
+        label: '2030–31',
+        startsOn: new Date('2030-04-01'),
+        endsOn: new Date('2031-03-31'),
+        status: 'PLANNED',
+      },
+    });
+    const section = { campusId: s.primaryId, classLevel: 'VI', name: 'A', capacity: 40 };
+    await send('post', '/academics/sections', s.owner)
+      .send({ ...section, academicYearId: planned.id })
+      .expect(201);
+    const subject = await send('post', '/academics/subjects', s.owner)
+      .send({ name: 'Mathematics', type: 'SCHOLASTIC' })
+      .expect(201);
+    await send('put', '/academics/class-subjects/VI', s.owner)
+      .send({ rows: [{ subjectId: idOf(subject), streamId: null, kind: 'COMPULSORY' }] })
+      .expect(200);
+    expect(doneOf(await get(s.owner))).toMatchObject({ academics: false });
+
+    const year = await send('post', '/school/academic-years', s.owner)
+      .send({ startsOn: '2026-04-01', endsOn: '2027-03-31', termCount: 3 })
+      .expect(201);
+    expect(year.body).toMatchObject({ status: 'CURRENT' });
+    await send('post', '/academics/sections', s.owner)
+      .send({ ...section, academicYearId: idOf(year) })
+      .expect(201);
+    expect(doneOf(await get(s.owner))).toMatchObject({ academics: true });
   });
 
   it('hides a dismissed checklist while items remain, keeping the first dismissal time', async () => {
@@ -218,7 +279,7 @@ describe('onboarding checklist API', () => {
       expect(JSON.parse(lines.at(-1)!)).toMatchObject({
         action: 'demo-setup',
         code: s.code,
-        done: ['profile', 'logo', 'academicYear', 'campuses'],
+        done: ['profile', 'logo', 'academicYear', 'campuses', 'academics'],
         skipped: [],
       });
 
@@ -238,6 +299,29 @@ describe('onboarding checklist API', () => {
       const logo = await request(server).get('/school/logo').set('Cookie', s.owner);
       expect(logo.status).toBe(200);
       expect(logo.headers['content-type']).toBe('image/png');
+
+      // Academics (spec section 11): 2 streams, 3 rooms, the CBSE starter subjects, sections
+      // for two classes in the current year and a few class subjects.
+      const tenant = { tenantId: s.tenantId };
+      const streams = await owner.stream.findMany({ where: tenant, orderBy: { name: 'asc' } });
+      expect(streams.map((x) => x.name)).toEqual(['Commerce', 'Science']);
+      expect(await owner.room.count({ where: tenant })).toBe(3);
+      const subjects = await owner.subject.findMany({ where: tenant });
+      expect(subjects.map((x) => x.name).sort()).toEqual(
+        STARTER_SUBJECTS.CBSE.map((x) => x.name).sort(),
+      );
+      const sections = await owner.section.findMany({ where: tenant });
+      expect(sections.every((x) => x.academicYearId === years[0]!.id)).toBe(true);
+      expect(new Set(sections.map((x) => x.classLevel)).size).toBe(2);
+      const senior = sections.filter((x) => x.classLevel === 'XI');
+      expect(senior.length).toBeGreaterThan(0);
+      expect(senior.every((x) => x.streamId !== null)).toBe(true);
+      expect(await owner.classSubject.count({ where: tenant })).toBeGreaterThan(0);
+      expect(
+        await owner.auditEvent.count({
+          where: { tenantId: s.tenantId, action: 'section.created' },
+        }),
+      ).toBe(sections.length);
     });
 
     it('skips what a school already has when run again', async () => {
@@ -246,11 +330,22 @@ describe('onboarding checklist API', () => {
       const before = await owner.schoolProfile.findUniqueOrThrow({
         where: { tenantId: s.tenantId },
       });
+      const tenant = { tenantId: s.tenantId };
+      const counts = () =>
+        Promise.all([
+          owner.stream.count({ where: tenant }),
+          owner.room.count({ where: tenant }),
+          owner.subject.count({ where: tenant }),
+          owner.section.count({ where: tenant }),
+          owner.classSubject.count({ where: tenant }),
+          owner.auditEvent.count({ where: tenant }),
+        ]);
+      const academicsBefore = await counts();
       const lines = await run('school:demo-setup', s.code);
       expect(JSON.parse(lines.at(-1)!)).toMatchObject({
         action: 'demo-setup',
         done: [],
-        skipped: ['profile', 'logo', 'academicYear', 'campuses'],
+        skipped: ['profile', 'logo', 'academicYear', 'campuses', 'academics'],
         reasons: { academicYear: expect.stringMatching(/CURRENT/) as unknown },
       });
       const after = await owner.schoolProfile.findUniqueOrThrow({
@@ -259,6 +354,31 @@ describe('onboarding checklist API', () => {
       expect(after.logoFileId).toBe(before.logoFileId);
       expect(await owner.academicYear.count({ where: { tenantId: s.tenantId } })).toBe(1);
       expect(await owner.campus.count({ where: { tenantId: s.tenantId } })).toBe(2);
+      expect(await counts()).toEqual(academicsBefore);
+    });
+
+    it('keeps the class subjects a school already set and adds only missing pieces', async () => {
+      const s = await school();
+      await send('put', '/school/profile', s.owner).send(PROFILE).expect(200);
+      const english = await send('post', '/academics/subjects', s.owner)
+        .send({ name: 'english', type: 'SCHOLASTIC' })
+        .expect(201);
+      await send('put', '/academics/class-subjects/VI', s.owner)
+        .send({ rows: [{ subjectId: idOf(english), streamId: null, kind: 'OPTIONAL' }] })
+        .expect(200);
+
+      await run('school:demo-setup', s.code);
+      const vi = await owner.classSubject.findMany({
+        where: { tenantId: s.tenantId, classLevel: 'VI' },
+      });
+      expect(vi).toEqual([expect.objectContaining({ subjectId: idOf(english), kind: 'OPTIONAL' })]);
+      // The school's own "english" stands in for the starter "English".
+      expect(
+        await owner.subject.count({
+          where: { tenantId: s.tenantId, name: { equals: 'English', mode: 'insensitive' } },
+        }),
+      ).toBe(1);
+      expect(doneOf(await get(s.owner))).toMatchObject({ academics: true });
     });
 
     it('says why it skips the year when the school has only a planned one', async () => {
@@ -279,6 +399,9 @@ describe('onboarding checklist API', () => {
       };
       expect(result.skipped).toEqual(['academicYear']);
       expect(result.reasons.academicYear).toMatch(/2030–31 \(PLANNED\).*none is current/);
+      // Streams, rooms and subjects need no year; sections wait for a current one.
+      expect(result.reasons.academics).toMatch(/no current year/);
+      expect(await owner.section.count({ where: { tenantId: s.tenantId } })).toBe(0);
       expect(checklist(await get(s.owner)).items.find((i) => i.key === 'academicYear')!.done).toBe(
         false,
       );

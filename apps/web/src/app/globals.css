@@ -11,3 +11,22 @@
     bottom: calc(var(--step-actions-height, 0px) + 1rem);
   }
 }
+
+/*
+ * The house colour BROWN has no palette token of its own. Like the palette's tint and strong
+ * pairs, the strong colour passes AA (4.5:1) on the tint in both themes.
+ */
+:root {
+  --house-brown-tint: #f7eee6;
+  --house-brown-strong: #7a4a1e;
+}
+
+.dark {
+  --house-brown-tint: #35261c;
+  --house-brown-strong: #e2b98f;
+}
+
+@theme inline {
+  --color-house-brown-tint: var(--house-brown-tint);
+  --color-house-brown-strong: var(--house-brown-strong);
+}

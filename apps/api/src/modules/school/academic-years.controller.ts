@@ -149,7 +149,10 @@ export class AcademicYearsController {
   @ApiUnauthorizedResponse({ description: 'No valid session' })
   @ApiForbiddenResponse({ description: 'Needs settings.manage (type permission-denied)' })
   @ApiNotFoundResponse({ description: 'No such year in this school' })
-  @ApiConflictResponse({ description: 'The year is not planned (type academic-year-locked)' })
+  @ApiConflictResponse({
+    description:
+      'The year is not planned (type academic-year-locked), or has sections (type in-use, with counts { sections })',
+  })
   async remove(
     @CurrentAuth() auth: RequestAuth,
     @Param('id') id: string,

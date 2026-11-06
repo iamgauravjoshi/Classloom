@@ -14,6 +14,8 @@ export const SCHOOL_PROBLEM_TYPES = [
   'campus-inactive',
   'logo-invalid',
   'storage-unavailable',
+  // The academics module's `in-use`: a planned year with sections cannot be deleted.
+  'in-use',
 ] as const;
 export type SchoolProblemType = (typeof SCHOOL_PROBLEM_TYPES)[number];
 
@@ -28,6 +30,7 @@ export type SchoolErrorKey =
   | 'academicTermsInvalid'
   | 'academicYearLocked'
   | 'academicYearLabelTaken'
+  | 'academicYearHasSections'
   | 'campusPrimary'
   | 'campusLastActive'
   | 'campusNameTaken'
@@ -50,6 +53,7 @@ const PROBLEM_KEYS: Record<Exclude<SchoolProblemType, 'logo-invalid'>, SchoolErr
   'academic-terms-invalid': 'academicTermsInvalid',
   'academic-year-locked': 'academicYearLocked',
   'academic-year-label-taken': 'academicYearLabelTaken',
+  'in-use': 'academicYearHasSections',
   'campus-primary': 'campusPrimary',
   'campus-last-active': 'campusLastActive',
   'campus-name-taken': 'campusNameTaken',
@@ -93,6 +97,15 @@ export function schoolProblemMessage(
 /** `schoolProblemMessage` for whatever a mutation threw. */
 export function schoolErrorMessage(error: unknown): SchoolErrorKey {
   return error instanceof ApiError ? schoolProblemMessage(error.problem) : 'generic';
+}
+
+/**
+ * The values the message of `schoolErrorMessage(error)` needs: the sections a planned year still
+ * has (`in-use` counts them), else none.
+ */
+export function schoolErrorValues(error: unknown): { count?: number } {
+  if (schoolErrorMessage(error) !== 'academicYearHasSections') return {};
+  return { count: (error as ApiError).problem.counts?.sections ?? 0 };
 }
 
 /** The fields a 400 names (`errors[].path`, first segment), once each. */

@@ -32,7 +32,7 @@ import { type ComponentProps, type ReactNode, useState } from 'react';
 import { BUTTON_CLASS } from '../auth/auth-ui';
 import { useLastShown } from '../iam/iam-ui';
 import { AcademicYearForm, type AcademicYearFormInitial } from './academic-year-form';
-import { schoolErrorMessage } from './school-errors';
+import { schoolErrorMessage, schoolErrorValues } from './school-errors';
 import { formatYmd } from './year-form-helpers';
 
 export interface ConfirmDialogProps {
@@ -187,7 +187,7 @@ export function YearsList({ years, canEdit }: { years: AcademicYear[]; canEdit: 
       });
       setConfirming(null);
     } catch (error) {
-      setConfirmError(tErrors(schoolErrorMessage(error)));
+      setConfirmError(tErrors(schoolErrorMessage(error), schoolErrorValues(error)));
     }
   }
 

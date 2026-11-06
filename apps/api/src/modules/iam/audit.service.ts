@@ -31,10 +31,47 @@ export type AuditAction =
   | 'campus.updated'
   | 'campus.deactivated'
   | 'campus.reactivated'
-  | 'campus.made_primary';
+  | 'campus.made_primary'
+  | 'section.created'
+  | 'section.updated'
+  | 'section.deleted'
+  | 'sections.copied'
+  | 'stream.created'
+  | 'stream.updated'
+  | 'stream.archived'
+  | 'stream.restored'
+  | 'stream.deleted'
+  | 'subject.created'
+  | 'subject.updated'
+  | 'subject.archived'
+  | 'subject.restored'
+  | 'subject.deleted'
+  | 'subjects.starter_added'
+  | 'class_subjects.updated'
+  | 'house.created'
+  | 'house.updated'
+  | 'house.archived'
+  | 'house.restored'
+  | 'house.deleted'
+  | 'room.created'
+  | 'room.updated'
+  | 'room.archived'
+  | 'room.restored'
+  | 'room.deleted';
 
 export type AuditTargetType =
-  'role' | 'membership' | 'invitation' | 'school' | 'academic_year' | 'campus';
+  | 'role'
+  | 'membership'
+  | 'invitation'
+  | 'school'
+  | 'academic_year'
+  | 'campus'
+  | 'section'
+  | 'stream'
+  | 'subject'
+  | 'class_level'
+  | 'house'
+  | 'room';
 
 export interface AuditInput {
   /** The school the change happened in: the actor's school, or the invited one for the system. */

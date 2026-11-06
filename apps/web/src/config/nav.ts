@@ -95,11 +95,14 @@ export const navConfig: NavGroup[] = [
   },
 ];
 
+/** Single-segment pages that are built, with routes of their own. */
+const BUILT_SECTIONS: ReadonlySet<string> = new Set(['dashboard', 'classes', 'subjects']);
+
 /**
- * Single-segment paths of every placeholder module page: all nav items except the dashboard and
+ * Single-segment paths of every placeholder module page: all nav items except the built ones and
  * the pages under a folder (`settings/...`), which have routes of their own.
  */
 export const comingSoonSections: string[] = navConfig
   .flatMap((group) => group.items)
   .map((item) => item.href.slice(1))
-  .filter((section) => section !== 'dashboard' && !section.includes('/'));
+  .filter((section) => !BUILT_SECTIONS.has(section) && !section.includes('/'));

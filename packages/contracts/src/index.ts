@@ -1,4 +1,6 @@
 export * from './academic-calendar';
+export * from './academics';
+export * from './academics-rules';
 export * from './auth';
 export * from './health';
 export * from './iam';

@@ -13,6 +13,8 @@ type Profile = {
 const empty = {
   profile: { udiseCode: null, addressLine1: null, pinCode: null, phone: null, logoFileId: null },
   hasCurrentYear: false,
+  hasCurrentYearSection: false,
+  hasClassSubject: false,
   primaryCampus: { addressLine1: null, pinCode: null },
 };
 
@@ -53,5 +55,14 @@ describe('checklistOf', () => {
     expect(c({ addressLine1: 'x', pinCode: '248001' })).toBe(true);
     expect(c({ addressLine1: 'x', pinCode: null })).toBe(false);
     expect(c({ addressLine1: null, pinCode: '248001' })).toBe(false);
+  });
+  it('marks academics done only when a section and a class subject exist', () => {
+    const a = (hasCurrentYearSection: boolean, hasClassSubject: boolean) =>
+      checklistOf({ ...empty, hasCurrentYearSection, hasClassSubject }).find(
+        (i) => i.key === 'academics',
+      )!.done;
+    expect(a(true, true)).toBe(true);
+    expect(a(true, false)).toBe(false);
+    expect(a(false, true)).toBe(false);
   });
 });

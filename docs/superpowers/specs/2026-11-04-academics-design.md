@@ -386,3 +386,33 @@ Every write goes through `withTenant` and writes its audit row in the same trans
 - [ ] Every change writes an audit event.
 - [ ] All copy is in i18n files.
 - [ ] `school:demo-setup` also creates two streams, three rooms, the current year's sections for two classes, and the CBSE starter subjects with a few class mappings.
+
+## 12. Decisions made during the build
+
+These refine the sections above. Each was ruled on during the build and is covered by tests.
+
+### API (§4, §6)
+
+- **Delete behaviour:** foreign keys use `ON DELETE NO ACTION` instead of `RESTRICT`. In-use rows are still refused, and deleting a whole school still cascades.
+- **Rooms and campuses:** a room that sections use can't move to another campus. Sections can't change campus.
+- **Problem types:** in addition to §7:
+  - newly adding an archived stream (to a class or a section) is 422 `stream-archived`;
+  - an archived subject newly added to a class is 422 `subject-archived`.
+- **Status changes:** PATCH never changes `status`. Only the archive and restore routes do, so the audit trail has one shape.
+- **Audit targets:** `class_subjects.updated` and `subjects.starter_added` use the school's id as the audit target, with the class level in before and after.
+- **Sections:**
+  - `POST /academics/sections` takes `academicYearId`.
+  - Class-teacher options need `classes.manage`, because they list the school's staff.
+  - Section labels in messages are class-qualified, for example "VI-A".
+- **Copy forward:** it skips sections whose class is outside the current profile range and reports them in `dropped` with `field: 'class'`. If every section is skipped, it returns 201 with `created: 0`.
+- **Class subjects:**
+  - `GET /academics/class-subjects` returns `{ classes: [{ classLevel, outsideRange, rows }], streams }`. `streams` holds the active streams plus archived ones still referenced, so `subjects.*` roles can use the grid without `classes.view`.
+  - A PUT with `rows: []` clears a class even when it's outside the range. Any non-empty PUT outside the range stays 422.
+- **Academic years:** deleting an academic year that has sections is refused with 409 `in-use` and `{ sections }`, so copied sections are never lost silently.
+
+### Web (§8)
+
+- **Streams helper:** "Add Science, Commerce and Humanities" shows while any of the three is missing, and names only the missing ones.
+- **Class-subject grid:** in a stream view, a subject set for all streams shows as "(all streams)" and can't be toggled for that stream.
+- **Setup checklist:** it stays visible after the setup wizard, at "4 of 5", until the school has sections and class subjects.
+- **Accessibility:** the shared primary button's hover colour fails AA contrast in light mode. That fix is a separate follow-up to `packages/ui`.

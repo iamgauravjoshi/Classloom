@@ -14,7 +14,11 @@ import { holdUnload, leavingHref } from './leave-guard-events';
  * - `guard(action)` asks before an in-page move, such as the wizard's Back, Skip or stepper.
  * The returned `dialog` must be rendered.
  */
-export function useLeaveGuard(dirty: boolean): {
+export function useLeaveGuard(
+  dirty: boolean,
+  /** The dialog's wording, when the wizard's own ("Your changes on this step…") doesn't fit. */
+  copy?: { title: string; body: ReactNode; leave: string; stay: string },
+): {
   guard: (action: () => void) => void;
   dialog: ReactNode;
 } {
@@ -52,11 +56,11 @@ export function useLeaveGuard(dirty: boolean): {
   const dialog = (
     <ConfirmDialog
       open={pending !== null}
-      title={t('title')}
-      body={t('body')}
-      action={t('leave')}
-      pendingLabel={t('leave')}
-      cancelLabel={t('stay')}
+      title={copy?.title ?? t('title')}
+      body={copy?.body ?? t('body')}
+      action={copy?.leave ?? t('leave')}
+      pendingLabel={copy?.leave ?? t('leave')}
+      cancelLabel={copy?.stay ?? t('stay')}
       destructive
       pending={false}
       errorText={null}

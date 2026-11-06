@@ -104,6 +104,40 @@ describe('ProblemFilter', () => {
     expect(res.body).toMatchObject({ type: 'logo-invalid', status: 422, reason: 'size' });
   });
 
+  it('carries field, limit, counts and sectionName for the academics problems', () => {
+    const { host, res } = mockHost('/academics/streams');
+    new ProblemFilter('production').catch(
+      new HttpException(
+        {
+          type: 'in-use',
+          title: 'In use.',
+          field: 'name',
+          limit: 20,
+          counts: { sections: 0, classSubjects: 1 },
+          sectionName: 'A',
+        },
+        409,
+      ),
+      host,
+    );
+    expect(res.body).toMatchObject({
+      type: 'in-use',
+      field: 'name',
+      limit: 20,
+      counts: { sections: 0, classSubjects: 1 },
+      sectionName: 'A',
+    });
+  });
+
+  it('drops counts that are not a record of numbers', () => {
+    const { host, res } = mockHost();
+    new ProblemFilter('production').catch(
+      new HttpException({ type: 'in-use', title: 'In use.', counts: { x: 'many' } }, 409),
+      host,
+    );
+    expect((res.body as Body).counts).toBeUndefined();
+  });
+
   it('keeps a custom HttpException message as the detail', () => {
     const { host, res } = mockHost();
     new ProblemFilter('production').catch(new BadRequestException('Section is full'), host);

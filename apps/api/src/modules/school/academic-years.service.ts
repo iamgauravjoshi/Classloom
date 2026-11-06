@@ -15,6 +15,7 @@ import { dbViolation, uniqueViolationProblem } from '../../core/prisma/constrain
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { withTenant } from '../../core/tenancy/with-tenant';
 import type { Prisma } from '../../generated/prisma/client';
+import { InUseException } from '../academics/academics-problems';
 import type { RequestAuth } from '../auth/request-auth';
 import { AuditService } from '../iam/audit.service';
 import type { SchoolMeta } from './profile.service';
@@ -245,12 +246,19 @@ export class AcademicYearsService {
     });
   }
 
-  /** Deletes a `PLANNED` year; its terms cascade. Any other status gets 409. */
+  /**
+   * Deletes a `PLANNED` year; its terms cascade. Any other status gets 409 `academic-year-locked`;
+   * a year with sections gets 409 `in-use` with `{ sections }` (their foreign key cascades, so the
+   * check is the API's). `lockYears` holds the year rows FOR UPDATE, which a section insert's key
+   * share lock waits on, so a section cannot slip in between the count and the delete.
+   */
   remove(auth: Actor, id: string, meta: SchoolMeta): Promise<void> {
     return this.write(auth, async (tx) => {
       await lockYears(tx, auth.tenantId);
       const year = toYear(await this.load(tx, id));
       if (year.status !== 'PLANNED') throw new AcademicYearLockedException();
+      const sections = await tx.section.count({ where: { academicYearId: id } });
+      if (sections > 0) throw new InUseException({ sections });
       await tx.academicYear.delete({ where: { id } });
       await this.audit.record(tx, {
         tenantId: auth.tenantId,
