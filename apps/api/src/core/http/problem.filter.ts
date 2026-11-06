@@ -79,7 +79,7 @@ export class ProblemFilter implements ExceptionFilter {
 /**
  * Fields a service attached to an HttpException body: `errors[]`, a `suggestion`, and the
  * problem `type`, `title`, `retryAfter` seconds, `attemptsLeft`, `schoolCode`, `reason`, `field`,
- * `limit`, `counts` and `sectionName` for errors the client acts on.
+ * `limit`, `counts`, `sectionName`, `problem` and `minimum` for errors the client acts on.
  */
 function extrasOf(
   response: string | object,
@@ -98,6 +98,8 @@ function extrasOf(
     | 'limit'
     | 'counts'
     | 'sectionName'
+    | 'problem'
+    | 'minimum'
   >
 > {
   if (typeof response === 'string') return {};
@@ -114,6 +116,8 @@ function extrasOf(
     limit,
     counts,
     sectionName,
+    problem,
+    minimum,
   } = response as Record<string, unknown>;
   return {
     ...(Array.isArray(errors) ? { errors: errors as ProblemDetails['errors'] } : {}),
@@ -128,6 +132,8 @@ function extrasOf(
     ...(typeof limit === 'number' ? { limit } : {}),
     ...(isCounts(counts) ? { counts } : {}),
     ...(typeof sectionName === 'string' ? { sectionName } : {}),
+    ...(typeof problem === 'string' ? { problem } : {}),
+    ...(typeof minimum === 'number' ? { minimum } : {}),
   };
 }
 

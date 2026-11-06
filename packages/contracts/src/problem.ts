@@ -35,6 +35,10 @@ export const problemDetailsSchema = z.object({
   counts: z.record(z.string(), z.number().int()).optional(),
   /** Set on a 409 `teacher-taken`: the section the teacher already leads that year. */
   sectionName: z.string().optional(),
+  /** Set on a 422 `number-pattern-invalid`: the first rule the pattern breaks (`PatternProblem`). */
+  problem: z.string().optional(),
+  /** Set on a 422 `next-number-too-low`: the lowest next number allowed. */
+  minimum: z.number().int().optional(),
 });
 
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;
