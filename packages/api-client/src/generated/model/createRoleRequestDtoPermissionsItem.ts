@@ -64,4 +64,5 @@ export const CreateRoleRequestDtoPermissionsItem = {
   settingsmanage: 'settings.manage',
   iamview: 'iam.view',
   iammanage: 'iam.manage',
+  auditview: 'audit.view',
 } as const;

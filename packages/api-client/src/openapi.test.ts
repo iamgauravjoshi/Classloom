@@ -15,6 +15,7 @@ describe('openapi.json nullable properties', () => {
     ['MembersPageDto', 'nextCursor'],
     ['InvitationDto', 'invitedBy'],
     ['LoginActivityPageDto', 'nextCursor'],
+    ['AuditEventsPageDto', 'nextCursor'],
   ])('describes %s.%s as a nullable string, not an array', (schema, name) => {
     expect(property(schema, name)).toEqual({ type: ['string', 'null'] });
   });
