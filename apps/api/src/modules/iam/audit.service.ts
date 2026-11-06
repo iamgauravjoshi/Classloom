@@ -5,8 +5,8 @@ import type { Prisma } from '../../generated/prisma/client';
 export const MAX_AUDIT_USER_AGENT_LENGTH = 512;
 
 /**
- * The actions the `audit_events` CHECK constraint admits (IAM spec §6; onboarding spec §4, widened
- * by the school_onboarding migration). Keep the two lists identical.
+ * The actions the `audit_events` CHECK constraint admits (IAM spec §6; onboarding spec §4; widened
+ * by the school_onboarding, academics and settings_6a migrations). Keep the two lists identical.
  */
 export type AuditAction =
   | 'role.created'
@@ -57,7 +57,9 @@ export type AuditAction =
   | 'room.updated'
   | 'room.archived'
   | 'room.restored'
-  | 'room.deleted';
+  | 'room.deleted'
+  | 'number_series.updated'
+  | 'audit.exported';
 
 export type AuditTargetType =
   | 'role'
@@ -71,7 +73,9 @@ export type AuditTargetType =
   | 'subject'
   | 'class_level'
   | 'house'
-  | 'room';
+  | 'room'
+  | 'number_series'
+  | 'audit';
 
 export interface AuditInput {
   /** The school the change happened in: the actor's school, or the invited one for the system. */

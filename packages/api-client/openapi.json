@@ -4384,6 +4384,285 @@
           "academics"
         ]
       }
+    },
+    "/settings/number-series": {
+      "get": {
+        "operationId": "listNumberSeries",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumberSeriesListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The four number series, each with its next number and a preview for the current year",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/settings/number-series/{key}": {
+      "patch": {
+        "operationId": "updateNumberSeries",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNumberSeriesRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumberSeriesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is not valid, or no field was sent"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs settings.manage (type permission-denied)"
+          },
+          "404": {
+            "description": "No such number series"
+          },
+          "409": {
+            "description": "no-current-year (a per-year next number without a year)"
+          },
+          "422": {
+            "description": "number-pattern-invalid (with problem) or next-number-too-low (with minimum)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Change a series' pattern, reset rule or next number",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/audit/events": {
+      "get": {
+        "operationId": "listAuditEvents",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "area",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "people",
+                "school",
+                "calendar",
+                "academics",
+                "settings"
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 500,
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEventsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A date is not a real YYYY-MM-DD date, or a filter or the cursor is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs audit.view (type permission-denied)"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The school's audit trail, newest first; from and to are inclusive IST dates, limit 50 by default (at most 100)",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/audit/events.csv": {
+      "get": {
+        "operationId": "exportAuditEvents",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "area",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "people",
+                "school",
+                "calendar",
+                "academics",
+                "settings"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The CSV, as an attachment named audit-log-<from>-<to>.csv",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A date is not a real YYYY-MM-DD date, or a filter or the cursor is not valid"
+          },
+          "401": {
+            "description": "No valid session"
+          },
+          "403": {
+            "description": "Needs audit.view (type permission-denied)"
+          },
+          "422": {
+            "description": "export-too-large (with limit): more than 5,000 events match; narrow the filter"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "The filtered audit trail as CSV (up to 5,000 events); each export is itself audited",
+        "tags": [
+          "audit"
+        ]
+      }
     }
   },
   "info": {
@@ -5468,7 +5747,7 @@
             "maxLength": 200
           },
           "permissions": {
-            "maxItems": 108,
+            "maxItems": 110,
             "type": "array",
             "items": {
               "type": "string",
@@ -5526,7 +5805,8 @@
                 "settings.view",
                 "settings.manage",
                 "iam.view",
-                "iam.manage"
+                "iam.manage",
+                "audit.view"
               ]
             }
           },
@@ -5599,7 +5879,7 @@
             "maxLength": 200
           },
           "permissions": {
-            "maxItems": 108,
+            "maxItems": 110,
             "type": "array",
             "items": {
               "type": "string",
@@ -5657,7 +5937,8 @@
                 "settings.view",
                 "settings.manage",
                 "iam.view",
-                "iam.manage"
+                "iam.manage",
+                "audit.view"
               ]
             }
           },
@@ -9031,6 +9312,267 @@
         },
         "required": [
           "teachers"
+        ]
+      },
+      "NumberSeriesListDto": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "ENQUIRY",
+                    "APPLICATION",
+                    "ADMISSION",
+                    "FEE_RECEIPT"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "reset": {
+                  "type": "string",
+                  "enum": [
+                    "ACADEMIC_YEAR",
+                    "NEVER"
+                  ]
+                },
+                "nextNumber": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "preview": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "key",
+                "name",
+                "pattern",
+                "reset",
+                "nextNumber",
+                "preview"
+              ]
+            }
+          }
+        },
+        "required": [
+          "series"
+        ]
+      },
+      "UpdateNumberSeriesRequestDto": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "reset": {
+            "type": "string",
+            "enum": [
+              "ACADEMIC_YEAR",
+              "NEVER"
+            ]
+          },
+          "nextNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 99999999
+          }
+        },
+        "additionalProperties": false
+      },
+      "NumberSeriesDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "ENQUIRY",
+              "APPLICATION",
+              "ADMISSION",
+              "FEE_RECEIPT"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "reset": {
+            "type": "string",
+            "enum": [
+              "ACADEMIC_YEAR",
+              "NEVER"
+            ]
+          },
+          "nextNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "preview": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "pattern",
+          "reset",
+          "nextNumber",
+          "preview"
+        ]
+      },
+      "AuditEventsPageDto": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "area": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "people",
+                        "school",
+                        "calendar",
+                        "academics",
+                        "settings"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "actor": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "userId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "userId",
+                        "name"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "target": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "label"
+                  ]
+                },
+                "changes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "type": "string"
+                      },
+                      "before": {},
+                      "after": {}
+                    },
+                    "required": [
+                      "field",
+                      "before",
+                      "after"
+                    ]
+                  }
+                },
+                "ip": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "device": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "action",
+                "area",
+                "createdAt",
+                "actor",
+                "target",
+                "changes",
+                "ip",
+                "device"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "events",
+          "nextCursor"
         ]
       }
     }

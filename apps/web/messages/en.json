@@ -869,7 +869,8 @@
         "communication": "Communication",
         "reports": "Reports",
         "settings": "School settings",
-        "iam": "Users & roles"
+        "iam": "Users & roles",
+        "audit": "Audit log"
       },
       "actions": {
         "view": "View",

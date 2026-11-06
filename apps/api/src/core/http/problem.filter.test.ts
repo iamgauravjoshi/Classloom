@@ -129,6 +129,20 @@ describe('ProblemFilter', () => {
     });
   });
 
+  it('carries problem and minimum for the number series problems', () => {
+    const { host, res } = mockHost('/settings/number-series/ADMISSION');
+    new ProblemFilter('production').catch(
+      new HttpException({ type: 'number-pattern-invalid', title: 'Bad.', problem: 'empty' }, 422),
+      host,
+    );
+    expect(res.body).toMatchObject({ type: 'number-pattern-invalid', problem: 'empty' });
+    new ProblemFilter('production').catch(
+      new HttpException({ type: 'next-number-too-low', title: 'Low.', minimum: 4814 }, 422),
+      host,
+    );
+    expect(res.body).toMatchObject({ type: 'next-number-too-low', minimum: 4814 });
+  });
+
   it('drops counts that are not a record of numbers', () => {
     const { host, res } = mockHost();
     new ProblemFilter('production').catch(

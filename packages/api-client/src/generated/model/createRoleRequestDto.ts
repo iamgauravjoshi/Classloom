@@ -15,7 +15,7 @@ export interface CreateRoleRequestDto {
   name: string;
   /** @maxLength 200 */
   description?: string;
-  /** @maxItems 108 */
+  /** @maxItems 110 */
   permissions: CreateRoleRequestDtoPermissionsItem[];
   requiresTwoFactor: boolean;
   cloneFromRoleId?: string;

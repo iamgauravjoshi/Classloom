@@ -15,7 +15,7 @@ export interface UpdateRoleRequestDto {
   name?: string;
   /** @maxLength 200 */
   description?: string;
-  /** @maxItems 108 */
+  /** @maxItems 110 */
   permissions?: UpdateRoleRequestDtoPermissionsItem[];
   requiresTwoFactor?: boolean;
 }
