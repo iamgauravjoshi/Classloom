@@ -40,6 +40,8 @@ export const PATTERN_PROBLEMS = [
   'seq-missing',
   'seq-repeated',
   'seq-width',
+  /** Not from `parseNumberPattern`: the API refuses an `ACADEMIC_YEAR` series without a year token. */
+  'year-token-required',
 ] as const;
 export type PatternProblem = (typeof PATTERN_PROBLEMS)[number];
 

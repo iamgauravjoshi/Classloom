@@ -309,46 +309,92 @@ describe('number series (Part 6a spec section 3)', () => {
   });
 
   describe('switching the reset rule', () => {
-    it('starts the year at the highest issued when the new pattern has no year token', async () => {
+    it('refuses a pattern-only change that removes the year token from a yearly series', async () => {
       const s = await school();
-      await issueMany(s, 'ADMISSION', 5);
-      const res = await patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR', pattern: 'A-{SEQ:4}' });
-      expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({ reset: 'ACADEMIC_YEAR', nextNumber: 6, preview: 'A-0006' });
-      expect(await issueMany(s, 'ADMISSION', 3)).toEqual(['A-0006', 'A-0007', 'A-0008']);
-
-      // Back to NEVER: the overall counter continues from the highest issued in any period.
-      const back = await patch(s, 'ADMISSION', { reset: 'NEVER' });
-      expect(back.status).toBe(200);
-      expect(back.body).toMatchObject({ reset: 'NEVER', nextNumber: 9, preview: 'A-0009' });
-      expect((await issue(s, 'ADMISSION', year(s.yearId))).value).toBe('A-0009');
+      const res = await patch(s, 'ENQUIRY', { pattern: 'ENQ-{SEQ:4}' });
+      expect(res.status).toBe(422);
+      expect(res.body as ProblemBody).toMatchObject({
+        type: 'number-pattern-invalid',
+        problem: 'year-token-required',
+      });
+      expect((await one(s, 'ENQUIRY')).pattern).toBe('ENQ/{AY}/{SEQ:4}');
     });
 
-    it('never repeats a number when a switch races with issuing', async () => {
+    it('refuses a reset-only switch to ACADEMIC_YEAR on a pattern without a year token', async () => {
       const s = await school();
+      const res = await patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR' });
+      expect(res.status).toBe(422);
+      expect(res.body as ProblemBody).toMatchObject({
+        type: 'number-pattern-invalid',
+        problem: 'year-token-required',
+      });
+      expect((await one(s, 'ADMISSION')).reset).toBe('NEVER');
+      expect(await h.audits(s.tenantId, 'number_series')).toEqual([]);
+    });
+
+    it('continues a NEVER series in the year when switched to ACADEMIC_YEAR', async () => {
+      const s = await school();
+      expect((await patch(s, 'ADMISSION', { pattern: 'ADM/{YY}/{SEQ:4}' })).status).toBe(200);
       await issueMany(s, 'ADMISSION', 5);
+      const res = await patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR' });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ nextNumber: 6, preview: 'ADM/26/0006' });
+      expect((await issue(s, 'ADMISSION', year(s.yearId))).value).toBe('ADM/26/0006');
+    });
+
+    it('never repeats a number on a round trip ACADEMIC_YEAR -> NEVER -> ACADEMIC_YEAR', async () => {
+      const s = await school();
+      await issueMany(s, 'ENQUIRY', 7);
+      const toNever = await patch(s, 'ENQUIRY', { reset: 'NEVER' });
+      expect(toNever.body).toMatchObject({ nextNumber: 8, preview: 'ENQ/2026-27/0008' });
+      expect(await issueMany(s, 'ENQUIRY', 3)).toEqual([
+        'ENQ/2026-27/0008',
+        'ENQ/2026-27/0009',
+        'ENQ/2026-27/0010',
+      ]);
+      const back = await patch(s, 'ENQUIRY', { reset: 'ACADEMIC_YEAR' });
+      expect(back.status).toBe(200);
+      expect(back.body).toMatchObject({ nextNumber: 11, preview: 'ENQ/2026-27/0011' });
+      expect((await issue(s, 'ENQUIRY', year(s.yearId))).value).toBe('ENQ/2026-27/0011');
+    });
+
+    it('continues a NEVER series from the highest issued in any year after a round trip', async () => {
+      const s = await school();
+      expect((await patch(s, 'ADMISSION', { pattern: 'A/{YY}/{SEQ:4}' })).status).toBe(200);
+      await issueMany(s, 'ADMISSION', 2);
+      expect((await patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR' })).status).toBe(200);
+      expect(await issueMany(s, 'ADMISSION', 3)).toEqual(['A/26/0003', 'A/26/0004', 'A/26/0005']);
+      const back = await patch(s, 'ADMISSION', { reset: 'NEVER' });
+      expect(back.body).toMatchObject({ reset: 'NEVER', nextNumber: 6, preview: 'A/26/0006' });
+    });
+
+    it('refuses a switch to ACADEMIC_YEAR without a current year once numbers were issued', async () => {
+      const s = await school(false);
+      expect((await patch(s, 'ADMISSION', { pattern: 'A/{YY}/{SEQ:4}' })).status).toBe(200);
+      const fresh = await patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR' });
+      expect(fresh.status).toBe(200);
+      expect((await patch(s, 'ADMISSION', { reset: 'NEVER' })).status).toBe(200);
+      await issue(s, 'ADMISSION', year(await h.year(s.tenantId, 2025, 'CLOSED'), 2025));
+      const res = await patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR' });
+      expect(res.status).toBe(409);
+      expect((res.body as ProblemBody).type).toBe('no-current-year');
+      expect((await one(s, 'ADMISSION')).reset).toBe('NEVER');
+    });
+
+    it('never repeats a number when a switch to NEVER races with issuing', async () => {
+      const s = await school();
+      await issueMany(s, 'ENQUIRY', 5);
       const [switched, ...issued] = await Promise.all([
-        patch(s, 'ADMISSION', { reset: 'ACADEMIC_YEAR', pattern: 'A-{SEQ:4}' }),
-        ...Array.from({ length: 10 }, () => issue(s, 'ADMISSION', year(s.yearId))),
+        patch(s, 'ENQUIRY', { reset: 'NEVER' }),
+        ...Array.from({ length: 10 }, () => issue(s, 'ENQUIRY', year(s.yearId))),
       ]);
       expect(switched.status).toBe(200);
       const later = await Promise.all(
-        Array.from({ length: 5 }, () => issue(s, 'ADMISSION', year(s.yearId))),
+        Array.from({ length: 5 }, () => issue(s, 'ENQUIRY', year(s.yearId))),
       );
       const sequences = [...issued, ...later].map((r) => (r as { sequence: number }).sequence);
       expect(new Set(sequences).size).toBe(15);
       expect(sequences.sort((a, b) => a - b)).toEqual(Array.from({ length: 15 }, (_, i) => i + 6));
-    });
-
-    it('starts the year at 0 when the pattern has a year token', async () => {
-      const s = await school();
-      await issueMany(s, 'ADMISSION', 3);
-      const res = await patch(s, 'ADMISSION', {
-        reset: 'ACADEMIC_YEAR',
-        pattern: 'ADM/{AY}/{SEQ:4}',
-      });
-      expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({ nextNumber: 1, preview: 'ADM/2026-27/0001' });
     });
 
     it('continues a per-year series from the highest year when switched to NEVER', async () => {
@@ -364,7 +410,7 @@ describe('number series (Part 6a spec section 3)', () => {
       await issueMany(s, 'ADMISSION', 5);
       const low = await patch(s, 'ADMISSION', {
         reset: 'ACADEMIC_YEAR',
-        pattern: 'A-{SEQ:4}',
+        pattern: 'A/{YY}/{SEQ:4}',
         nextNumber: 5,
       });
       expect(low.status).toBe(422);

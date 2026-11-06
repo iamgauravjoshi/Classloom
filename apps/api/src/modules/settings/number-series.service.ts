@@ -150,6 +150,11 @@ export class NumberSeriesService {
    * Issues the series' next number in the caller's transaction (`tx` from `withTenant`): if that
    * transaction rolls back, so does the counter, and the number is issued again. The period is the
    * year's id for a per-year series, else `'ALL'`. Throws `NumberSeriesExhausted` past 99,999,999.
+   *
+   * `year` is the caller's: the year the record being numbered belongs to (and whose start year
+   * the pattern prints), not necessarily the school's current year. The series row stays locked
+   * `FOR SHARE` until the caller's transaction ends, so a change to the series waits for it; keep
+   * that transaction short.
    */
   async next(
     tx: Prisma.TransactionClient,
@@ -205,10 +210,12 @@ export class NumberSeriesService {
    * Changes the pattern, the reset rule or the next number of one series, with one
    * `number_series.updated` audit row (the key and the changed fields); no change writes nothing.
    *
-   * Switching the reset rule never lets a number repeat: to `NEVER`, the overall counter starts at
-   * the highest number issued in any period; to `ACADEMIC_YEAR` with a pattern without a year
-   * token, the current year's counter does. `nextNumber` applies to the period of the (new) reset
-   * rule for the current year and must be above its last value.
+   * An `ACADEMIC_YEAR` series needs a year token (422 `number-pattern-invalid`,
+   * `year-token-required`). Switching the reset rule never lets a number repeat: to `NEVER`, the
+   * overall counter starts at the highest number issued in any period; to `ACADEMIC_YEAR`, the
+   * current year's counter starts at least at the overall counter (409 `no-current-year` when there
+   * is no current year and the overall counter has issued numbers). `nextNumber` applies to the
+   * period of the (new) reset rule for the current year and must be above its last value.
    */
   update(
     auth: Actor,
@@ -237,15 +244,22 @@ export class NumberSeriesService {
       // The counter's new last value, when it changes.
       let setLast: number | null = null;
 
-      if (reset !== current.reset && period) {
-        // A stored pattern that no longer parses counts as having no year token: the safe side.
+      // A yearly series restarts each year, so its numbers must carry the year to stay unique.
+      if ((input.pattern !== undefined || input.reset !== undefined) && reset === 'ACADEMIC_YEAR') {
         const parsed = parseNumberPattern(pattern);
-        if (reset === 'NEVER' || !(parsed.ok && hasYearToken(parsed.parts))) {
-          const highest = await highestIssued(tx, key);
-          if (highest > last) {
-            setLast = highest;
-            last = highest;
-          }
+        if (!(parsed.ok && hasYearToken(parsed.parts))) {
+          throw new NumberPatternInvalidException('year-token-required');
+        }
+      }
+
+      // Switching never lets a number repeat, even after a round trip between the rules.
+      if (reset !== current.reset) {
+        const floor =
+          reset === 'NEVER' ? await highestIssued(tx, key) : await lastValue(tx, key, ALL);
+        if (reset === 'ACADEMIC_YEAR' && !period && floor > 0) throw new NoCurrentYearException();
+        if (period && floor > last) {
+          setLast = floor;
+          last = floor;
         }
       }
 
