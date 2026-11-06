@@ -66,6 +66,17 @@ for (const theme of ['light', 'dark'] as const) {
       });
     }
 
+    test('a hovered primary button keeps AA contrast', async ({ page }) => {
+      await page.goto('/en/register-school');
+      const next = page.getByRole('button', { name: 'Next' });
+      await next.hover();
+      // Touch devices have no hover state; where there is one, the hover fill must be applied.
+      if (await page.evaluate(() => matchMedia('(hover: hover)').matches)) {
+        await expect(next).toHaveCSS('background-color', 'rgb(50, 80, 204)');
+      }
+      await expectNoViolations(page);
+    });
+
     test.describe('security page', () => {
       // The page lists sessions and devices, so it gets a user of its own: the shared one may have
       // been given trusted devices or other sessions by another test.
@@ -381,8 +392,6 @@ for (const theme of ['light', 'dark'] as const) {
         await dialog.getByLabel('Stream name').fill('science');
         await dialog.getByRole('button', { name: 'Add stream' }).click();
         await expect(dialog.getByText('Another one already has this name.')).toBeVisible();
-        // The pointer still rests on the submit button; its hover shade is not what is measured.
-        await page.mouse.move(0, 0);
         await expectNoViolations(page);
       });
 
@@ -428,8 +437,6 @@ for (const theme of ['light', 'dark'] as const) {
         await dialog.getByLabel('House name').fill('R');
         await dialog.getByRole('button', { name: 'Save changes' }).click();
         await expect(dialog.getByText('Enter a name of 2 to 40 characters.')).toBeVisible();
-        // The pointer still rests on the submit button; its hover shade is not what is measured.
-        await page.mouse.move(0, 0);
         await expectNoViolations(page);
       });
 
@@ -474,8 +481,6 @@ for (const theme of ['light', 'dark'] as const) {
         await dialog.getByLabel('Capacity').fill('900');
         await dialog.getByRole('button', { name: 'Add room' }).click();
         await expect(dialog.getByText('Enter a capacity from 1 to 500.')).toBeVisible();
-        // The pointer still rests on the submit button; its hover shade is not what is measured.
-        await page.mouse.move(0, 0);
         await expectNoViolations(page);
       });
 
@@ -542,8 +547,6 @@ for (const theme of ['light', 'dark'] as const) {
         await dialog.getByLabel('Capacity').fill('40');
         await dialog.getByRole('button', { name: 'Add section' }).click();
         await expect(dialog.getByText('Choose a stream.')).toBeVisible();
-        // The pointer still rests on the submit button; its hover shade is not what is measured.
-        await page.mouse.move(0, 0);
         await expectNoViolations(page);
       });
 
@@ -616,7 +619,6 @@ for (const theme of ['light', 'dark'] as const) {
         ).toBeVisible();
         await expect(page.getByRole('heading', { level: 4, name: 'VI-A' })).toBeVisible();
         await expect(page.getByText('Room: Room 101')).toBeVisible();
-        await page.mouse.move(0, 0);
         await expectNoViolations(page);
 
         // The form, warning that the room seats fewer than the section holds.
@@ -742,7 +744,6 @@ for (const theme of ['light', 'dark'] as const) {
           await expect(page.getByRole('heading', { level: 3, name: 'Biology' })).toBeVisible();
           await expect(page.getByText('Code: 044')).toBeVisible();
           await expect(page.getByText('Co-scholastic').first()).toBeVisible();
-          await page.mouse.move(0, 0);
           await expectNoViolations(page);
 
           // From the menu, the picker marks what is already added.
@@ -762,7 +763,6 @@ for (const theme of ['light', 'dark'] as const) {
           await dialog.getByLabel('Code').fill('1 2');
           await dialog.getByRole('button', { name: 'Add subject' }).click();
           await expect(dialog.getByText('Use up to 10 letters, digits or hyphens.')).toBeVisible();
-          await page.mouse.move(0, 0);
           await expectNoViolations(page);
         });
 
@@ -813,7 +813,6 @@ for (const theme of ['light', 'dark'] as const) {
             grid.getByRole('button', { name: 'Physics, Class X: Compulsory' }),
           ).toBeVisible();
           await expect(page.getByText('Class X has unsaved changes.')).toBeVisible();
-          await page.mouse.move(0, 0);
           await expectNoViolations(page);
 
           // The Science stream's own rows. English is compulsory for all streams: named so, and
@@ -833,7 +832,6 @@ for (const theme of ['light', 'dark'] as const) {
           await expect(
             grid.getByRole('button', { name: /^English Core, Class XI, Science:/ }),
           ).toHaveCount(0);
-          await page.mouse.move(0, 0);
           await expectNoViolations(page);
 
           await page.getByRole('button', { name: 'Save Class X' }).click();
@@ -854,7 +852,6 @@ for (const theme of ['light', 'dark'] as const) {
           expect(
             await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
           ).toBe(true);
-          await page.mouse.move(0, 0);
           await expectNoViolations(page);
         });
 
