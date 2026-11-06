@@ -46,9 +46,15 @@ jobs:
       - run: pnpm test:int
 
   e2e:
-    name: Cross-device E2E and accessibility
+    # The suite outgrew one runner (it hit the 40-minute limit with 206 tests unrun), so it runs as
+    # three shards in parallel. Each shard runs about a third of the tests on two workers.
+    name: Cross-device E2E and accessibility (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -63,11 +69,11 @@ jobs:
       - run: pnpm --filter @classloom/web exec playwright install --with-deps chromium firefox webkit
       - run: pnpm build
       # Run Playwright directly (not via turbo) so its output streams live in the job log.
-      - run: pnpm --filter @classloom/web exec playwright test
+      - run: pnpm --filter @classloom/web exec playwright test --shard=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             apps/web/playwright-report
             apps/web/test-results

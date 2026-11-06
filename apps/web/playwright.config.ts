@@ -18,7 +18,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 2 : 0,
-  // Fail fast instead of hanging a CI runner: the whole suite takes about 22 minutes on two workers.
+  // Fail fast instead of hanging a CI runner. CI splits the suite into three shards, each about
+  // 15–20 minutes on two workers.
   globalTimeout: CI ? 40 * 60_000 : undefined,
   workers: CI ? 2 : undefined,
   reporter: [['list'], ['html', { open: 'never' }]],
