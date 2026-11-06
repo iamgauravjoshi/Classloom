@@ -32,6 +32,7 @@ export const BASE_TOKENS = [
   'input',
   'primary',
   'primary-foreground',
+  'primary-hover',
   'primary-text',
   'secondary',
   'secondary-foreground',
@@ -49,6 +50,12 @@ export type SemanticToken = BaseToken | `${StatusHue}-tint` | `${StatusHue}-stro
 export type SemanticTheme = Readonly<Record<SemanticToken, string>>;
 
 const DARK_CARD = palette.dark[700];
+
+/**
+ * Hover fill for primary buttons: an opaque, darker primary. A translucent hover (primary at 80%)
+ * lightens towards the page in light mode and drops white text to 3.7:1; this keeps it at 6.7:1.
+ */
+const PRIMARY_HOVER = '#3250CC';
 
 /** The saturated colour of each hue, used for icons, charts and dark-mode tints. */
 export const baseHue: Readonly<Record<StatusHue, string>> = {
@@ -145,6 +152,7 @@ const light: SemanticTheme = {
   input: palette.grey[500],
   primary: brand.primary,
   'primary-foreground': brand.white,
+  'primary-hover': PRIMARY_HOVER,
   'primary-text': brand.primary,
   secondary: brand.secondary,
   'secondary-foreground': brand.dark,
@@ -173,6 +181,7 @@ const dark: SemanticTheme = {
   input: palette.dark[400],
   primary: brand.primary,
   'primary-foreground': brand.white,
+  'primary-hover': PRIMARY_HOVER,
   'primary-text': palette.primary[600],
   secondary: brand.secondary,
   'secondary-foreground': brand.dark,

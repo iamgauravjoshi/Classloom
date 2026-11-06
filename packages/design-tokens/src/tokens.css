@@ -16,6 +16,7 @@
   --input: #838A9B;
   --primary: #3D5EE1;
   --primary-foreground: #FFFFFF;
+  --primary-hover: #3250CC;
   --primary-text: #3D5EE1;
   --secondary: #6FCCD8;
   --secondary-foreground: #131022;
@@ -79,6 +80,7 @@
   --input: #8C8997;
   --primary: #3D5EE1;
   --primary-foreground: #FFFFFF;
+  --primary-hover: #3250CC;
   --primary-text: #8B9EED;
   --secondary: #6FCCD8;
   --secondary-foreground: #131022;
@@ -129,6 +131,7 @@
   --color-input: var(--input);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-text: var(--primary-text);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);

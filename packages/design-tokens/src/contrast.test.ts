@@ -36,6 +36,7 @@ describe.each(['light', 'dark'] as const)('%s semantic tokens', (mode) => {
 
   it('primary buttons, links and destructive buttons meet AA', () => {
     expect(contrastRatio(s['primary-foreground'], s.primary)).toBeGreaterThanOrEqual(AA);
+    expect(contrastRatio(s['primary-foreground'], s['primary-hover'])).toBeGreaterThanOrEqual(AA);
     expect(contrastRatio(s['primary-text'], s.card)).toBeGreaterThanOrEqual(AA);
     expect(contrastRatio(s['primary-text'], s.accent)).toBeGreaterThanOrEqual(AA);
     expect(contrastRatio(s['destructive-foreground'], s.destructive)).toBeGreaterThanOrEqual(AA);
