@@ -94,26 +94,28 @@ model Tenant {
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  campuses           Campus[]
-  memberships        Membership[]
-  registrationTokens RegistrationToken[]
-  sessions           Session[]
-  authEvents         AuthEvent[]
-  roles              Role[]
-  rolePermissions    RolePermission[]
-  membershipRoles    MembershipRole[]
-  invitations        Invitation[]
-  auditEvents        AuditEvent[]
-  schoolProfile      SchoolProfile?
-  files              File[]
-  academicYears      AcademicYear[]
-  academicTerms      AcademicTerm[]
-  streams            Stream[]
-  subjects           Subject[]
-  classSubjects      ClassSubject[]
-  houses             House[]
-  rooms              Room[]
-  sections           Section[]
+  campuses             Campus[]
+  memberships          Membership[]
+  registrationTokens   RegistrationToken[]
+  sessions             Session[]
+  authEvents           AuthEvent[]
+  roles                Role[]
+  rolePermissions      RolePermission[]
+  membershipRoles      MembershipRole[]
+  invitations          Invitation[]
+  auditEvents          AuditEvent[]
+  schoolProfile        SchoolProfile?
+  files                File[]
+  academicYears        AcademicYear[]
+  academicTerms        AcademicTerm[]
+  streams              Stream[]
+  subjects             Subject[]
+  classSubjects        ClassSubject[]
+  houses               House[]
+  rooms                Room[]
+  sections             Section[]
+  numberSeries         NumberSeries[]
+  numberSeriesCounters NumberSeriesCounter[]
 
   @@map("tenants")
 }

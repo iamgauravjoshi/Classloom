@@ -1,0 +1,57 @@
+// Settings: number series. Spec: docs/superpowers/specs/2026-11-06-settings-6a-design.md,
+// sections 3 and 8.
+//
+// Both models are tenant-owned and row-level secured (forced RLS, listed in TENANT_SCOPED_MODELS).
+// Added in the migration SQL, as Prisma cannot express them: CHECK constraints on the pattern's
+// length (1-40; the full pattern rules are enforced by the service), on `last_value >= 0`, and on
+// the counter period's shape. Rows are seeded for every existing school by the migration, and for
+// new schools at registration.
+
+/// Values match NUMBER_SERIES_KEYS in @classloom/contracts.
+enum NumberSeriesKey {
+  ENQUIRY
+  APPLICATION
+  ADMISSION
+  FEE_RECEIPT
+}
+
+/// Values match NUMBER_SERIES_RESETS in @classloom/contracts.
+enum NumberSeriesReset {
+  ACADEMIC_YEAR
+  NEVER
+}
+
+/// How one kind of number (enquiry, admission, ...) is formatted, and when its counter restarts.
+model NumberSeries {
+  tenantId  String            @map("tenant_id") @db.Uuid
+  key       NumberSeriesKey
+  /// 1-40 characters; passes parseNumberPattern (checked by the service).
+  pattern   String
+  reset     NumberSeriesReset
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  counters NumberSeriesCounter[]
+
+  @@id([tenantId, key])
+  @@map("number_series")
+}
+
+/// The last number a series issued in one period. Counters only grow, so numbers never repeat.
+model NumberSeriesCounter {
+  tenantId  String          @map("tenant_id") @db.Uuid
+  key       NumberSeriesKey
+  /// The academic year's id (as text) for ACADEMIC_YEAR, or 'ALL' for NEVER.
+  period    String
+  /// >= 0. The next number is lastValue + 1.
+  lastValue BigInt          @map("last_value")
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  series NumberSeries @relation(fields: [tenantId, key], references: [tenantId, key], onDelete: Cascade)
+
+  @@id([tenantId, key, period])
+  @@map("number_series_counters")
+}

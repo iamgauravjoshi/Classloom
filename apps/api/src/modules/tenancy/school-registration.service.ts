@@ -1,6 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-import type { SchoolRegistrationAccepted, SchoolRegistrationRequest } from '@classloom/contracts';
+import {
+  DEFAULT_SERIES,
+  NUMBER_SERIES_KEYS,
+  type SchoolRegistrationAccepted,
+  type SchoolRegistrationRequest,
+} from '@classloom/contracts';
 import { suggestSchoolCode } from '@classloom/utils';
 import { ConflictException, GoneException, Inject, Injectable, Logger } from '@nestjs/common';
 
@@ -89,6 +94,14 @@ export class SchoolRegistrationService {
           // the registration's city and state.
           await tx.schoolProfile.create({
             data: { tenantId: tenant.id, city: input.city, state: input.state },
+          });
+          // The four number series with their defaults (Part 6a spec section 3).
+          await tx.numberSeries.createMany({
+            data: NUMBER_SERIES_KEYS.map((key) => ({
+              tenantId: tenant.id,
+              key,
+              ...DEFAULT_SERIES[key],
+            })),
           });
           const user = await tx.user.upsert({
             where: { email: input.email },

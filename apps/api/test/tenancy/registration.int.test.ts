@@ -4,6 +4,8 @@ import {
   BUILT_IN_ROLE_DEFAULTS,
   BUILT_IN_ROLE_KEYS,
   type BuiltInRoleKey,
+  DEFAULT_SERIES,
+  NUMBER_SERIES_KEYS,
 } from '@classloom/contracts';
 import { formatDateIN } from '@classloom/utils';
 import { getQueueToken } from '@nestjs/bullmq';
@@ -133,8 +135,13 @@ describe('school registration', () => {
         }),
         roles: await tx.role.findMany({ include: { permissions: true } }),
         profiles: await tx.schoolProfile.findMany(),
+        series: await tx.numberSeries.findMany({ orderBy: { key: 'asc' } }),
       };
     });
+    // The four number series with their defaults (Part 6a spec section 3).
+    expect(rows.series.map(({ key, pattern, reset }) => ({ key, pattern, reset }))).toEqual(
+      NUMBER_SERIES_KEYS.map((key) => ({ key, ...DEFAULT_SERIES[key] })),
+    );
     expect(rows.profiles).toHaveLength(1);
     expect(rows.profiles[0]).toMatchObject({
       tenantId: tenant.id,
